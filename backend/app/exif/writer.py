@@ -1,17 +1,34 @@
-"""EXIF/XMP writing on *copies* with ExifTool (metadata only: the JPEG image data is never re-encoded)."""
+"""EXIF/XMP writing with ExifTool (metadata only: the JPEG image data is never re-encoded).
 
+Used on export copies, and — when the user chooses it — directly on the source photos. Before the first
+modification of a source photo, `read_tags` captures the current values of every tag this module may write
+(`WRITTEN_TAGS`) so that `restore_args` can put them back exactly (absent tags are deleted again).
+"""
+
+import json
 import subprocess
 import tempfile
 from dataclasses import dataclass
 
 from .. import config
 
+# Tags this application may write; their original values are saved before touching a source photo
+WRITTEN_TAGS = [
+    "EXIF:GPSLatitude",
+    "EXIF:GPSLatitudeRef",
+    "EXIF:GPSLongitude",
+    "EXIF:GPSLongitudeRef",
+    "EXIF:GPSImgDirection",
+    "EXIF:GPSImgDirectionRef",
+    "XMP-GPano:PoseHeadingDegrees",
+]
+
 
 @dataclass
 class Edit:
     path: str
     heading: float | None = None  # final heading, degrees from true north
-    lat: float | None = None  # corrected position (None = keep the original tags)
+    lat: float | None = None  # corrected position (None = keep the current tags)
     lon: float | None = None
 
 
@@ -41,29 +58,67 @@ def tag_args(e: Edit, panoramax_compat: bool) -> list[str]:
     return args
 
 
-def write_batch(edits: list[Edit], panoramax_compat: bool = True) -> dict[str, str]:
-    """Write tags in place on the given files (which must be copies). Returns {path: error} for failures."""
-    todo = [(e, tag_args(e, panoramax_compat)) for e in edits]
-    todo = [(e, a) for e, a in todo if a]
-    if not todo:
+def restore_args(orig: dict) -> list[str]:
+    """Arguments putting back the saved values (a tag absent at the time is deleted)."""
+    args = []
+    for t in WRITTEN_TAGS:
+        name = t.split(":", 1)[1]
+        v = orig.get(name)
+        args.append(f"-{t}={v}" if v is not None else f"-{t}=")
+    return args
+
+
+def run_batch(items: list[tuple[str, list[str]]], on_source: bool = False) -> dict[str, str]:
+    """Run one ExifTool process writing each (path, args). Returns {path: error} for reported failures.
+
+    on_source: the file is a user's photo: keep its file system dates (-P) and modify it in place.
+    """
+    items = [(p, a) for p, a in items if a]
+    if not items:
         return {}
+    common = ["-n", "-charset", "filename=utf8"]
+    common += ["-overwrite_original_in_place", "-P"] if on_source else ["-overwrite_original"]
     with tempfile.NamedTemporaryFile("w", suffix=".args", encoding="utf-8") as f:
-        for e, a in todo:
-            # -n: numeric values; -overwrite_original: the file is our own copy
-            f.write("\n".join(["-n", "-overwrite_original", "-charset", "filename=utf8", *a, e.path, "-execute"]) + "\n")
+        for path, a in items:
+            f.write("\n".join([*common, *a, path, "-execute"]) + "\n")
         f.flush()
         res = subprocess.run(
-            [config.EXIFTOOL, "-q", "-q", "-@", f.name],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
+            [config.EXIFTOOL, "-q", "-q", "-@", f.name], capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
     errors = {}
     if res.returncode != 0 or res.stderr.strip():
         # The caller also re-reads every written file to verify the values
         for line in res.stderr.splitlines():
-            for e, _ in todo:
-                if e.path in line:
-                    errors[e.path] = line.strip()[:300]
+            for path, _ in items:
+                if path in line:
+                    errors[path] = line.strip()[:300]
     return errors
+
+
+def write_batch(edits: list[Edit], panoramax_compat: bool = True, on_source: bool = False) -> dict[str, str]:
+    return run_batch([(e.path, tag_args(e, panoramax_compat)) for e in edits], on_source)
+
+
+def read_tags(paths: list[str]) -> dict[str, dict]:
+    """Current raw values (numeric) of WRITTEN_TAGS for each file: {path: {TagName: value}}."""
+    if not paths:
+        return {}
+    with tempfile.NamedTemporaryFile("w", suffix=".args", encoding="utf-8") as f:
+        f.write("\n".join(paths) + "\n")
+        f.flush()
+        res = subprocess.run(
+            [config.EXIFTOOL, "-json", "-n", "-charset", "filename=utf8", *[f"-{t}" for t in WRITTEN_TAGS], "-@", f.name],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    data = json.loads(res.stdout) if res.stdout.strip() else []
+    out = {}
+    for d in data:
+        src = d.pop("SourceFile")
+        out[src] = {k: v for k, v in d.items() if k in {t.split(":", 1)[1] for t in WRITTEN_TAGS}}
+    missing = [p for p in paths if p not in out]
+    if missing:
+        raise OSError(f"Lecture des métadonnées impossible : {missing[0]}")
+    return out

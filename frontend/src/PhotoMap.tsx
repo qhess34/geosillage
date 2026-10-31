@@ -10,7 +10,9 @@ interface Props {
   basemap: Basemap
   selectedId: number | null
   range: [number, number] | null
+  editMode: boolean // positions: drag the selected photo, or click the map to place it
   onSelect: (id: number, extend: boolean) => void
+  onMove: (id: number, lat: number, lon: number) => void
 }
 
 const ANOMALY = FLAGS.GPS_JUMP | FLAGS.INVALID_COORD
@@ -29,7 +31,8 @@ function toGeoJSON(photos: PhotoRow[], sequences: Sequence[]): GeoJSON.FeatureCo
           id: p.id,
           idx: p.idx,
           color: p.sequence_id != null ? colors.get(p.sequence_id) ?? '#9ca3af' : '#9ca3af',
-          anomaly: p.flags & ANOMALY ? 1 : 0,
+          anomaly: p.flags & ANOMALY && !p.pos_method ? 1 : 0,
+          corrected: p.pos_method ? 1 : 0,
           heading: p.heading ?? -1, // -1 = no heading (null is not usable in filters)
           manual: p.heading_manual != null ? 1 : 0,
         },
@@ -42,6 +45,21 @@ function lineGeoJSON(photos: PhotoRow[]): GeoJSON.Feature {
     .filter((p) => p.lat != null && p.lon != null && !(p.flags & (ANOMALY | FLAGS.DUPLICATE)))
     .map((p) => [p.lon as number, p.lat as number])
   return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }
+}
+
+// Original → corrected position links (and original positions) for corrected photos
+function movesGeoJSON(photos: PhotoRow[]): GeoJSON.FeatureCollection {
+  const features: GeoJSON.Feature[] = []
+  for (const p of photos) {
+    if (!p.pos_method || p.lat_orig == null || p.lon_orig == null || p.lat == null || p.lon == null) continue
+    features.push({
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'LineString', coordinates: [[p.lon_orig, p.lat_orig], [p.lon, p.lat]] },
+    })
+    features.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [p.lon_orig, p.lat_orig] } })
+  }
+  return { type: 'FeatureCollection', features }
 }
 
 function rasterStyle(b: Basemap): maplibregl.StyleSpecification {
@@ -71,13 +89,14 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, onSelect }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, onSelect, onMove }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
+  const marker = useRef<maplibregl.Marker | null>(null)
   const ready = useRef(false)
   const fitted = useRef(false)
-  const latest = useRef({ photos, sequences, selectedId, range, onSelect })
-  latest.current = { photos, sequences, selectedId, range, onSelect }
+  const latest = useRef({ photos, sequences, selectedId, range, editMode, onSelect, onMove })
+  latest.current = { photos, sequences, selectedId, range, editMode, onSelect, onMove }
 
   const rangeFilter = (r: [number, number] | null): maplibregl.FilterSpecification =>
     r ? ['all', ['>=', ['get', 'idx'], r[0]], ['<=', ['get', 'idx'], r[1]]] : ['==', ['get', 'idx'], -1]
@@ -89,7 +108,22 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     if (!m.hasImage('arrow')) m.addImage('arrow', arrowImage(), { sdf: true })
     m.addSource('track', { type: 'geojson', data: lineGeoJSON(photos) })
     m.addSource('photos', { type: 'geojson', data: toGeoJSON(photos, sequences) })
+    m.addSource('moves', { type: 'geojson', data: movesGeoJSON(photos) })
     m.addLayer({ id: 'track', type: 'line', source: 'track', paint: { 'line-color': '#6b7280', 'line-width': 1.5, 'line-opacity': 0.6 } })
+    m.addLayer({
+      id: 'moves-line',
+      type: 'line',
+      source: 'moves',
+      filter: ['==', ['geometry-type'], 'LineString'],
+      paint: { 'line-color': '#7c3aed', 'line-width': 1.5, 'line-dasharray': [2, 2] },
+    })
+    m.addLayer({
+      id: 'moves-orig',
+      type: 'circle',
+      source: 'moves',
+      filter: ['==', ['geometry-type'], 'Point'],
+      paint: { 'circle-radius': 3, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#7c3aed', 'circle-stroke-width': 1.5 },
+    })
     m.addLayer({
       id: 'range',
       type: 'circle',
@@ -104,8 +138,9 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2, 16, 5, 19, 8],
         'circle-color': ['case', ['==', ['get', 'anomaly'], 1], '#dc2626', ['get', 'color']],
-        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0, 16, 1],
-        'circle-stroke-color': '#ffffff',
+        // zoom must stay at the top level of the expression
+        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, ['case', ['==', ['get', 'corrected'], 1], 2, 0], 16, ['case', ['==', ['get', 'corrected'], 1], 2, 1]],
+        'circle-stroke-color': ['case', ['==', ['get', 'corrected'], 1], '#7c3aed', '#ffffff'],
       },
     })
     m.addLayer({
@@ -174,9 +209,16 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       ready.current = true
       fit(m)
     })
-    m.on('click', 'photos', (e) => {
-      const f = e.features?.[0]
-      if (f) latest.current.onSelect(Number(f.properties?.id), e.originalEvent.shiftKey)
+    m.on('click', (e) => {
+      const f = m.getLayer('photos') ? m.queryRenderedFeatures(e.point, { layers: ['photos'] })[0] : undefined
+      const { editMode, selectedId, photos, onSelect, onMove } = latest.current
+      if (f) {
+        onSelect(Number(f.properties?.id), e.originalEvent.shiftKey)
+        return
+      }
+      // Edit mode: a click on the map places the selected photo if it has no position yet
+      const sel = photos.find((p) => p.id === selectedId)
+      if (editMode && sel && (sel.lat == null || sel.lon == null)) onMove(sel.id, e.lngLat.lat, e.lngLat.lng)
     })
     m.on('mouseenter', 'photos', () => (m.getCanvas().style.cursor = 'pointer'))
     m.on('mouseleave', 'photos', () => (m.getCanvas().style.cursor = ''))
@@ -202,8 +244,29 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     if (!m || !ready.current) return
     ;(m.getSource('photos') as GeoJSONSource | undefined)?.setData(toGeoJSON(photos, sequences))
     ;(m.getSource('track') as GeoJSONSource | undefined)?.setData(lineGeoJSON(photos))
+    ;(m.getSource('moves') as GeoJSONSource | undefined)?.setData(movesGeoJSON(photos))
     fit(m)
   }, [photos, sequences])
+
+  // Edit mode: a draggable marker on the selected photo
+  useEffect(() => {
+    const m = map.current
+    marker.current?.remove()
+    marker.current = null
+    if (!m || !editMode || selectedId == null) return
+    const p = photos.find((x) => x.id === selectedId)
+    if (!p || p.lat == null || p.lon == null) return
+    const mk = new maplibregl.Marker({ draggable: true, color: '#7c3aed' }).setLngLat([p.lon, p.lat]).addTo(m)
+    mk.getElement().title = 'Glisser pour corriger la position'
+    mk.on('dragend', () => {
+      const ll = mk.getLngLat()
+      latest.current.onMove(p.id, ll.lat, ll.lng)
+    })
+    marker.current = mk
+    return () => {
+      mk.remove()
+    }
+  }, [editMode, selectedId, photos])
 
   useEffect(() => {
     const m = map.current

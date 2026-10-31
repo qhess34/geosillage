@@ -101,7 +101,23 @@ MIGRATIONS = [
         report TEXT NOT NULL
     );
     """,
+    """
+    -- Direct modification of source photos (user's choice): what to put back on restore
+    ALTER TABLE photo ADD COLUMN orig_tags TEXT;      -- JSON of the tags' values before our first write
+    ALTER TABLE photo ADD COLUMN moved_from TEXT;     -- original path when the file was moved by an export
+    ALTER TABLE photo ADD COLUMN source_written_at REAL;
+    ALTER TABLE export ADD COLUMN mode TEXT NOT NULL DEFAULT 'copy';
+    """,
 ]
+
+# Position flags that no longer apply once the user has set a corrected position
+POSITION_FLAGS = NO_GPS | INVALID_COORD | GPS_JUMP
+# SQL: flags of photo alias p with position flags cleared when corrected
+EFF_FLAGS_SQL = f"(CASE WHEN p.lat IS NOT NULL THEN p.flags & ~{POSITION_FLAGS} ELSE p.flags END)"
+
+
+def eff_flags(flags: int, corrected: bool) -> int:
+    return flags & ~POSITION_FLAGS if corrected else flags
 
 
 class ProjectNotFound(Exception):

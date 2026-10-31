@@ -94,7 +94,7 @@ def recompute(conn, mark_stale_ids: set[int] | None = None) -> None:
     """
     s = db.get_settings(conn)
     rows = conn.execute(
-        "SELECT id, ts, COALESCE(lat, lat_orig), COALESCE(lon, lon_orig), flags FROM photo ORDER BY idx"
+        f"SELECT p.id, p.ts, COALESCE(p.lat, p.lat_orig), COALESCE(p.lon, p.lon_orig), {db.EFF_FLAGS_SQL} FROM photo p ORDER BY p.idx"
     ).fetchall()
     pts = [Pt(*r) for r in rows]
     res = compute(pts, s["heading_min_m"], s["heading_window_s"])

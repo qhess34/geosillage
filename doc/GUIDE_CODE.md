@@ -13,13 +13,14 @@ backend/app/
   importer.py      scan récursif, hash rapide, lecture EXIF par lots, analyse, miniatures, fichiers introuvables
   undo.py          annuler/rétablir générique (journal op_log : lignes modifiées avant/après)
   routes_edit.py   routes séquences, caps, annuler/rétablir, export
-  exporter.py      export : un dossier par séquence, copies + EXIF, vérification par relecture
+  exporter.py      export (copie / déplacement des sources / sur place), vérification par relecture, restauration des sources
   exif/reader.py   lecture ExifTool (-json -n -fast, lots de 250 fichiers), dump complet pour inspection
-  exif/writer.py   écriture ExifTool sur les copies (cap, position), règle « cap 0 » Panoramax
+  exif/writer.py   écriture ExifTool (cap, position), lecture/restauration des balises d'origine, règle « cap 0 » Panoramax
   core/geo.py      géodésie WGS84 (pyproj.Geod) : distance, azimut, longueur de trace
   core/analysis.py ordre chronologique, détection d'anomalies, bilan d'import
   core/headings.py calcul du cap, cap final, statistiques
   core/sequences.py création, limites, division, fusion, retrait, découpage proposé, statistiques
+  core/positions.py corrections de position : saisie, décalage, le long du trajet, retour à l'original
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
   ProjectList.tsx  création, ouverture, suppression (avec confirmation) des projets
@@ -91,7 +92,28 @@ Choix de 15 m : mesuré sur une sortie simulée de 5 000 photos (bruit GPS ~2 m,
 rapport à la vraie direction : erreur médiane 7,2° / 90e centile 29° avec 5 m, 3,9° / 15,8° avec 15 m, 3,4° / 14,5°
 avec 20 m mais 16 photos incertaines. À revalider sur de vraies photos.
 
+## Positions
+
+`photo.lat_orig/lon_orig` ne changent jamais ; la position corrigée est dans `photo.lat/lon` (NULL = originale) avec
+`pos_method` (`manual`, `offset`, `along`). Une photo corrigée n'est plus considérée comme « sans GPS / saut / invalide »
+pour le cap, les séquences et l'export : `db.EFF_FLAGS_SQL` / `db.eff_flags` effacent ces drapeaux quand `lat` est
+renseignée (le bilan d'import garde les anomalies d'origine). Après une correction, les caps sont recalculés et les
+caps manuels voisins (±3 photos) marqués `heading_stale` (« à revoir »), jamais écrasés.
+
+Interface : mode `M` → marqueur MapLibre déplaçable sur la photo courante (`dragend` → `PUT …/position`) ; clic sur la
+carte pour placer une photo sans position ; couches `moves-*` : position d'origine et lien vers la corrigée.
+
 ## Export
+
+Modes (`exporter.MODES`) : `copy` (copies), `move` (les sources sont déplacées dans les dossiers de séquence et
+modifiées), `in_place` (sources modifiées sans déplacement, pas de dossier). Pour `move`/`in_place` : avant la
+première écriture, `writer.read_tags` sauvegarde dans `photo.orig_tags` les valeurs des balises que l'application
+écrit (`writer.WRITTEN_TAGS`) ; `photo.moved_from` garde le tout premier chemin ; les déplacements passent par des noms
+temporaires (renumérotation sans écrasement) et `photo.path` est mis à jour à chaque renommage. ExifTool écrit les
+sources avec `-overwrite_original_in_place -P` (date du fichier conservée). `restore_sources` réécrit les valeurs
+sauvegardées (une balise absente à l'origine est supprimée), vérifie par relecture, puis remet les fichiers en place.
+Un ré-export `move` ne supprime jamais un fichier qui est une photo du projet. Les positions restaurées sont
+réencodées depuis la valeur décimale : identiques à ~1e-9° près, pas au bit près.
 
 `exporter.run` : vérifie d'abord que chaque dossier cible est absent, vide, ou un export précédent du même projet
 (marqueur `.pss-export.json`, dont seuls les fichiers listés sont supprimés) ; refuse un dossier d'export situé dans
@@ -116,6 +138,8 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 - ExifTool doit être installé (`libimage-exiftool-perl`) ; chemin modifiable via `PSS_EXIFTOOL`.
 - Fichier JPEG tronqué : ExifTool lit souvent l'en-tête sans erreur ; c'est la génération de la miniature qui le
   détecte.
+- Dans une expression MapLibre, `zoom` doit être au premier niveau (`interpolate`/`step`) : `['case', …, ['interpolate', …, ['zoom'] …]]`
+  est refusé et la couche n'est pas créée.
 - Dans les filtres MapLibre, `null` n'est pas utilisable : une photo sans cap a `heading = -1` dans le GeoJSON.
 - `setStyle` de MapLibre doit être appelé avec `{diff: false}`, sinon `style.load` ne se déclenche pas et les
   couches de photos ne sont pas recréées après un changement de fond.
@@ -124,11 +148,13 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 
 ## Tests
 
-`backend/tests` (pytest, 34 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
+`backend/tests` (pytest, 39 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
 persistance après redémarrage, originaux inchangés par comparaison de hash), fichiers introuvables, suppression de
 projet ; calcul du cap (lignes droites, passage 359°/0°, arrêts, interruptions, précision sur sortie simulée) ;
 séquences et annuler/rétablir ; export (dossiers, EXIF relus, données image identiques, métadonnées GoPro/GPano
-conservées, ré-export, dossier étranger refusé).
+conservées, ré-export, dossier étranger refusé) ; positions (saisie, annuler, décalage, le long du trajet, saut
+corrigé utilisable, cap manuel « à revoir ») ; modification des sources sur place et par déplacement, puis
+restauration (balises d'origine, emplacement, données image identiques).
 
 Mesures (4 cœurs, photos 1024×512 simulées) : import de 5 002 photos en 7,7 s (EXIF + analyse), 12 s avec les
 miniatures ; ré-analyse 0,05 s ; export de 4 955 photos (2 séquences, copie + EXIF + relecture) en 19 s. À refaire sur de vraies photos GoPro MAX (5,6K, ~5 Mo).

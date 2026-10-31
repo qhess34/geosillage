@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config, db, importer, jobs, routes_edit
+from . import config, db, exporter, importer, jobs, routes_edit
 from .core import analysis, headings
 from .exif import reader
 
@@ -75,6 +75,8 @@ def project_get(pid: str):
             "source_dirs": [r[0] for r in conn.execute("SELECT path FROM source_dir ORDER BY added_at")],
             "summary": analysis.summary(conn),
             "headings": headings.stats(conn),
+            "sources": exporter.modified_sources(conn),
+            "corrected_positions": conn.execute("SELECT COUNT(*) FROM photo WHERE lat IS NOT NULL").fetchone()[0],
             "jobs": jobs.list_jobs(conn, 10),
         }
 
@@ -143,7 +145,7 @@ def job_cancel(pid: str, job_id: str):
 
 PHOTO_FIELDS = [
     "id", "idx", "ts", "lat", "lon", "lat_orig", "lon_orig", "flags", "thumb", "sequence_id", "rank", "is_360",
-    "heading", "heading_state", "heading_manual",
+    "heading", "heading_state", "heading_manual", "pos_method",
 ]
 
 
@@ -154,7 +156,7 @@ def photos_list(pid: str):
         rows = conn.execute(
             f"""SELECT p.id, p.idx, p.ts, COALESCE(p.lat, p.lat_orig), COALESCE(p.lon, p.lon_orig), p.lat_orig,
                       p.lon_orig, p.flags, p.thumb, p.sequence_id, p.rank, p.is_360,
-                      {headings.FINAL_SQL}, p.heading_auto_state, p.heading_manual
+                      {headings.FINAL_SQL}, p.heading_auto_state, p.heading_manual, p.pos_method
                FROM photo p LEFT JOIN sequence s ON s.id = p.sequence_id ORDER BY p.idx"""
         ).fetchall()
     return {"fields": PHOTO_FIELDS, "rows": [list(r) for r in rows], "flags": db.FLAG_NAMES}

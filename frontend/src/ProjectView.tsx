@@ -16,6 +16,15 @@ const JOB_LABELS: Record<string, string> = {
   export: 'Export',
 }
 
+const POS_LABELS: Record<string, string> = { manual: 'manuelle', offset: 'décalage', along: 'le long du trajet' }
+
+// Great-circle distance (display only)
+function distanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const r = Math.PI / 180
+  const a = Math.sin(((lat2 - lat1) * r) / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lon2 - lon1) * r) / 2) ** 2
+  return 2 * 6371008.8 * Math.asin(Math.sqrt(a))
+}
+
 const SHORTCUTS: [string, string][] = [
   ['← / →', 'Photo précédente / suivante (Maj : par 10)'],
   ['Début / Fin', 'Première / dernière photo'],
@@ -26,6 +35,7 @@ const SHORTCUTS: [string, string][] = [
   ['Suppr', 'Retirer la photo courante de sa séquence'],
   ['Échap', 'Effacer la plage'],
   ['[ / ]', 'Cap de la photo −1° / +1° (Maj : 5°)'],
+  ['M', 'Mode positions : glisser le marqueur violet, ou cliquer la carte pour placer une photo sans GPS'],
   ['Ctrl+Z / Ctrl+Y', 'Annuler / rétablir'],
   ['?', 'Cette aide'],
 ]
@@ -118,6 +128,31 @@ function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onErro
   const rangeOp = (mode: 'offset' | 'set' | 'clear') =>
     range &&
     api.headingRange(projectId, range[0], range[1], mode, Number(rangeValue) || 0).then((r) => onChanged(r.undo), (e) => onError(e.message))
+  const [latTyped, setLatTyped] = useState('')
+  const [lonTyped, setLonTyped] = useState('')
+  const [east, setEast] = useState('0')
+  const [north, setNorth] = useState('0')
+  const [along, setAlong] = useState('3')
+  useEffect(() => {
+    const la = photo.lat ?? photo.lat_orig
+    const lo = photo.lon ?? photo.lon_orig
+    setLatTyped(la != null ? la.toFixed(7) : '')
+    setLonTyped(lo != null ? lo.toFixed(7) : '')
+  }, [photo.id, photo.lat, photo.lon, photo.lat_orig, photo.lon_orig])
+  const setPos = (lat: number | null, lon: number | null) =>
+    api.setPosition(projectId, photo.id, lat, lon).then((r) => onChanged(r.undo), (e) => onError(e.message))
+  const batch = (mode: 'offset' | 'along' | 'revert') =>
+    range &&
+    api
+      .positionsBatch(projectId, {
+        start_idx: range[0],
+        end_idx: range[1],
+        mode,
+        east_m: Number(east) || 0,
+        north_m: Number(north) || 0,
+        meters: Number(along) || 0,
+      })
+      .then((r) => onChanged(r.undo), (e) => onError(e.message))
 
   return (
     <div className="photo-panel">
@@ -200,16 +235,78 @@ function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onErro
         </div>
       )}
 
+      <h3>Position</h3>
+      <div className="small-text position-box">
+        <div>
+          Originale : <span className="mono">{fmtCoord(photo.lat_orig, photo.lon_orig)}</span>
+        </div>
+        {photo.pos_method ? (
+          <div>
+            Corrigée : <span className="mono">{fmtCoord(photo.lat, photo.lon)}</span> <span className="badge">{POS_LABELS[photo.pos_method] ?? photo.pos_method}</span>{' '}
+            {photo.lat_orig != null && photo.lon != null && photo.lat != null && photo.lon_orig != null && (
+              <span className="muted">({fmtDistance(distanceM(photo.lat_orig, photo.lon_orig, photo.lat, photo.lon))})</span>
+            )}
+          </div>
+        ) : (
+          <div className="muted">Pas de correction. Touche M puis glisser le marqueur violet sur la carte.</div>
+        )}
+        <form
+          className="row"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const la = Number(latTyped.replace(',', '.'))
+            const lo = Number(lonTyped.replace(',', '.'))
+            if (latTyped && lonTyped && Number.isFinite(la) && Number.isFinite(lo)) setPos(la, lo)
+          }}
+        >
+          <input className="coord" value={latTyped} onChange={(e) => setLatTyped(e.target.value)} placeholder="latitude" aria-label="Latitude" />
+          <input className="coord" value={lonTyped} onChange={(e) => setLonTyped(e.target.value)} placeholder="longitude" aria-label="Longitude" />
+          <button className="small" type="submit">
+            OK
+          </button>
+        </form>
+        {photo.pos_method && (
+          <button className="small" onClick={() => setPos(null, null)}>
+            Revenir à la position d'origine
+          </button>
+        )}
+      </div>
+      {range && (
+        <div className="range-heading small-text">
+          <div>
+            Positions de la plage {range[0] + 1} → {range[1] + 1} :
+          </div>
+          <div className="row wrap">
+            <label>
+              E <input className="num" type="number" step="0.5" value={east} onChange={(e) => setEast(e.target.value)} /> m
+            </label>
+            <label>
+              N <input className="num" type="number" step="0.5" value={north} onChange={(e) => setNorth(e.target.value)} /> m
+            </label>
+            <button className="small" onClick={() => batch('offset')} title="Déplace toutes les photos de la plage du même vecteur">
+              Décaler
+            </button>
+          </div>
+          <div className="row wrap">
+            <label>
+              <input className="num" type="number" step="0.5" value={along} onChange={(e) => setAlong(e.target.value)} /> m
+            </label>
+            <button className="small" onClick={() => batch('along')} title="Avance (valeur positive) ou recule chaque photo dans son sens de déplacement">
+              Le long du trajet
+            </button>
+            <button className="small" onClick={() => batch('revert')}>
+              Positions d'origine
+            </button>
+          </div>
+        </div>
+      )}
+
       <h3>Informations</h3>
       <table className="summary">
         <tbody>
           <tr>
             <th>Date</th>
             <td>{photo.ts_text ?? '—'}</td>
-          </tr>
-          <tr>
-            <th>GPS</th>
-            <td className="mono">{fmtCoord(photo.lat_orig, photo.lon_orig)}</td>
           </tr>
           <tr>
             <th>Heure GPS</th>
@@ -290,6 +387,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [tab, setTab] = useState<Tab>('photo')
   const [showImport, setShowImport] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [custom, setCustom] = useState<Basemap[]>(loadCustomBasemaps)
@@ -435,6 +533,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         if (current?.sequence_id != null) api.splitSequence(projectId, current.sequence_id, current.id).then(applyState, (er) => setError(er.message))
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (current?.sequence_id != null) api.removePhotos(projectId, [current.id]).then(applyState, (er) => setError(er.message))
+      } else if (e.key === 'm' || e.key === 'M') {
+        setEditMode((v) => !v)
       } else if (e.key === 'Escape') {
         setRange(null)
       } else if (e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') {
@@ -500,6 +600,14 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? `Rétablir : ${undoState.redo} (Ctrl+Y)` : 'Rien à rétablir'}>
           ↷ Rétablir
         </button>
+        <button
+          className={editMode ? 'primary' : ''}
+          aria-pressed={editMode}
+          onClick={() => setEditMode(!editMode)}
+          title="Mode positions (M) : glisser le marqueur de la photo courante pour corriger sa position"
+        >
+          ✥ Positions
+        </button>
         <button onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
           Vérifier les fichiers
         </button>
@@ -525,10 +633,21 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       )}
       <main className="main" style={{ gridTemplateColumns: `1fr 6px ${panelWidth}px` }}>
         <div className="center">
-          <PhotoMap photos={photos} sequences={sequences} basemap={basemap} selectedId={selected} range={range} onSelect={(id, extend) => {
-            const p = photos.find((x) => x.id === id)
-            if (p) goIdx(p.idx, extend)
-          }} />
+          <PhotoMap
+            photos={photos}
+            sequences={sequences}
+            basemap={basemap}
+            selectedId={selected}
+            range={range}
+            editMode={editMode}
+            onSelect={(id, extend) => {
+              const p = photos.find((x) => x.id === id)
+              if (p) goIdx(p.idx, extend)
+            }}
+            onMove={(id, lat, lon) =>
+              api.setPosition(projectId, id, lat, lon).then((r) => afterHeadingChange(r.undo), (er) => setError(er.message))
+            }
+          />
           <Timeline photos={photos} sequences={sequences} selectedIdx={current?.idx ?? null} range={range} onPick={goIdx} />
         </div>
         <div className="resizer" onMouseDown={startResize} title="Redimensionner" />
@@ -568,7 +687,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onError={fail}
               />
             )}
-            {tab === 'export' && <ExportTab projectId={projectId} sequences={sequences} jobs={project.jobs} onStarted={refresh} onError={fail} />}
+            {tab === 'export' && (
+              <ExportTab projectId={projectId} sequences={sequences} jobs={project.jobs} sources={project.sources} onStarted={refresh} onError={fail} />
+            )}
             {tab === 'summary' && (
               <>
                 <Summary p={project} />

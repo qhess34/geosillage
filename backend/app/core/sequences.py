@@ -34,7 +34,8 @@ def _eligible(conn, start_idx: int, end_idx: int, allow_sid=None) -> tuple[list[
     if start_idx > end_idx:
         start_idx, end_idx = end_idx, start_idx
     rows = conn.execute(
-        "SELECT id, flags, sequence_id FROM photo WHERE idx BETWEEN ? AND ? ORDER BY idx", (start_idx, end_idx)
+        f"SELECT p.id, {db.EFF_FLAGS_SQL} flags, p.sequence_id FROM photo p WHERE p.idx BETWEEN ? AND ? ORDER BY p.idx",
+        (start_idx, end_idx),
     ).fetchall()
     ids, excluded, conflicts = [], 0, set()
     for r in rows:
@@ -165,8 +166,9 @@ def propose_cuts(conn, gap_s: float | None = None, max_dist_m: float = 100.0, mi
     s = db.get_settings(conn)
     gap_s = gap_s if gap_s is not None else s["gap_seconds"]
     rows = conn.execute(
-        f"""SELECT id, idx, ts, COALESCE(lat, lat_orig) lat, COALESCE(lon, lon_orig) lon, flags, sequence_id
-            FROM photo WHERE flags & ? = 0 ORDER BY idx""",
+        f"""SELECT p.id, p.idx, p.ts, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon,
+                   {db.EFF_FLAGS_SQL} flags, p.sequence_id
+            FROM photo p WHERE {db.EFF_FLAGS_SQL} & ? = 0 ORDER BY p.idx""",
         (EXCLUDED,),
     ).fetchall()
     segments: list[dict] = []
@@ -206,8 +208,9 @@ def list_with_stats(conn) -> list[dict]:
     out = []
     for s in seqs:
         pts = conn.execute(
-            """SELECT idx, ts, COALESCE(lat, lat_orig) lat, COALESCE(lon, lon_orig) lon, flags
-               FROM photo WHERE sequence_id=? ORDER BY idx""",
+            f"""SELECT p.idx, p.ts, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon,
+                      {db.EFF_FLAGS_SQL} flags, p.lat IS NOT NULL corrected
+               FROM photo p WHERE p.sequence_id=? ORDER BY p.idx""",
             (s["id"],),
         ).fetchall()
         if not pts:
@@ -229,6 +232,7 @@ def list_with_stats(conn) -> list[dict]:
                 "distance_m": round(geo.path_length(track), 1),
                 "anomalies": anomalies,
                 "gps_jumps": jumps,
+                "corrected": sum(1 for p in pts if p["corrected"]),
                 "headings": headings.stats(conn, s["id"]),
             }
         )

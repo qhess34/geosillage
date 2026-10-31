@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from . import db, exporter, jobs, undo
-from .core import headings, sequences
+from .core import headings, positions, sequences
 
 router = APIRouter(prefix="/api/projects/{pid}")
 
@@ -217,36 +217,135 @@ def heading_range(pid: str, body: HeadingRangeIn):
         return {"changed": len(rows) - skipped, "skipped": skipped, "undo": undo.state(conn)}
 
 
+# ---- Positions ----
+
+
+class PositionIn(BaseModel):
+    lat: float | None = Field(default=None, ge=-90, le=90)  # None (both) = back to the original position
+    lon: float | None = Field(default=None, ge=-180, le=180)
+
+
+class PositionsBatchIn(BaseModel):
+    photo_ids: list[int] | None = None
+    start_idx: int | None = None  # or an index range
+    end_idx: int | None = None
+    mode: str = Field(pattern="^(offset|along|revert)$")
+    east_m: float = Field(default=0.0, ge=-1000, le=1000)
+    north_m: float = Field(default=0.0, ge=-1000, le=1000)
+    meters: float = Field(default=0.0, ge=-1000, le=1000)
+
+
+def _pos_errors(fn):
+    try:
+        return fn()
+    except positions.PositionError as e:
+        raise HTTPException(409, str(e))
+
+
+@router.put("/photos/{photo_id}/position")
+def position_set(pid: str, photo_id: int, body: PositionIn):
+    with db.open_project(pid) as conn:
+        if (body.lat is None) != (body.lon is None):
+            raise HTTPException(400, "Latitude et longitude vont ensemble")
+        label = "Position corrigée" if body.lat is not None else "Retour à la position d'origine"
+        with undo.undoable(conn, label):
+            if body.lat is None:
+                positions.revert(conn, [photo_id])
+            else:
+                _pos_errors(lambda: positions.set_position(conn, photo_id, body.lat, body.lon))
+        headings.recompute(conn, mark_stale_ids={photo_id})
+        return {"undo": undo.state(conn)}
+
+
+@router.post("/positions/batch")
+def positions_batch(pid: str, body: PositionsBatchIn):
+    with db.open_project(pid) as conn:
+        if body.photo_ids:
+            ids = body.photo_ids
+        elif body.start_idx is not None and body.end_idx is not None:
+            ids = positions.ids_in_range(conn, body.start_idx, body.end_idx)
+        else:
+            raise HTTPException(400, "Indiquez des photos ou une plage")
+        labels = {
+            "offset": f"Décalage de {len(ids)} positions ({body.east_m:+g} m E, {body.north_m:+g} m N)",
+            "along": f"Déplacement de {len(ids)} positions de {body.meters:+g} m le long du trajet",
+            "revert": f"Positions d'origine pour {len(ids)} photos",
+        }
+        skipped = 0
+        with undo.undoable(conn, labels[body.mode]):
+            if body.mode == "offset":
+                changed = _pos_errors(lambda: positions.offset(conn, ids, body.east_m, body.north_m))
+            elif body.mode == "along":
+                changed, skipped = _pos_errors(lambda: positions.along(conn, ids, body.meters))
+            else:
+                changed = positions.revert(conn, ids)
+        headings.recompute(conn, mark_stale_ids=set(ids))
+        return {"changed": changed, "skipped": skipped, "undo": undo.state(conn)}
+
+
 # ---- Export ----
 
 
 class ExportIn(BaseModel):
-    out_dir: str = Field(min_length=1)
+    out_dir: str | None = None  # not used by in_place
     sequence_ids: list[int] | None = None
     panoramax_compat: bool = True
     exclude_gps_jumps: bool = True
+    # copy: copies (originals untouched); move / in_place: the source photos themselves are modified
+    mode: str = Field(default="copy", pattern="^(copy|move|in_place)$")
+
+
+def _running(pid: str, kinds: set[str]) -> bool:
+    with db.open_project(pid) as conn:
+        return any(j["state"] == "running" and j["kind"] in kinds for j in jobs.list_jobs(conn, 20))
 
 
 @router.post("/export", status_code=202)
 def export_start(pid: str, body: ExportIn):
-    out = Path(os.path.expanduser(body.out_dir)).resolve()
+    out = None
+    if body.mode != "in_place":
+        if not body.out_dir or not body.out_dir.strip():
+            raise HTTPException(400, "Dossier de destination manquant")
+        out = Path(os.path.expanduser(body.out_dir)).resolve()
+        if out.exists() and not out.is_dir():
+            raise HTTPException(400, "Le chemin d'export n'est pas un dossier")
     with db.open_project(pid) as conn:
-        for (src,) in conn.execute("SELECT path FROM source_dir"):
-            src = Path(src).resolve()
-            if out == src or src in out.parents:
-                raise HTTPException(400, f"Le dossier d'export ne doit pas être dans un dossier source ({src})")
+        if body.mode == "copy":
+            # Copies inside a source folder would be imported again as new photos
+            for (src,) in conn.execute("SELECT path FROM source_dir"):
+                src = Path(src).resolve()
+                if out == src or src in out.parents:
+                    raise HTTPException(400, f"Le dossier d'export ne doit pas être dans un dossier source ({src})")
         if not conn.execute("SELECT 1 FROM sequence LIMIT 1").fetchone():
             raise HTTPException(400, "Aucune séquence à exporter")
-    if out.exists() and not out.is_dir():
-        raise HTTPException(400, "Le chemin d'export n'est pas un dossier")
+    if _running(pid, {"export", "restore_sources", "import"}):
+        raise HTTPException(409, "Une autre tâche sur les fichiers est en cours")
 
     def task(ctx):
-        exporter.run(ctx, str(out), body.sequence_ids, body.panoramax_compat, body.exclude_gps_jumps)
+        exporter.run(ctx, str(out) if out else None, body.sequence_ids, body.panoramax_compat, body.exclude_gps_jumps, body.mode)
 
-    return {"job_id": jobs.start(pid, "export", task, unique=False), "out_dir": str(out)}
+    return {"job_id": jobs.start(pid, "export", task, unique=False), "out_dir": str(out) if out else None}
 
 
 @router.get("/exports")
 def export_list(pid: str):
     with db.open_project(pid) as conn:
         return exporter.list_exports(conn)
+
+
+@router.get("/sources")
+def sources_state(pid: str):
+    """How many source photos were modified / moved by the application."""
+    with db.open_project(pid) as conn:
+        return exporter.modified_sources(conn)
+
+
+@router.post("/sources/restore", status_code=202)
+def sources_restore(pid: str):
+    with db.open_project(pid) as conn:
+        state = exporter.modified_sources(conn)
+    if not state["modified"] and not state["moved"]:
+        raise HTTPException(400, "Aucune photo source modifiée")
+    if _running(pid, {"export", "restore_sources", "import"}):
+        raise HTTPException(409, "Une autre tâche sur les fichiers est en cours")
+    return {"job_id": jobs.start(pid, "restore_sources", exporter.restore_sources)}

@@ -49,8 +49,17 @@ export interface Project {
   source_dirs: string[]
   summary: Summary
   headings: HeadingStats
+  sources: SourcesState
+  corrected_positions: number
   jobs: Job[]
 }
+
+export interface SourcesState {
+  modified: number
+  moved: number
+}
+
+export type ExportMode = 'copy' | 'move' | 'in_place'
 
 // Column arrays as sent by /photos (compact for 10k+ photos)
 export interface PhotoRow {
@@ -69,6 +78,7 @@ export interface PhotoRow {
   heading: number | null // final heading
   heading_state: string | null
   heading_manual: number | null
+  pos_method: string | null // corrected position method, null = original
 }
 
 export interface PhotoDetail extends PhotoRow {
@@ -91,6 +101,8 @@ export interface PhotoDetail extends PhotoRow {
   heading_stale: number
   sequence_offset: number
   heading_final: number | null
+  moved_from: string | null
+  source_written_at: number | null
   flag_names: string[]
 }
 
@@ -117,6 +129,7 @@ export interface Sequence {
   distance_m: number
   anomalies: number
   gps_jumps: number
+  corrected: number
   headings: HeadingStats
 }
 
@@ -149,6 +162,8 @@ export interface ExportRecord {
     without_heading: string[]
     corrected_positions: number
     excluded_gps_jumps?: string[]
+    foreign_files?: string[]
+    mode?: ExportMode
     problems: Record<string, string>
     panoramax_compat: boolean
   }
@@ -225,8 +240,28 @@ export const api = {
       value,
     }),
   recomputeHeadings: (id: string) => req<HeadingStats>('POST', `/api/projects/${id}/headings/recompute`),
-  exportSequences: (id: string, out_dir: string, sequence_ids: number[] | null, panoramax_compat: boolean, exclude_gps_jumps: boolean) =>
-    req<{ job_id: string; out_dir: string }>('POST', `/api/projects/${id}/export`, { out_dir, sequence_ids, panoramax_compat, exclude_gps_jumps }),
+  exportSequences: (
+    id: string,
+    out_dir: string | null,
+    sequence_ids: number[] | null,
+    panoramax_compat: boolean,
+    exclude_gps_jumps: boolean,
+    mode: ExportMode,
+  ) =>
+    req<{ job_id: string; out_dir: string | null }>('POST', `/api/projects/${id}/export`, {
+      out_dir,
+      sequence_ids,
+      panoramax_compat,
+      exclude_gps_jumps,
+      mode,
+    }),
+  restoreSources: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/sources/restore`),
+  setPosition: (id: string, photo: number, lat: number | null, lon: number | null) =>
+    req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/position`, lat == null ? {} : { lat, lon }),
+  positionsBatch: (
+    id: string,
+    body: { start_idx: number; end_idx: number; mode: 'offset' | 'along' | 'revert'; east_m?: number; north_m?: number; meters?: number },
+  ) => req<{ changed: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/positions/batch`, body),
   exports: (id: string) => req<ExportRecord[]>('GET', `/api/projects/${id}/exports`),
   thumbUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/thumb`,
   imageUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/image`,

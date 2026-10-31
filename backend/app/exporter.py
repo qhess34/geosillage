@@ -1,12 +1,19 @@
-"""Export: one folder per sequence, containing copies of the photos with corrected EXIF.
+"""Export of the sequences, with corrected EXIF (heading, and position when corrected).
 
-<out_dir>/<NN>_<sequence name>/<rank>_<original file name>.jpg
+Three modes:
 
-- The original files are only read (copied); tags are written on the copies with ExifTool,
-  without re-encoding the image data.
-- Every written file is read back to verify heading and position.
-- Each folder gets `.pss-export.json` (marker: a later export of the same project may replace the folder)
-  and `photos.csv` (original path, position, heading and their origin).
+- ``copy`` (default, originals untouched): <out_dir>/<NN>_<sequence>/<n>_<file name>.jpg are copies.
+- ``move`` (user's choice): the *source photos* are moved into <out_dir>/<NN>_<sequence>/ and their EXIF
+  are modified in place. photo.path follows the file; photo.moved_from keeps the very first path.
+- ``in_place`` (user's choice): the source photos keep their place and their EXIF are modified.
+
+In every mode ExifTool only rewrites metadata: the image data is never re-encoded. Every written file is
+read back to verify heading and position. Before the first modification of a source photo, the current
+values of the tags we write are saved in photo.orig_tags; `restore_sources` puts them back and moves files
+back to their original place.
+
+Each sequence folder gets `.pss-export.json` (marker: a later export of the same project may reuse the
+folder) and `photos.csv` (source path, position, heading and their origin).
 """
 
 import csv
@@ -25,6 +32,7 @@ from .exif import reader, writer
 
 MARKER = ".pss-export.json"
 BATCH = 200
+MODES = ("copy", "move", "in_place")
 
 
 class ExportError(jobs.UserError):
@@ -37,8 +45,15 @@ def slug(name: str) -> str:
     return s[:60] or "sequence"
 
 
-def _prepare_dir(path: Path, project_id: str) -> None:
-    """Create the folder; an existing one is only reused if it is a previous export of this project."""
+def _project_paths(conn) -> set[str]:
+    return {r[0] for r in conn.execute("SELECT path FROM photo")}
+
+
+def _prepare_dir(path: Path, project_id: str, protected: set[str]) -> None:
+    """Create the folder; an existing one is only reused if it is a previous export of this project.
+
+    Files listed by a previous *copy* export are deleted, but never a file that is a project photo
+    (after a move export the folder holds the user's photos)."""
     if path.exists():
         marker = path / MARKER
         if not marker.exists():
@@ -48,12 +63,14 @@ def _prepare_dir(path: Path, project_id: str) -> None:
             info = json.loads(marker.read_text())
             if info.get("project_id") != project_id:
                 raise ExportError(f"Le dossier {path} contient l'export d'un autre projet")
-            for f in info.get("files", []):
-                p = path / f
-                if p.is_file():
-                    p.unlink()
+            if info.get("mode", "copy") == "copy":
+                for f in info.get("files", []):
+                    p = path / f
+                    if p.is_file() and str(p) not in protected:
+                        p.unlink()
             for leftover in path.glob("*.tmp"):
-                leftover.unlink()
+                if str(leftover) not in protected:
+                    leftover.unlink()
     path.mkdir(parents=True, exist_ok=True)
 
 
@@ -68,7 +85,8 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
     for s in seqs:
         photos = conn.execute(
             f"""SELECT p.id, p.rank, p.path, p.filename, p.flags, p.lat, p.lon, p.lat_orig, p.lon_orig, p.pos_method,
-                       p.heading_auto, p.heading_auto_state, p.heading_manual, {headings.FINAL_SQL} AS heading
+                       p.heading_auto, p.heading_auto_state, p.heading_manual, p.orig_tags, p.moved_from,
+                       {headings.FINAL_SQL} AS heading
                 FROM photo p JOIN sequence s ON s.id = p.sequence_id
                 WHERE p.sequence_id=? ORDER BY p.rank""",
             (s["id"],),
@@ -77,13 +95,59 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
     return out
 
 
-def run(ctx: jobs.JobContext, out_dir: str, sequence_ids: list[int] | None, panoramax_compat: bool, exclude_jumps: bool = True) -> None:
+def _save_orig_tags(pid: str, items: list[dict]) -> None:
+    """Before modifying source photos: save the current values of the tags we write (first time only)."""
+    todo = [it for it in items if it["orig_tags"] is None]
+    for i in range(0, len(todo), BATCH):
+        part = todo[i : i + BATCH]
+        tags = writer.read_tags([it["path"] for it in part])
+        with db.open_project(pid) as conn, db.transaction(conn):
+            for it in part:
+                it["orig_tags"] = json.dumps(tags[it["path"]])
+                conn.execute("UPDATE photo SET orig_tags=? WHERE id=? AND orig_tags IS NULL", (it["orig_tags"], it["id"]))
+
+
+def _move_files(pid: str, items: list[dict]) -> None:
+    """Move source photos to their destination; two passes through temporary names so that renumbering
+    inside a folder never overwrites a file. photo.path is updated after every rename."""
+    todo = [it for it in items if os.path.abspath(it["path"]) != os.path.abspath(it["dest"])]
+    for it in todo:
+        if os.path.exists(it["dest"]) and it["dest"] not in {x["path"] for x in todo}:
+            raise ExportError(f"Un fichier existe déjà : {it['dest']}")
+    with db.open_project(pid) as conn:
+        for phase in ("tmp", "final"):
+            with db.transaction(conn):
+                for it in todo:
+                    src = it["path"]
+                    dst = str(Path(it["dest"]).parent / f".pss-move-{it['id']}.tmp") if phase == "tmp" else it["dest"]
+                    shutil.move(src, dst)
+                    if it["moved_from"] is None:
+                        it["moved_from"] = src
+                        conn.execute("UPDATE photo SET moved_from=? WHERE id=? AND moved_from IS NULL", (src, it["id"]))
+                    conn.execute("UPDATE photo SET path=? WHERE id=?", (dst, it["id"]))
+                    it["path"] = dst
+
+
+def run(
+    ctx: jobs.JobContext,
+    out_dir: str | None,
+    sequence_ids: list[int] | None,
+    panoramax_compat: bool,
+    exclude_jumps: bool = True,
+    mode: str = "copy",
+) -> None:
     """exclude_jumps: photos flagged as GPS jumps are left out (their position is wrong until corrected)."""
+    if mode not in MODES:
+        raise ExportError(f"Mode inconnu : {mode}")
     pid = ctx.project_id
-    out = Path(os.path.expanduser(out_dir)).resolve()
+    on_source = mode != "copy"
+    out = Path(os.path.expanduser(out_dir)).resolve() if out_dir else None
+    if out is None and mode != "in_place":
+        raise ExportError("Dossier de destination manquant")
     with db.open_project(pid) as conn:
         headings.recompute(conn)
         work = plan(conn, sequence_ids)
+        protected = _project_paths(conn)
     if not work:
         raise ExportError("Aucune séquence à exporter")
     for s in work:
@@ -94,41 +158,50 @@ def run(ctx: jobs.JobContext, out_dir: str, sequence_ids: list[int] | None, pano
     total = sum(len(s["photos"]) for s in work)
     done = 0
     ctx.progress(0, total, "Préparation de l'export…", force=True)
-    # Refuse before copying anything if a destination folder is not ours
-    for s in work:
-        _prepare_dir(out / s["dir"], pid)
+    if out is not None:
+        # Refuse before touching anything if a destination folder is not ours
+        for s in work:
+            _prepare_dir(out / s["dir"], pid, protected)
 
     results = []
     for s in work:
         ctx.check()
-        d = out / s["dir"]
+        d = out / s["dir"] if out is not None else None
         width = max(4, len(str(len(s["photos"]))))
         items = []
         for n, p in enumerate(s["photos"], 1):
             if not os.path.exists(p["path"]):
                 raise ExportError(f"Fichier source introuvable : {p['path']}")
-            name = f"{n:0{width}d}_{p['filename']}"  # continuous numbering keeps the order by name
+            original_name = os.path.basename(p["moved_from"] or p["path"])
+            name = f"{n:0{width}d}_{original_name}"  # continuous numbering keeps the order by name
             corrected = p["lat"] is not None and p["lon"] is not None
             items.append(
                 {
                     **p,
-                    "dest": str(d / name),
-                    "name": name,
+                    "dest": str(d / name) if d is not None else p["path"],
+                    "name": name if d is not None else os.path.basename(p["path"]),
                     "write_lat": p["lat"] if corrected else None,
                     "write_lon": p["lon"] if corrected else None,
                 }
             )
 
+        if on_source:
+            ctx.progress(done, total, f"Sauvegarde des métadonnées d'origine (« {s['name']} »)", force=True)
+            _save_orig_tags(pid, items)
+        if mode == "move":
+            ctx.progress(done, total, f"Déplacement des photos de « {s['name']} »", force=True)
+            _move_files(pid, items)
+
         def do_batch(batch):
             ctx.check()
-            for it in batch:
-                tmp = it["dest"] + ".tmp"
-                shutil.copyfile(it["path"], tmp)
-                shutil.copystat(it["path"], tmp)
-                os.replace(tmp, it["dest"])
+            if mode == "copy":
+                for it in batch:
+                    tmp = it["dest"] + ".tmp"
+                    shutil.copyfile(it["path"], tmp)
+                    shutil.copystat(it["path"], tmp)
+                    os.replace(tmp, it["dest"])
             edits = [writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"]) for it in batch]
-            errors = writer.write_batch(edits, panoramax_compat)
-            # Verify by reading back
+            errors = writer.write_batch(edits, panoramax_compat, on_source=on_source)
             check = {m.path: m for m in reader.read_batch([it["dest"] for it in batch])}
             problems = dict(errors)
             for it in batch:
@@ -144,6 +217,12 @@ def run(ctx: jobs.JobContext, out_dir: str, sequence_ids: list[int] | None, pano
                     m.lat is None or abs(m.lat - it["write_lat"]) > 1e-7 or abs(m.lon - it["write_lon"]) > 1e-7
                 ):
                     problems[it["dest"]] = "position relue différente"
+            if on_source:
+                with db.open_project(pid) as conn:
+                    conn.executemany(
+                        "UPDATE photo SET source_written_at=? WHERE id=?",
+                        [(time.time(), it["id"]) for it in batch if it["dest"] not in problems],
+                    )
             return len(batch), problems
 
         problems: dict[str, str] = {}
@@ -154,46 +233,118 @@ def run(ctx: jobs.JobContext, out_dir: str, sequence_ids: list[int] | None, pano
                 done += n
                 ctx.progress(done, total, f"Export de « {s['name']} »")
 
-        with open(d / "photos.csv", "w", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            w.writerow(["fichier", "source", "latitude", "longitude", "position", "cap", "origine_cap"])
-            for it in items:
-                lat = it["lat"] if it["lat"] is not None else it["lat_orig"]
-                lon = it["lon"] if it["lon"] is not None else it["lon_orig"]
-                origin = (
-                    "manuel" if it["heading_manual"] is not None
-                    else "calculé" if it["heading"] is not None
-                    else "aucun (" + (it["heading_auto_state"] or "missing") + ")"
-                )
-                w.writerow([
-                    it["name"], it["path"], f"{lat:.8f}", f"{lon:.8f}",
-                    it["pos_method"] or ("corrigée" if it["write_lat"] is not None else "originale"),
-                    "" if it["heading"] is None else writer.heading_value(it["heading"], panoramax_compat),
-                    origin,
-                ])
+        foreign = []
+        if d is not None:
+            names = {it["name"] for it in items}
+            foreign = sorted(f.name for f in d.iterdir() if f.suffix.lower() in (".jpg", ".jpeg") and f.name not in names)
+            _write_csv(d / "photos.csv", items, panoramax_compat)
         report = {
             "count": len(items),
             "with_heading": sum(1 for it in items if it["heading"] is not None),
             "without_heading": [it["name"] for it in items if it["heading"] is None],
             "corrected_positions": sum(1 for it in items if it["write_lat"] is not None),
             "excluded_gps_jumps": s["excluded"],
+            "foreign_files": foreign,
             "problems": problems,
             "panoramax_compat": panoramax_compat,
+            "mode": mode,
         }
-        (d / MARKER).write_text(
-            json.dumps({"project_id": pid, "sequence_id": s["id"], "exported_at": time.time(), "files": [it["name"] for it in items] + ["photos.csv"], "report": report}, ensure_ascii=False, indent=1)
-        )
+        if d is not None:
+            files = [it["name"] for it in items] + ["photos.csv"]
+            (d / MARKER).write_text(
+                json.dumps({"project_id": pid, "sequence_id": s["id"], "mode": mode, "exported_at": time.time(), "files": files, "report": report}, ensure_ascii=False, indent=1)
+            )
         with db.open_project(pid) as conn:
             conn.execute(
-                "INSERT INTO export(ts, sequence_id, sequence_name, path, photo_count, report) VALUES(?, ?, ?, ?, ?, ?)",
-                (time.time(), s["id"], s["name"], str(d), len(items), json.dumps(report, ensure_ascii=False)),
+                "INSERT INTO export(ts, sequence_id, sequence_name, path, photo_count, report, mode) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                (time.time(), s["id"], s["name"], str(d) if d is not None else "(photos sources, sur place)", len(items), json.dumps(report, ensure_ascii=False), mode),
             )
         results.append((s["name"], len(problems)))
 
     bad = sum(n for _, n in results)
-    ctx.progress(total, total, f"{len(results)} séquence(s) exportée(s) dans {out}" + (f" — {bad} problème(s)" if bad else ""), force=True)
+    where = f" dans {out}" if out is not None else " (sur place)"
+    ctx.progress(total, total, f"{len(results)} séquence(s) exportée(s){where}" + (f" — {bad} problème(s)" if bad else ""), force=True)
     if bad:
         raise ExportError(f"{bad} fichier(s) en échec de vérification (voir l'historique des exports)")
+
+
+def _write_csv(path: Path, items: list[dict], panoramax_compat: bool) -> None:
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["fichier", "source", "latitude", "longitude", "position", "cap", "origine_cap"])
+        for it in items:
+            lat = it["lat"] if it["lat"] is not None else it["lat_orig"]
+            lon = it["lon"] if it["lon"] is not None else it["lon_orig"]
+            origin = (
+                "manuel" if it["heading_manual"] is not None
+                else "calculé" if it["heading"] is not None
+                else "aucun (" + (it["heading_auto_state"] or "missing") + ")"
+            )
+            w.writerow([
+                it["name"], it["moved_from"] or it["path"],
+                "" if lat is None else f"{lat:.8f}", "" if lon is None else f"{lon:.8f}",
+                it["pos_method"] or "originale",
+                "" if it["heading"] is None else writer.heading_value(it["heading"], panoramax_compat),
+                origin,
+            ])
+
+
+def modified_sources(conn) -> dict:
+    r = conn.execute(
+        "SELECT SUM(orig_tags IS NOT NULL AND source_written_at IS NOT NULL), SUM(moved_from IS NOT NULL) FROM photo"
+    ).fetchone()
+    return {"modified": r[0] or 0, "moved": r[1] or 0}
+
+
+def restore_sources(ctx: jobs.JobContext) -> None:
+    """Put back the saved tag values in the source photos and move them back to their original place."""
+    pid = ctx.project_id
+    with db.open_project(pid) as conn:
+        rows = [dict(r) for r in conn.execute(
+            "SELECT id, path, orig_tags, moved_from FROM photo WHERE orig_tags IS NOT NULL OR moved_from IS NOT NULL ORDER BY idx"
+        )]
+    total = len(rows)
+    ctx.progress(0, total, "Restauration des photos sources…", force=True)
+    problems: dict[str, str] = {}
+    done = 0
+    for i in range(0, total, BATCH):
+        ctx.check()
+        part = rows[i : i + BATCH]
+        missing = [r for r in part if not os.path.exists(r["path"])]
+        for r in missing:
+            problems[r["path"]] = "fichier introuvable"
+        part = [r for r in part if os.path.exists(r["path"])]
+        tagged = [r for r in part if r["orig_tags"]]
+        errors = writer.run_batch([(r["path"], writer.restore_args(json.loads(r["orig_tags"]))) for r in tagged], on_source=True)
+        problems.update(errors)
+        # Verify: the written tags are back to their saved values
+        now = writer.read_tags([r["path"] for r in tagged]) if tagged else {}
+        for r in tagged:
+            want = json.loads(r["orig_tags"])
+            got = now.get(r["path"], {})
+            for k in set(want) | set(got):
+                a, b = want.get(k), got.get(k)
+                if not (a == b or (isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) < 1e-6)):
+                    problems[r["path"]] = f"{k} : {b} au lieu de {a}"
+        with db.open_project(pid) as conn, db.transaction(conn):
+            for r in part:
+                if r["path"] in problems:
+                    continue
+                if r["orig_tags"]:
+                    conn.execute("UPDATE photo SET orig_tags=NULL, source_written_at=NULL WHERE id=?", (r["id"],))
+                if r["moved_from"]:
+                    if os.path.exists(r["moved_from"]):
+                        problems[r["path"]] = f"impossible de remettre en place : {r['moved_from']} existe déjà"
+                        continue
+                    os.makedirs(os.path.dirname(r["moved_from"]), exist_ok=True)
+                    shutil.move(r["path"], r["moved_from"])
+                    conn.execute("UPDATE photo SET path=?, moved_from=NULL WHERE id=?", (r["moved_from"], r["id"]))
+        done += len(part) + len(missing)
+        ctx.progress(done, total)
+    ctx.progress(total, total, f"{total - len(problems)} photo(s) restaurée(s)" + (f", {len(problems)} en échec" if problems else ""), force=True)
+    if problems:
+        first = next(iter(problems.items()))
+        raise ExportError(f"{len(problems)} photo(s) non restaurée(s), par ex. {first[0]} : {first[1]}")
 
 
 def list_exports(conn, limit=50) -> list[dict]:
