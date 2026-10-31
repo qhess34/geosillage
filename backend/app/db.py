@@ -75,6 +75,32 @@ MIGRATIONS = [
         message TEXT, created_at REAL NOT NULL, updated_at REAL NOT NULL
     );
     """,
+    """
+    CREATE TABLE sequence(
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        heading_offset REAL NOT NULL DEFAULT 0,   -- degrees added to computed headings
+        created_at REAL NOT NULL
+    );
+    CREATE INDEX photo_seq ON photo(sequence_id, rank);
+    -- Undo/redo journal: rows changed by an operation (before/after values) + sequence table snapshots
+    CREATE TABLE op_log(
+        id INTEGER PRIMARY KEY,
+        ts REAL NOT NULL,
+        label TEXT NOT NULL,
+        data TEXT NOT NULL,
+        undone INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE export(
+        id INTEGER PRIMARY KEY,
+        ts REAL NOT NULL,
+        sequence_id INTEGER,
+        sequence_name TEXT NOT NULL,
+        path TEXT NOT NULL,
+        photo_count INTEGER NOT NULL,
+        report TEXT NOT NULL
+    );
+    """,
 ]
 
 

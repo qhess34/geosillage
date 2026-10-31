@@ -48,6 +48,7 @@ export interface Project {
   settings: Record<string, number>
   source_dirs: string[]
   summary: Summary
+  headings: HeadingStats
   jobs: Job[]
 }
 
@@ -63,7 +64,11 @@ export interface PhotoRow {
   flags: number
   thumb: number
   sequence_id: number | null
+  rank: number | null
   is_360: number
+  heading: number | null // final heading
+  heading_state: string | null
+  heading_manual: number | null
 }
 
 export interface PhotoDetail extends PhotoRow {
@@ -81,7 +86,72 @@ export interface PhotoDetail extends PhotoRow {
   width: number | null
   height: number | null
   projection: string | null
+  heading_auto: number | null
+  heading_auto_state: string | null
+  heading_stale: number
+  sequence_offset: number
+  heading_final: number | null
   flag_names: string[]
+}
+
+export interface HeadingStats {
+  total: number
+  manual: number
+  computed: number
+  uncertain: number
+  missing: number
+  stale: number
+  with_heading_pct: number
+}
+
+export interface Sequence {
+  id: number
+  name: string
+  heading_offset: number
+  count: number
+  start_idx: number
+  end_idx: number
+  start: number
+  end: number
+  duration_s: number
+  distance_m: number
+  anomalies: number
+  gps_jumps: number
+  headings: HeadingStats
+}
+
+export interface UndoState {
+  undo: string | null
+  redo: string | null
+}
+
+export interface SeqState {
+  sequences: Sequence[]
+  undo: UndoState
+}
+
+export interface Proposal {
+  start_idx: number
+  end_idx: number
+  count: number
+  reason: string
+}
+
+export interface ExportRecord {
+  id: number
+  ts: number
+  sequence_name: string
+  path: string
+  photo_count: number
+  report: {
+    count: number
+    with_heading: number
+    without_heading: string[]
+    corrected_positions: number
+    excluded_gps_jumps?: string[]
+    problems: Record<string, string>
+    panoramax_compat: boolean
+  }
 }
 
 export interface FsListing {
@@ -127,6 +197,37 @@ export const api = {
   photo: (id: string, photo: number) => req<PhotoDetail>('GET', `/api/projects/${id}/photos/${photo}`),
   exif: (id: string, photo: number) => req<Record<string, unknown>>('GET', `/api/projects/${id}/photos/${photo}/exif`),
   fs: (path: string) => req<FsListing>('GET', `/api/fs?path=${encodeURIComponent(path)}`),
+  sequences: (id: string) => req<SeqState>('GET', `/api/projects/${id}/sequences`),
+  createSequence: (id: string, start_idx: number, end_idx: number) =>
+    req<SeqState & { excluded: number }>('POST', `/api/projects/${id}/sequences`, { start_idx, end_idx }),
+  createSequences: (id: string, segments: [number, number][]) =>
+    req<SeqState>('POST', `/api/projects/${id}/sequences/bulk`, { segments }),
+  proposals: (id: string, gap_s: number, max_dist_m: number, min_photos: number) =>
+    req<Proposal[]>('GET', `/api/projects/${id}/sequences/proposals?gap_s=${gap_s}&max_dist_m=${max_dist_m}&min_photos=${min_photos}`),
+  updateSequence: (id: string, sid: number, body: { name?: string; heading_offset?: number }) =>
+    req<SeqState>('PATCH', `/api/projects/${id}/sequences/${sid}`, body),
+  setBounds: (id: string, sid: number, start_idx: number, end_idx: number) =>
+    req<SeqState>('PUT', `/api/projects/${id}/sequences/${sid}/bounds`, { start_idx, end_idx }),
+  deleteSequence: (id: string, sid: number) => req<SeqState>('DELETE', `/api/projects/${id}/sequences/${sid}`),
+  splitSequence: (id: string, sid: number, photo: number) =>
+    req<SeqState>('POST', `/api/projects/${id}/sequences/${sid}/split?photo_id=${photo}`),
+  mergeSequences: (id: string, ids: number[]) => req<SeqState>('POST', `/api/projects/${id}/sequences/merge`, { ids }),
+  removePhotos: (id: string, ids: number[]) => req<SeqState>('POST', `/api/projects/${id}/sequences/remove-photos`, { ids }),
+  undo: (id: string) => req<SeqState & { done: string }>('POST', `/api/projects/${id}/undo`),
+  redo: (id: string) => req<SeqState & { done: string }>('POST', `/api/projects/${id}/redo`),
+  setHeading: (id: string, photo: number, value: number | null) =>
+    req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/heading`, { value }),
+  headingRange: (id: string, start_idx: number, end_idx: number, mode: 'offset' | 'set' | 'clear', value = 0) =>
+    req<{ changed: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/headings/range`, {
+      start_idx,
+      end_idx,
+      mode,
+      value,
+    }),
+  recomputeHeadings: (id: string) => req<HeadingStats>('POST', `/api/projects/${id}/headings/recompute`),
+  exportSequences: (id: string, out_dir: string, sequence_ids: number[] | null, panoramax_compat: boolean, exclude_gps_jumps: boolean) =>
+    req<{ job_id: string; out_dir: string }>('POST', `/api/projects/${id}/export`, { out_dir, sequence_ids, panoramax_compat, exclude_gps_jumps }),
+  exports: (id: string) => req<ExportRecord[]>('GET', `/api/projects/${id}/exports`),
   thumbUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/thumb`,
   imageUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/image`,
 }
@@ -154,4 +255,13 @@ export const FLAG_LABELS: Record<string, string> = {
   unreadable: 'Illisible',
   same_time: 'Même horodatage que la précédente',
   missing_file: 'Fichier source introuvable',
+}
+
+// Sequence colours (cycled), readable on light and dark basemaps
+export const SEQ_COLORS = ['#2563eb', '#db2777', '#059669', '#d97706', '#7c3aed', '#0891b2', '#65a30d', '#dc2626', '#4f46e5', '#c026d3']
+
+export function seqColor(seqs: Sequence[], sid: number | null): string {
+  if (sid == null) return '#9ca3af'
+  const i = seqs.findIndex((s) => s.id === sid)
+  return i < 0 ? '#9ca3af' : SEQ_COLORS[i % SEQ_COLORS.length]
 }

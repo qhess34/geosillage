@@ -9,8 +9,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config, db, importer, jobs
-from .core import analysis
+from . import config, db, importer, jobs, routes_edit
+from .core import analysis, headings
 from .exif import reader
 
 
@@ -26,6 +26,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Panoramax Sequence Studio", lifespan=lifespan)
+app.include_router(routes_edit.router)
 
 
 @app.exception_handler(db.ProjectNotFound)
@@ -44,6 +45,8 @@ class SettingsIn(BaseModel):
     gap_seconds: float | None = Field(default=None, gt=0)
     jump_speed_ms: float | None = Field(default=None, gt=0)
     jump_min_m: float | None = Field(default=None, ge=0)
+    heading_min_m: float | None = Field(default=None, gt=0, le=100)
+    heading_window_s: float | None = Field(default=None, gt=0, le=120)
 
 
 class ImportIn(BaseModel):
@@ -71,6 +74,7 @@ def project_get(pid: str):
             "settings": db.get_settings(conn),
             "source_dirs": [r[0] for r in conn.execute("SELECT path FROM source_dir ORDER BY added_at")],
             "summary": analysis.summary(conn),
+            "headings": headings.stats(conn),
             "jobs": jobs.list_jobs(conn, 10),
         }
 
@@ -87,6 +91,7 @@ def project_update(pid: str, body: dict):
             s = SettingsIn(**body["settings"]).model_dump(exclude_none=True)
             db.set_meta(conn, "settings", {**(db.get_meta(conn, "settings", {}) or {}), **s})
             analysis.run(conn)
+            headings.recompute(conn)
     return project_get(pid)
 
 
@@ -136,7 +141,10 @@ def job_cancel(pid: str, job_id: str):
 
 # ---- Photos ----
 
-PHOTO_FIELDS = ["id", "idx", "ts", "lat", "lon", "lat_orig", "lon_orig", "flags", "thumb", "sequence_id", "is_360"]
+PHOTO_FIELDS = [
+    "id", "idx", "ts", "lat", "lon", "lat_orig", "lon_orig", "flags", "thumb", "sequence_id", "rank", "is_360",
+    "heading", "heading_state", "heading_manual",
+]
 
 
 @app.get("/api/projects/{pid}/photos")
@@ -144,8 +152,10 @@ def photos_list(pid: str):
     """Compact list for the map, timeline and list views (column arrays, chronological order)."""
     with db.open_project(pid) as conn:
         rows = conn.execute(
-            """SELECT id, idx, ts, COALESCE(lat, lat_orig), COALESCE(lon, lon_orig), lat_orig, lon_orig,
-                      flags, thumb, sequence_id, is_360 FROM photo ORDER BY idx"""
+            f"""SELECT p.id, p.idx, p.ts, COALESCE(p.lat, p.lat_orig), COALESCE(p.lon, p.lon_orig), p.lat_orig,
+                      p.lon_orig, p.flags, p.thumb, p.sequence_id, p.rank, p.is_360,
+                      {headings.FINAL_SQL}, p.heading_auto_state, p.heading_manual
+               FROM photo p LEFT JOIN sequence s ON s.id = p.sequence_id ORDER BY p.idx"""
         ).fetchall()
     return {"fields": PHOTO_FIELDS, "rows": [list(r) for r in rows], "flags": db.FLAG_NAMES}
 
@@ -161,6 +171,9 @@ def _photo(conn, photo_id: int):
 def photo_get(pid: str, photo_id: int):
     with db.open_project(pid) as conn:
         d = dict(_photo(conn, photo_id))
+        off = conn.execute("SELECT heading_offset FROM sequence WHERE id=?", (d["sequence_id"],)).fetchone()
+    d["sequence_offset"] = off[0] if off else 0.0
+    d["heading_final"] = headings.final_heading(d["heading_manual"], d["heading_auto"], d["sequence_offset"])
     d["flag_names"] = [n for f, n in db.FLAG_NAMES.items() if d["flags"] & f]
     return d
 

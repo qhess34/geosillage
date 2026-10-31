@@ -17,6 +17,10 @@ class Cancelled(Exception):
     pass
 
 
+class UserError(Exception):
+    """Error whose message is meant for the user (shown as is on the job)."""
+
+
 class JobContext:
     def __init__(self, project_id: str, job_id: str):
         self.project_id = project_id
@@ -74,6 +78,8 @@ def start(project_id: str, kind: str, fn: Callable[[JobContext], None], unique=T
             state, message = "cancelled", "Annulé"
         except db.ProjectNotFound:
             state = "cancelled"
+        except UserError as e:
+            state, message = "error", str(e)
         except Exception as e:  # keep the UI alive: the error is reported on the job
             traceback.print_exc()
             state, message = "error", f"{type(e).__name__}: {e}"

@@ -1,20 +1,22 @@
 import maplibregl, { GeoJSONSource, Map as MlMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
-import { FLAGS, PhotoRow } from './api'
+import { FLAGS, PhotoRow, seqColor, Sequence } from './api'
 import { Basemap } from './basemaps'
 
 interface Props {
   photos: PhotoRow[]
+  sequences: Sequence[]
   basemap: Basemap
   selectedId: number | null
-  onSelect: (id: number) => void
+  range: [number, number] | null
+  onSelect: (id: number, extend: boolean) => void
 }
 
 const ANOMALY = FLAGS.GPS_JUMP | FLAGS.INVALID_COORD
-const WARN = FLAGS.GAP_BEFORE | FLAGS.DUPLICATE | FLAGS.NO_DATE | FLAGS.UNREADABLE | FLAGS.MISSING_FILE
 
-function toGeoJSON(photos: PhotoRow[]): GeoJSON.FeatureCollection {
+function toGeoJSON(photos: PhotoRow[], sequences: Sequence[]): GeoJSON.FeatureCollection {
+  const colors = new Map(sequences.map((s) => [s.id, seqColor(sequences, s.id)]))
   return {
     type: 'FeatureCollection',
     features: photos
@@ -23,7 +25,14 @@ function toGeoJSON(photos: PhotoRow[]): GeoJSON.FeatureCollection {
         type: 'Feature',
         id: p.id,
         geometry: { type: 'Point', coordinates: [p.lon as number, p.lat as number] },
-        properties: { id: p.id, idx: p.idx, level: p.flags & ANOMALY ? 2 : p.flags & WARN ? 1 : 0 },
+        properties: {
+          id: p.id,
+          idx: p.idx,
+          color: p.sequence_id != null ? colors.get(p.sequence_id) ?? '#9ca3af' : '#9ca3af',
+          anomaly: p.flags & ANOMALY ? 1 : 0,
+          heading: p.heading ?? -1, // -1 = no heading (null is not usable in filters)
+          manual: p.heading_manual != null ? 1 : 0,
+        },
       })),
   }
 }
@@ -45,31 +54,76 @@ function rasterStyle(b: Basemap): maplibregl.StyleSpecification {
   }
 }
 
-export default function PhotoMap({ photos, basemap, selectedId, onSelect }: Props) {
+// Arrow icon pointing north (rotated by the heading); SDF so it can be coloured
+function arrowImage(): ImageData {
+  const s = 32
+  const c = document.createElement('canvas')
+  c.width = c.height = s
+  const g = c.getContext('2d') as CanvasRenderingContext2D
+  g.fillStyle = '#000'
+  g.beginPath()
+  g.moveTo(s / 2, 1)
+  g.lineTo(s - 7, s - 6)
+  g.lineTo(s / 2, s - 12)
+  g.lineTo(7, s - 6)
+  g.closePath()
+  g.fill()
+  return g.getImageData(0, 0, s, s)
+}
+
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, onSelect }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const ready = useRef(false)
   const fitted = useRef(false)
-  const latest = useRef({ photos, selectedId, onSelect })
-  latest.current = { photos, selectedId, onSelect }
+  const latest = useRef({ photos, sequences, selectedId, range, onSelect })
+  latest.current = { photos, sequences, selectedId, range, onSelect }
+
+  const rangeFilter = (r: [number, number] | null): maplibregl.FilterSpecification =>
+    r ? ['all', ['>=', ['get', 'idx'], r[0]], ['<=', ['get', 'idx'], r[1]]] : ['==', ['get', 'idx'], -1]
 
   // Photo layers are (re)added after every style change (basemap switch)
   function addLayers(m: MlMap) {
-    const { photos, selectedId } = latest.current
+    const { photos, sequences, selectedId, range } = latest.current
     if (m.getSource('photos')) return
+    if (!m.hasImage('arrow')) m.addImage('arrow', arrowImage(), { sdf: true })
     m.addSource('track', { type: 'geojson', data: lineGeoJSON(photos) })
-    m.addSource('photos', { type: 'geojson', data: toGeoJSON(photos) })
-    m.addLayer({ id: 'track', type: 'line', source: 'track', paint: { 'line-color': '#1d4ed8', 'line-width': 2, 'line-opacity': 0.5 } })
+    m.addSource('photos', { type: 'geojson', data: toGeoJSON(photos, sequences) })
+    m.addLayer({ id: 'track', type: 'line', source: 'track', paint: { 'line-color': '#6b7280', 'line-width': 1.5, 'line-opacity': 0.6 } })
+    m.addLayer({
+      id: 'range',
+      type: 'circle',
+      source: 'photos',
+      filter: rangeFilter(range),
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 5, 16, 9], 'circle-color': '#facc15', 'circle-opacity': 0.6 },
+    })
     m.addLayer({
       id: 'photos',
       type: 'circle',
       source: 'photos',
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2, 16, 5, 19, 8],
-        'circle-color': ['match', ['get', 'level'], 2, '#dc2626', 1, '#f59e0b', '#2563eb'],
+        'circle-color': ['case', ['==', ['get', 'anomaly'], 1], '#dc2626', ['get', 'color']],
         'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0, 16, 1],
         'circle-stroke-color': '#ffffff',
       },
+    })
+    m.addLayer({
+      id: 'arrows',
+      type: 'symbol',
+      source: 'photos',
+      minzoom: 15,
+      filter: ['>=', ['get', 'heading'], 0],
+      layout: {
+        'icon-image': 'arrow',
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 15, 0.45, 19, 0.9],
+        'icon-rotate': ['get', 'heading'],
+        'icon-rotation-alignment': 'map',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-offset': [0, -22],
+      },
+      paint: { 'icon-color': ['case', ['==', ['get', 'manual'], 1], '#7c3aed', '#111827'], 'icon-halo-color': '#ffffff', 'icon-halo-width': 1.5 },
     })
     m.addLayer({
       id: 'selected',
@@ -78,6 +132,31 @@ export default function PhotoMap({ photos, basemap, selectedId, onSelect }: Prop
       filter: ['==', ['get', 'id'], selectedId ?? -1],
       paint: { 'circle-radius': 9, 'circle-color': '#facc15', 'circle-stroke-width': 3, 'circle-stroke-color': '#111827' },
     })
+    m.addLayer({
+      id: 'selected-arrow',
+      type: 'symbol',
+      source: 'photos',
+      filter: ['all', ['==', ['get', 'id'], selectedId ?? -1], ['>=', ['get', 'heading'], 0]],
+      layout: {
+        'icon-image': 'arrow',
+        'icon-size': 1.1,
+        'icon-rotate': ['get', 'heading'],
+        'icon-rotation-alignment': 'map',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-offset': [0, -24],
+      },
+      paint: { 'icon-color': '#facc15', 'icon-halo-color': '#111827', 'icon-halo-width': 2 },
+    })
+  }
+
+  function fit(m: MlMap) {
+    const pts = latest.current.photos.filter((p) => p.lat != null && p.lon != null && !(p.flags & ANOMALY))
+    if (fitted.current || !pts.length) return
+    const b = new maplibregl.LngLatBounds()
+    pts.forEach((p) => b.extend([p.lon as number, p.lat as number]))
+    m.fitBounds(b, { padding: 40, duration: 0, maxZoom: 17 })
+    fitted.current = true
   }
 
   useEffect(() => {
@@ -97,11 +176,12 @@ export default function PhotoMap({ photos, basemap, selectedId, onSelect }: Prop
     })
     m.on('click', 'photos', (e) => {
       const f = e.features?.[0]
-      if (f) latest.current.onSelect(Number(f.properties?.id))
+      if (f) latest.current.onSelect(Number(f.properties?.id), e.originalEvent.shiftKey)
     })
     m.on('mouseenter', 'photos', () => (m.getCanvas().style.cursor = 'pointer'))
     m.on('mouseleave', 'photos', () => (m.getCanvas().style.cursor = ''))
     map.current = m
+    ;(window as unknown as { __pssMap?: MlMap }).__pssMap = m // inspection in end-to-end tests
     return () => {
       m.remove()
       map.current = null
@@ -120,25 +200,23 @@ export default function PhotoMap({ photos, basemap, selectedId, onSelect }: Prop
   useEffect(() => {
     const m = map.current
     if (!m || !ready.current) return
-    ;(m.getSource('photos') as GeoJSONSource | undefined)?.setData(toGeoJSON(photos))
+    ;(m.getSource('photos') as GeoJSONSource | undefined)?.setData(toGeoJSON(photos, sequences))
     ;(m.getSource('track') as GeoJSONSource | undefined)?.setData(lineGeoJSON(photos))
     fit(m)
-  }, [photos])
+  }, [photos, sequences])
 
-  function fit(m: MlMap) {
-    const pts = latest.current.photos.filter((p) => p.lat != null && p.lon != null && !(p.flags & ANOMALY))
-    if (fitted.current || !pts.length) return
-    const b = new maplibregl.LngLatBounds()
-    pts.forEach((p) => b.extend([p.lon as number, p.lat as number]))
-    m.fitBounds(b, { padding: 40, duration: 0, maxZoom: 17 })
-    fitted.current = true
-  }
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current || !m.getLayer('range')) return
+    m.setFilter('range', rangeFilter(range))
+  }, [range])
 
   // Keep the active photo visible on the map while navigating
   useEffect(() => {
     const m = map.current
     if (!m || !ready.current || !m.getLayer('selected')) return
     m.setFilter('selected', ['==', ['get', 'id'], selectedId ?? -1])
+    m.setFilter('selected-arrow', ['all', ['==', ['get', 'id'], selectedId ?? -1], ['>=', ['get', 'heading'], 0]])
     const p = photos.find((x) => x.id === selectedId)
     if (p && p.lat != null && p.lon != null) {
       const pt = m.project([p.lon, p.lat])

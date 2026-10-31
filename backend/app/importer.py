@@ -9,7 +9,7 @@ from pathlib import Path
 from PIL import Image
 
 from . import config, db, jobs
-from .core import analysis
+from .core import analysis, headings
 from .exif import reader
 
 JPEG_EXT = {".jpg", ".jpeg"}
@@ -99,6 +99,7 @@ def import_paths(ctx: jobs.JobContext, roots: list[str]) -> None:
             ctx.progress(done, total, "Lecture des métadonnées…")
         ctx.progress(done, total, "Analyse…", force=True)
         analysis.run(conn)
+        headings.recompute(conn)
     ctx.progress(total, total, "Import terminé", force=True)
     start_thumbnails(pid)
 
@@ -171,4 +172,5 @@ def check_files(ctx: jobs.JobContext) -> None:
         with db.transaction(conn):
             conn.execute("UPDATE photo SET flags = flags & ?", (~db.MISSING_FILE,))
             conn.executemany("UPDATE photo SET flags = flags | ? WHERE id=?", [(db.MISSING_FILE, i) for i in missing])
+        headings.recompute(conn)
     ctx.progress(len(rows), len(rows), f"{len(missing)} fichier(s) introuvable(s)", force=True)
