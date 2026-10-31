@@ -1,0 +1,154 @@
+import maplibregl, { GeoJSONSource, Map as MlMap } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import { useEffect, useRef } from 'react'
+import { FLAGS, PhotoRow } from './api'
+import { Basemap } from './basemaps'
+
+interface Props {
+  photos: PhotoRow[]
+  basemap: Basemap
+  selectedId: number | null
+  onSelect: (id: number) => void
+}
+
+const ANOMALY = FLAGS.GPS_JUMP | FLAGS.INVALID_COORD
+const WARN = FLAGS.GAP_BEFORE | FLAGS.DUPLICATE | FLAGS.NO_DATE | FLAGS.UNREADABLE | FLAGS.MISSING_FILE
+
+function toGeoJSON(photos: PhotoRow[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: photos
+      .filter((p) => p.lat != null && p.lon != null && !(p.flags & FLAGS.INVALID_COORD))
+      .map((p) => ({
+        type: 'Feature',
+        id: p.id,
+        geometry: { type: 'Point', coordinates: [p.lon as number, p.lat as number] },
+        properties: { id: p.id, idx: p.idx, level: p.flags & ANOMALY ? 2 : p.flags & WARN ? 1 : 0 },
+      })),
+  }
+}
+
+function lineGeoJSON(photos: PhotoRow[]): GeoJSON.Feature {
+  const coords = photos
+    .filter((p) => p.lat != null && p.lon != null && !(p.flags & (ANOMALY | FLAGS.DUPLICATE)))
+    .map((p) => [p.lon as number, p.lat as number])
+  return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }
+}
+
+function rasterStyle(b: Basemap): maplibregl.StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      base: { type: 'raster', tiles: [b.url], tileSize: 256, maxzoom: b.maxzoom, attribution: b.attribution },
+    },
+    layers: [{ id: 'base', type: 'raster', source: 'base' }],
+  }
+}
+
+export default function PhotoMap({ photos, basemap, selectedId, onSelect }: Props) {
+  const el = useRef<HTMLDivElement>(null)
+  const map = useRef<MlMap | null>(null)
+  const ready = useRef(false)
+  const fitted = useRef(false)
+  const latest = useRef({ photos, selectedId, onSelect })
+  latest.current = { photos, selectedId, onSelect }
+
+  // Photo layers are (re)added after every style change (basemap switch)
+  function addLayers(m: MlMap) {
+    const { photos, selectedId } = latest.current
+    if (m.getSource('photos')) return
+    m.addSource('track', { type: 'geojson', data: lineGeoJSON(photos) })
+    m.addSource('photos', { type: 'geojson', data: toGeoJSON(photos) })
+    m.addLayer({ id: 'track', type: 'line', source: 'track', paint: { 'line-color': '#1d4ed8', 'line-width': 2, 'line-opacity': 0.5 } })
+    m.addLayer({
+      id: 'photos',
+      type: 'circle',
+      source: 'photos',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2, 16, 5, 19, 8],
+        'circle-color': ['match', ['get', 'level'], 2, '#dc2626', 1, '#f59e0b', '#2563eb'],
+        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0, 16, 1],
+        'circle-stroke-color': '#ffffff',
+      },
+    })
+    m.addLayer({
+      id: 'selected',
+      type: 'circle',
+      source: 'photos',
+      filter: ['==', ['get', 'id'], selectedId ?? -1],
+      paint: { 'circle-radius': 9, 'circle-color': '#facc15', 'circle-stroke-width': 3, 'circle-stroke-color': '#111827' },
+    })
+  }
+
+  useEffect(() => {
+    const m = new maplibregl.Map({
+      container: el.current as HTMLDivElement,
+      style: rasterStyle(basemap),
+      center: [2.5, 46.5],
+      zoom: 5,
+      attributionControl: { compact: false },
+    })
+    m.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-left')
+    m.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')
+    m.on('style.load', () => {
+      addLayers(m)
+      ready.current = true
+      fit(m)
+    })
+    m.on('click', 'photos', (e) => {
+      const f = e.features?.[0]
+      if (f) latest.current.onSelect(Number(f.properties?.id))
+    })
+    m.on('mouseenter', 'photos', () => (m.getCanvas().style.cursor = 'pointer'))
+    m.on('mouseleave', 'photos', () => (m.getCanvas().style.cursor = ''))
+    map.current = m
+    return () => {
+      m.remove()
+      map.current = null
+      ready.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    // diff: false forces a full reload so that 'style.load' fires and photo layers are re-added
+    m.setStyle(rasterStyle(basemap), { diff: false })
+  }, [basemap])
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current) return
+    ;(m.getSource('photos') as GeoJSONSource | undefined)?.setData(toGeoJSON(photos))
+    ;(m.getSource('track') as GeoJSONSource | undefined)?.setData(lineGeoJSON(photos))
+    fit(m)
+  }, [photos])
+
+  function fit(m: MlMap) {
+    const pts = latest.current.photos.filter((p) => p.lat != null && p.lon != null && !(p.flags & ANOMALY))
+    if (fitted.current || !pts.length) return
+    const b = new maplibregl.LngLatBounds()
+    pts.forEach((p) => b.extend([p.lon as number, p.lat as number]))
+    m.fitBounds(b, { padding: 40, duration: 0, maxZoom: 17 })
+    fitted.current = true
+  }
+
+  // Keep the active photo visible on the map while navigating
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current || !m.getLayer('selected')) return
+    m.setFilter('selected', ['==', ['get', 'id'], selectedId ?? -1])
+    const p = photos.find((x) => x.id === selectedId)
+    if (p && p.lat != null && p.lon != null) {
+      const pt = m.project([p.lon, p.lat])
+      const c = m.getContainer()
+      const margin = 60
+      if (pt.x < margin || pt.y < margin || pt.x > c.clientWidth - margin || pt.y > c.clientHeight - margin) {
+        m.easeTo({ center: [p.lon, p.lat], duration: 300 })
+      }
+    }
+  }, [selectedId, photos])
+
+  return <div ref={el} className="map" />
+}
