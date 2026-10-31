@@ -29,7 +29,7 @@ def set_position(conn, photo_id: int, lat: float, lon: float, method: str = "man
         raise PositionError("Coordonnées invalides")
     if not conn.execute("SELECT 1 FROM photo WHERE id=?", (photo_id,)).fetchone():
         raise PositionError("Photo introuvable")
-    conn.execute("UPDATE photo SET lat=?, lon=?, pos_method=? WHERE id=?", (lat, lon, method, photo_id))
+    conn.execute("UPDATE photo SET lat=?, lon=?, pos_method=?, time_offset=NULL WHERE id=?", (lat, lon, method, photo_id))
 
 
 def offset(conn, ids: list[int], east_m: float, north_m: float) -> int:
@@ -41,7 +41,7 @@ def offset(conn, ids: list[int], east_m: float, north_m: float) -> int:
     rows = [r for r in _current(conn, ids) if r["lat"] is not None and geo.valid_coord(r["lat"], r["lon"])]
     for r in rows:
         lon, lat, _ = geo.GEOD.fwd(r["lon"], r["lat"], az, dist)
-        conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='offset' WHERE id=?", (lat, lon, r["id"]))
+        conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='offset', time_offset=NULL WHERE id=?", (lat, lon, r["id"]))
     return len(rows)
 
 
@@ -53,7 +53,7 @@ def along(conn, ids: list[int], meters: float) -> tuple[int, int]:
             skipped += 1
             continue
         lon, lat, _ = geo.GEOD.fwd(r["lon"], r["lat"], r["heading_auto"], meters)
-        conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='along' WHERE id=?", (lat, lon, r["id"]))
+        conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='along', time_offset=NULL WHERE id=?", (lat, lon, r["id"]))
         moved += 1
     return moved, skipped
 
@@ -62,7 +62,7 @@ def revert(conn, ids: list[int]) -> int:
     if not ids:
         return 0
     ph = ",".join("?" * len(ids))
-    return conn.execute(f"UPDATE photo SET lat=NULL, lon=NULL, pos_method=NULL WHERE id IN ({ph})", ids).rowcount
+    return conn.execute(f"UPDATE photo SET lat=NULL, lon=NULL, pos_method=NULL, time_offset=NULL WHERE id IN ({ph})", ids).rowcount
 
 
 def ids_in_range(conn, start_idx: int, end_idx: int) -> list[int]:

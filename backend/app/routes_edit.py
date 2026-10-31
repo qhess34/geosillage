@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from . import db, exporter, jobs, undo
-from .core import headings, positions, sequences
+from .core import headings, positions, sequences, timesync
 
 router = APIRouter(prefix="/api/projects/{pid}")
 
@@ -281,6 +281,84 @@ def positions_batch(pid: str, body: PositionsBatchIn):
                 changed = positions.revert(conn, ids)
         headings.recompute(conn, mark_stale_ids=set(ids))
         return {"changed": changed, "skipped": skipped, "undo": undo.state(conn)}
+
+
+# ---- Time synchronisation (GPS delay) ----
+
+
+class SyncApplyIn(BaseModel):
+    offset_s: float = Field(ge=-120, le=120)
+    scope: str = Field(pattern="^(all|sequence|range)$")
+    sequence_id: int | None = None
+    start_idx: int | None = None
+    end_idx: int | None = None
+    keep_manual: bool = True
+
+
+class SyncPoint(BaseModel):
+    photo_id: int
+    offset_s: float
+
+
+def _sync_errors(fn):
+    try:
+        return fn()
+    except timesync.SyncError as e:
+        raise HTTPException(409, str(e))
+
+
+@router.get("/track")
+def track_get(pid: str):
+    """GPS track used for synchronisation: runs of [ts, lat, lon]."""
+    with db.open_project(pid) as conn:
+        return {"runs": [[list(p) for p in run] for run in timesync.build_track(conn)], "max_extrapolation_s": timesync.MAX_EXTRAPOLATION_S}
+
+
+@router.get("/timesync/offset")
+def sync_offset(pid: str, photo_id: int, lat: float, lon: float, window_s: float = 30.0):
+    """Offset making the photo match (lat, lon) projected on the track."""
+    with db.open_project(pid) as conn:
+        row = conn.execute("SELECT ts FROM photo WHERE id=?", (photo_id,)).fetchone()
+        if not row or row["ts"] is None:
+            raise HTTPException(404, "Photo introuvable ou sans date")
+        off, slat, slon = _sync_errors(lambda: timesync.offset_for_point(timesync.build_track(conn), row["ts"], lat, lon, window_s))
+        return {"offset_s": off, "lat": slat, "lon": slon}
+
+
+@router.post("/timesync/apply")
+def sync_apply(pid: str, body: SyncApplyIn):
+    with db.open_project(pid) as conn:
+        if body.scope == "all":
+            ids = [r[0] for r in conn.execute("SELECT id FROM photo")]
+            where = "tout le projet"
+        elif body.scope == "sequence":
+            if body.sequence_id is None:
+                raise HTTPException(400, "Séquence manquante")
+            ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE sequence_id=?", (body.sequence_id,))]
+            where = "une séquence"
+        else:
+            if body.start_idx is None or body.end_idx is None:
+                raise HTTPException(400, "Plage manquante")
+            ids = positions.ids_in_range(conn, body.start_idx, body.end_idx)
+            where = "une plage"
+        with undo.undoable(conn, f"Synchronisation {body.offset_s:+.1f} s sur {where}"):
+            res = _sync_errors(lambda: timesync.apply(conn, body.offset_s, ids, body.keep_manual))
+        headings.recompute(conn, mark_stale_ids=set(ids))
+        db.set_meta(conn, "last_time_offset", body.offset_s)
+        return {**res, "undo": undo.state(conn)}
+
+
+@router.get("/timesync/points")
+def sync_points_get(pid: str):
+    with db.open_project(pid) as conn:
+        return {"points": db.get_meta(conn, "sync_points", []), "last_offset_s": db.get_meta(conn, "last_time_offset")}
+
+
+@router.put("/timesync/points")
+def sync_points_put(pid: str, points: list[SyncPoint]):
+    with db.open_project(pid) as conn:
+        db.set_meta(conn, "sync_points", [p.model_dump() for p in points])
+        return {"points": db.get_meta(conn, "sync_points", [])}
 
 
 # ---- Export ----

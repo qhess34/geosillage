@@ -7,6 +7,8 @@ import HeadingDial from './HeadingDial'
 import ImportDialog from './ImportDialog'
 import PhotoMap from './PhotoMap'
 import SequencesTab from './SequencesTab'
+import SyncTab from './SyncTab'
+import { positionAt, Track } from './timesync'
 import Timeline from './Timeline'
 
 const JOB_LABELS: Record<string, string> = {
@@ -16,7 +18,7 @@ const JOB_LABELS: Record<string, string> = {
   export: 'Export',
 }
 
-const POS_LABELS: Record<string, string> = { manual: 'manuelle', offset: 'décalage', along: 'le long du trajet' }
+const POS_LABELS: Record<string, string> = { manual: 'manuelle', offset: 'décalage', along: 'le long du trajet', time: 'synchro temporelle' }
 
 // Great-circle distance (display only)
 function distanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -373,7 +375,7 @@ function JobBar({ jobs, projectId }: { jobs: Job[]; projectId: string }) {
   )
 }
 
-type Tab = 'photo' | 'sequences' | 'export' | 'summary'
+type Tab = 'photo' | 'sequences' | 'sync' | 'export' | 'summary'
 
 export default function ProjectView({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const [project, setProject] = useState<Project | null>(null)
@@ -388,6 +390,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [showImport, setShowImport] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  const [track, setTrack] = useState<Track | null>(null)
+  const [syncOffset, setSyncOffset] = useState<number | null>(null)
+  const [syncDragged, setSyncDragged] = useState<{ photoId: number; offset: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [custom, setCustom] = useState<Basemap[]>(loadCustomBasemaps)
@@ -459,6 +464,30 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     [projectId, reloadPhotos],
   )
   const fail = useCallback((m: string) => setError(m), [])
+
+  // Time synchronisation: track loaded when the tab opens (and after imports)
+  const photoCount = photos.length
+  useEffect(() => {
+    if (tab !== 'sync') return
+    api.track(projectId).then((t) => setTrack(t.runs), (e) => setError(e.message))
+  }, [tab, projectId, photoCount])
+  const sync = useMemo(() => (tab === 'sync' && track ? { track, offset: syncOffset } : null), [tab, track, syncOffset])
+  const onSyncOffset = useCallback(
+    (offset: number, final: boolean) => {
+      setSyncOffset(offset)
+      if (!final || selected == null) return
+      // Authoritative value from the backend (same projection, geodesic)
+      const p = photos.find((x) => x.id === selected)
+      const pos = p && p.ts != null && track ? positionAt(track, p.ts + offset) : null
+      setSyncDragged({ photoId: selected, offset })
+      if (pos)
+        api.syncOffset(projectId, selected, pos[0], pos[1]).then((r) => {
+          setSyncOffset(r.offset_s)
+          setSyncDragged({ photoId: selected, offset: r.offset_s })
+        }, () => undefined)
+    },
+    [selected, photos, track, projectId],
+  )
 
   useEffect(() => {
     if (selected == null) {
@@ -573,7 +602,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     e.preventDefault()
     const startX = e.clientX
     const startW = panelWidth
-    const move = (ev: MouseEvent) => setPanelWidth(Math.max(280, Math.min(800, startW - (ev.clientX - startX))))
+    const move = (ev: MouseEvent) => setPanelWidth(Math.max(280, Math.min(window.innerWidth * 0.65, startW - (ev.clientX - startX))))
     const up = () => {
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
@@ -640,6 +669,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             selectedId={selected}
             range={range}
             editMode={editMode}
+            sync={sync}
+            onSyncOffset={onSyncOffset}
             onSelect={(id, extend) => {
               const p = photos.find((x) => x.id === id)
               if (p) goIdx(p.idx, extend)
@@ -657,6 +688,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               [
                 ['photo', 'Photo'],
                 ['sequences', `Séquences (${sequences.length})`],
+                ['sync', 'Synchro'],
                 ['export', 'Export'],
                 ['summary', 'Bilan'],
               ] as [Tab, string][]
@@ -684,6 +716,25 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   setRange(null)
                 }}
                 onGo={(idx) => goIdx(idx)}
+                onError={fail}
+              />
+            )}
+            {tab === 'sync' && (
+              <SyncTab
+                projectId={projectId}
+                photo={detail}
+                photos={photos}
+                sequences={sequences}
+                range={range}
+                offset={syncOffset}
+                dragged={syncDragged}
+                onOffset={setSyncOffset}
+                onGo={(idx) => goIdx(idx)}
+                onApplied={() => {
+                  afterHeadingChange()
+                  api.project(projectId).then(setProject, () => undefined)
+                }}
+                onNotice={setNotice}
                 onError={fail}
               />
             )}

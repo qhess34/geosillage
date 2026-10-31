@@ -103,6 +103,7 @@ export interface PhotoDetail extends PhotoRow {
   heading_final: number | null
   moved_from: string | null
   source_written_at: number | null
+  time_offset: number | null
   flag_names: string[]
 }
 
@@ -141,6 +142,11 @@ export interface UndoState {
 export interface SeqState {
   sequences: Sequence[]
   undo: UndoState
+}
+
+export interface SyncPoint {
+  photo_id: number
+  offset_s: number
 }
 
 export interface Proposal {
@@ -255,6 +261,15 @@ export const api = {
       exclude_gps_jumps,
       mode,
     }),
+  track: (id: string) => req<{ runs: [number, number, number][][]; max_extrapolation_s: number }>('GET', `/api/projects/${id}/track`),
+  syncOffset: (id: string, photo: number, lat: number, lon: number) =>
+    req<{ offset_s: number; lat: number; lon: number }>('GET', `/api/projects/${id}/timesync/offset?photo_id=${photo}&lat=${lat}&lon=${lon}`),
+  syncApply: (
+    id: string,
+    body: { offset_s: number; scope: 'all' | 'sequence' | 'range'; sequence_id?: number; start_idx?: number; end_idx?: number; keep_manual: boolean },
+  ) => req<{ changed: number; kept_manual: number; uncovered: number; undo: UndoState }>('POST', `/api/projects/${id}/timesync/apply`, body),
+  syncPoints: (id: string) => req<{ points: SyncPoint[]; last_offset_s: number | null }>('GET', `/api/projects/${id}/timesync/points`),
+  saveSyncPoints: (id: string, points: SyncPoint[]) => req<{ points: SyncPoint[] }>('PUT', `/api/projects/${id}/timesync/points`, points),
   restoreSources: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/sources/restore`),
   setPosition: (id: string, photo: number, lat: number | null, lon: number | null) =>
     req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/position`, lat == null ? {} : { lat, lon }),

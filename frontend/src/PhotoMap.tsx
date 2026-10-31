@@ -3,6 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
 import { FLAGS, PhotoRow, seqColor, Sequence } from './api'
 import { Basemap } from './basemaps'
+import { positionAt, snap, Track } from './timesync'
 
 interface Props {
   photos: PhotoRow[]
@@ -11,8 +12,33 @@ interface Props {
   selectedId: number | null
   range: [number, number] | null
   editMode: boolean // positions: drag the selected photo, or click the map to place it
+  sync: { track: Track; offset: number | null } | null // time synchronisation mode
   onSelect: (id: number, extend: boolean) => void
   onMove: (id: number, lat: number, lon: number) => void
+  onSyncOffset: (offset: number, final: boolean) => void
+}
+
+const SYNC = '#ea580c'
+
+function syncTrackGeoJSON(track: Track | undefined): GeoJSON.Feature {
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'MultiLineString', coordinates: (track ?? []).map((run) => run.map((p) => [p[2], p[1]])) },
+  }
+}
+
+// Preview: every dated photo placed on the track at (time + offset)
+function ghostsGeoJSON(photos: PhotoRow[], track: Track | undefined, offset: number | null): GeoJSON.FeatureCollection {
+  const features: GeoJSON.Feature[] = []
+  if (track && offset != null) {
+    for (const p of photos) {
+      if (p.ts == null) continue
+      const pos = positionAt(track, p.ts + offset)
+      if (pos) features.push({ type: 'Feature', properties: { id: p.id }, geometry: { type: 'Point', coordinates: [pos[1], pos[0]] } })
+    }
+  }
+  return { type: 'FeatureCollection', features }
 }
 
 const ANOMALY = FLAGS.GPS_JUMP | FLAGS.INVALID_COORD
@@ -89,14 +115,16 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, onSelect, onMove }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, onSelect, onMove, onSyncOffset }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
+  const syncMarker = useRef<maplibregl.Marker | null>(null)
+  const dragging = useRef(false)
   const ready = useRef(false)
   const fitted = useRef(false)
-  const latest = useRef({ photos, sequences, selectedId, range, editMode, onSelect, onMove })
-  latest.current = { photos, sequences, selectedId, range, editMode, onSelect, onMove }
+  const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, onSelect, onMove, onSyncOffset })
+  latest.current = { photos, sequences, selectedId, range, editMode, sync, onSelect, onMove, onSyncOffset }
 
   const rangeFilter = (r: [number, number] | null): maplibregl.FilterSpecification =>
     r ? ['all', ['>=', ['get', 'idx'], r[0]], ['<=', ['get', 'idx'], r[1]]] : ['==', ['get', 'idx'], -1]
@@ -109,6 +137,9 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     m.addSource('track', { type: 'geojson', data: lineGeoJSON(photos) })
     m.addSource('photos', { type: 'geojson', data: toGeoJSON(photos, sequences) })
     m.addSource('moves', { type: 'geojson', data: movesGeoJSON(photos) })
+    const s = latest.current.sync
+    m.addSource('sync-track', { type: 'geojson', data: syncTrackGeoJSON(s?.track) })
+    m.addSource('ghosts', { type: 'geojson', data: ghostsGeoJSON(photos, s?.track, s?.offset ?? null) })
     m.addLayer({ id: 'track', type: 'line', source: 'track', paint: { 'line-color': '#6b7280', 'line-width': 1.5, 'line-opacity': 0.6 } })
     m.addLayer({
       id: 'moves-line',
@@ -123,6 +154,13 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       source: 'moves',
       filter: ['==', ['geometry-type'], 'Point'],
       paint: { 'circle-radius': 3, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#7c3aed', 'circle-stroke-width': 1.5 },
+    })
+    m.addLayer({
+      id: 'sync-track',
+      type: 'line',
+      source: 'sync-track',
+      layout: { visibility: s ? 'visible' : 'none', 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': SYNC, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 2, 18, 6], 'line-opacity': 0.45 },
     })
     m.addLayer({
       id: 'range',
@@ -159,6 +197,12 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
         'icon-offset': [0, -22],
       },
       paint: { 'icon-color': ['case', ['==', ['get', 'manual'], 1], '#7c3aed', '#111827'], 'icon-halo-color': '#ffffff', 'icon-halo-width': 1.5 },
+    })
+    m.addLayer({
+      id: 'ghosts',
+      type: 'circle',
+      source: 'ghosts',
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 2, 18, 6], 'circle-color': SYNC, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1 },
     })
     m.addLayer({
       id: 'selected',
@@ -248,12 +292,76 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     fit(m)
   }, [photos, sequences])
 
+  // Sync mode: track and preview of all photos shifted by the offset (one update per animation frame)
+  const syncTrack = sync?.track
+  const syncOffset = sync?.offset ?? null
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current || !m.getLayer('sync-track')) return
+    m.setLayoutProperty('sync-track', 'visibility', syncTrack ? 'visible' : 'none')
+    ;(m.getSource('sync-track') as GeoJSONSource | undefined)?.setData(syncTrackGeoJSON(syncTrack))
+  }, [syncTrack])
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current) return
+    const id = requestAnimationFrame(() =>
+      (m.getSource('ghosts') as GeoJSONSource | undefined)?.setData(ghostsGeoJSON(latest.current.photos, syncTrack, syncTrack ? syncOffset : null)),
+    )
+    return () => cancelAnimationFrame(id)
+  }, [syncTrack, syncOffset, photos])
+
+  // Sync mode: the selected photo's marker slides along the track only
+  useEffect(() => {
+    const m = map.current
+    syncMarker.current?.remove()
+    syncMarker.current = null
+    const s = latest.current.sync
+    if (!m || !syncTrack || selectedId == null || !s) return
+    const p = photos.find((x) => x.id === selectedId)
+    if (!p || p.ts == null) return
+    const ts = p.ts
+    const start = (s.offset != null && positionAt(syncTrack, ts + s.offset)) || (p.lat_orig != null && p.lon_orig != null ? [p.lat_orig, p.lon_orig] : null)
+    if (!start) return
+    const el = document.createElement('div')
+    el.className = 'sync-marker'
+    el.title = 'Glisser le long de la trace jusqu\'à l\'élément visible sur la photo'
+    const mk = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([start[1], start[0]]).addTo(m)
+    let last: number | null = null
+    mk.on('dragstart', () => (dragging.current = true))
+    mk.on('drag', () => {
+      const ll = mk.getLngLat()
+      const sn = snap(syncTrack, ts, ll.lat, ll.lng)
+      if (!sn) return
+      mk.setLngLat([sn.lon, sn.lat])
+      last = sn.offset
+      latest.current.onSyncOffset(sn.offset, false)
+    })
+    mk.on('dragend', () => {
+      dragging.current = false
+      if (last != null) latest.current.onSyncOffset(last, true)
+    })
+    syncMarker.current = mk
+    return () => {
+      mk.remove()
+    }
+    // offset changes move the marker below, without re-creating it (it may be dragged)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncTrack, selectedId, photos])
+  useEffect(() => {
+    const mk = syncMarker.current
+    if (!mk || dragging.current || !syncTrack || syncOffset == null) return
+    const p = latest.current.photos.find((x) => x.id === latest.current.selectedId)
+    if (!p || p.ts == null) return
+    const pos = positionAt(syncTrack, p.ts + syncOffset)
+    if (pos) mk.setLngLat([pos[1], pos[0]])
+  }, [syncOffset, syncTrack])
+
   // Edit mode: a draggable marker on the selected photo
   useEffect(() => {
     const m = map.current
     marker.current?.remove()
     marker.current = null
-    if (!m || !editMode || selectedId == null) return
+    if (!m || !editMode || sync || selectedId == null) return
     const p = photos.find((x) => x.id === selectedId)
     if (!p || p.lat == null || p.lon == null) return
     const mk = new maplibregl.Marker({ draggable: true, color: '#7c3aed' }).setLngLat([p.lon, p.lat]).addTo(m)
@@ -266,7 +374,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     return () => {
       mk.remove()
     }
-  }, [editMode, selectedId, photos])
+  }, [editMode, selectedId, photos, sync])
 
   useEffect(() => {
     const m = map.current

@@ -19,7 +19,8 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 2b | Visionneuse 360°, liste virtualisée | à faire |
 | 2d | Correction GPS : glisser sur la carte, saisie, placer une photo sans GPS, décalage et déplacement le long du trajet sur une plage ; export en copie, en déplaçant les sources, ou sur place ; restauration des sources | ✅ |
 | 2d (reste) | Exports GeoJSON/CSV des positions | à faire |
-| 3 | Retard GPS + calibration, GPX | à faire |
+| 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
+| 3 (reste) | Import GPX, magnétisme OSM | à faire |
 | 4 | Publication Panoramax | en attente (pas de publication pour l'instant) |
 
 ## Préparer une sortie
@@ -28,13 +29,23 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 2. **Découper** (onglet *Séquences*) : *Découpage proposé* coupe aux interruptions de prise de vue et aux sauts de
    position ; on coche les segments à garder. Ou à la main : `D` / `F` sur la photo courante (ou glisser sur la
    timeline), puis `S`. `C` coupe la séquence avant la photo courante. `Ctrl+Z` / `Ctrl+Y` annulent / rétablissent.
-3. **Corriger les positions** : `M` (ou *✥ Positions*) puis glisser le marqueur violet de la photo courante ; une
+3. **Corriger le retard GPS** (onglet *Synchro*, fond *Satellite*) : la GoPro enregistre la position avec 0,5 à 3 s
+   de retard. Choisir une photo où l'on voit un repère visible sur la vue satellite (passage piéton, angle de
+   bâtiment…), l'agrandir (molette dans la visionneuse), puis faire glisser le marqueur orange : il ne peut aller
+   que **le long de la trace**, et le décalage en secondes s'affiche ; toutes les photos se décalent en aperçu
+   (points orange). Vérifier sur d'autres photos (← →), enregistrer des points de calage (la médiane est proposée),
+   puis appliquer à toute la sortie, à la séquence ou à une plage. Chaque photo est alors placée sur la trace à
+   l'instant de prise de vue + décalage ; les sauts GPS et photos sans GPS reçoivent aussi une position. Les
+   positions corrigées à la main sont gardées (option). Annulable.
+   Conseil : caler sur une portion où la trace suit bien la route — si le GPS est décalé latéralement (rue
+   parallèle), la projection sur la trace donne un décalage faux.
+4. **Corriger les positions** : `M` (ou *✥ Positions*) puis glisser le marqueur violet de la photo courante ; une
    photo sans GPS se place d'un clic sur la carte. Onglet *Photo* : saisie des coordonnées, retour à l'original ;
    sur une plage : décalage (m vers l'est / le nord) ou déplacement le long du trajet. La position d'origine reste
    visible (cercle violet et pointillés) ; un saut GPS corrigé redevient utilisable (cap, séquences, export).
-4. **Vérifier les caps** : flèches sur la carte (zoom ≥ 15) ; onglet *Photo* : cadran, `[` / `]`, cap manuel ;
+5. **Vérifier les caps** : flèches sur la carte (zoom ≥ 15) ; onglet *Photo* : cadran, `[` / `]`, cap manuel ;
    décalage par séquence ; décalage ou cap fixe sur une plage. Les caps manuels ne sont jamais écrasés.
-5. **Exporter** (onglet *Export*), trois modes :
+6. **Exporter** (onglet *Export*), trois modes :
    - *Copier* (par défaut) : copies, sources intactes ;
    - *Déplacer* : les photos sources sont déplacées et renommées dans un dossier par séquence, EXIF modifiés ;
    - *Sur place* : EXIF des photos sources modifiés, sans les déplacer.

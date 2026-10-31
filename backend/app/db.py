@@ -108,6 +108,10 @@ MIGRATIONS = [
     ALTER TABLE photo ADD COLUMN source_written_at REAL;
     ALTER TABLE export ADD COLUMN mode TEXT NOT NULL DEFAULT 'copy';
     """,
+    """
+    -- Time synchronisation: offset (s) used to place the photo on the GPS track (pos_method = 'time')
+    ALTER TABLE photo ADD COLUMN time_offset REAL;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

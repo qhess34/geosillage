@@ -21,6 +21,7 @@ backend/app/
   core/headings.py calcul du cap, cap final, statistiques
   core/sequences.py création, limites, division, fusion, retrait, découpage proposé, statistiques
   core/positions.py corrections de position : saisie, décalage, le long du trajet, retour à l'original
+  core/timesync.py  retard GPS : trace, position à un instant, projection d'un point sur la trace, application
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
   ProjectList.tsx  création, ouverture, suppression (avec confirmation) des projets
@@ -31,6 +32,9 @@ frontend/src/
   SequencesTab.tsx plage, découpage proposé, liste des séquences et actions
   ExportTab.tsx    export par séquence, historique
   FolderPicker.tsx choix d'un dossier local
+  SyncTab.tsx      onglet Synchro : visionneuse, décalage en direct, points de calage, application
+  PhotoViewer.tsx  visionneuse plate pleine définition (molette = zoom, glisser = déplacer)
+  timesync.ts      miroir JS de core/timesync.py pour l'aperçu en direct (positionAt, snap)
   ImportDialog.tsx sélecteur de dossiers (via /api/fs)
   basemaps.ts      fonds de carte (OSM, Esri World Imagery, OpenTopoMap, XYZ personnalisés)
 tools/make_samples.py  générateur de sorties GoPro MAX simulées + vérité terrain
@@ -103,6 +107,29 @@ caps manuels voisins (±3 photos) marqués `heading_stale` (« à revoir »), ja
 Interface : mode `M` → marqueur MapLibre déplaçable sur la photo courante (`dragend` → `PUT …/position`) ; clic sur la
 carte pour placer une photo sans position ; couches `moves-*` : position d'origine et lien vers la corrigée.
 
+## Retard GPS (synchronisation temporelle)
+
+`core/timesync.py`. La *trace* = positions GPS d'origine des photos fiables (ni saut, ni doublon, ni sans date),
+triées par temps, coupées aux interruptions (`GAP_BEFORE`) ; deux points de même horodatage : seul le premier est
+gardé. `position_at(track, t)` interpole (géodésique) entre les deux points encadrant `t` — la photo reste sur
+l'itinéraire — et extrapole au plus `MAX_EXTRAPOLATION_S` (5 s) au-delà d'une extrémité ; dans une interruption :
+`None` (photo laissée telle quelle, comptée « hors trace »).
+
+Mesure : `offset_for_point` projette le point lâché par l'utilisateur sur les segments de la trace situés à ±30 s
+de la photo (pour ne pas s'accrocher à un autre passage dans la même rue) ; décalage = instant du point projeté −
+instant de la photo. Le navigateur fait la même projection (`timesync.ts`, projection plane locale) pour l'aperçu
+pendant le glisser, puis demande la valeur au backend au relâchement.
+
+Application (`apply`) : `lat/lon` = position de la trace à `ts + décalage`, `pos_method = 'time'`,
+`photo.time_offset` = décalage. Les positions `manual` / `offset` / `along` sont gardées si `keep_manual`.
+`time_offset` fait partie des colonnes annulables (`undo.PHOTO_COLS`). Points de calage et dernier décalage
+appliqué : `meta.sync_points`, `meta.last_time_offset`.
+
+Mesure sur la sortie simulée de 300 photos (retard 0,5–3 s, bruit ~2 m, épisodes de décalage latéral de 12 m) :
+un point de calage glissé sur la vraie position donne +1,6 s (retard réel 1,46 s) ; erreur médiane de position
+5,8 m → 2,2 m, 90e centile 9,8 → 6,0 m. Une photo prise dans un épisode de décalage latéral donne un décalage faux
+(−0,8 s) : d'où le conseil de caler là où la trace suit la route, et de comparer plusieurs points.
+
 ## Export
 
 Modes (`exporter.MODES`) : `copy` (copies), `move` (les sources sont déplacées dans les dossiers de séquence et
@@ -148,13 +175,15 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 
 ## Tests
 
-`backend/tests` (pytest, 39 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
+`backend/tests` (pytest, 44 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
 persistance après redémarrage, originaux inchangés par comparaison de hash), fichiers introuvables, suppression de
 projet ; calcul du cap (lignes droites, passage 359°/0°, arrêts, interruptions, précision sur sortie simulée) ;
 séquences et annuler/rétablir ; export (dossiers, EXIF relus, données image identiques, métadonnées GoPro/GPano
 conservées, ré-export, dossier étranger refusé) ; positions (saisie, annuler, décalage, le long du trajet, saut
 corrigé utilisable, cap manuel « à revoir ») ; modification des sources sur place et par déplacement, puis
-restauration (balises d'origine, emplacement, données image identiques).
+restauration (balises d'origine, emplacement, données image identiques) ; synchronisation (interpolation sur la
+trace, virage, extrapolation limitée, projection d'un point, gain de précision sur sortie simulée, portée, positions
+manuelles gardées).
 
 Mesures (4 cœurs, photos 1024×512 simulées) : import de 5 002 photos en 7,7 s (EXIF + analyse), 12 s avec les
 miniatures ; ré-analyse 0,05 s ; export de 4 955 photos (2 séquences, copie + EXIF + relecture) en 19 s. À refaire sur de vraies photos GoPro MAX (5,6K, ~5 Mo).
