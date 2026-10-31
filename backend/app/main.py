@@ -211,6 +211,8 @@ def photo_exif(pid: str, photo_id: int):
 
 @app.get("/api/fs")
 def fs_list(path: str = "~"):
+    if path == "~":
+        path = config.DEFAULT_DIR
     p = Path(os.path.expanduser(path)).resolve()
     if not p.is_dir():
         raise HTTPException(400, "Dossier introuvable")

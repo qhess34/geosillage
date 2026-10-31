@@ -6,6 +6,8 @@ from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("PSS_DATA_DIR", Path.home() / ".local/share/panoramax-studio")).expanduser()
 PROJECTS_DIR = DATA_DIR / "projects"
+# Folder shown first by the folder pickers (in Docker: the mounted photos folder)
+DEFAULT_DIR = os.environ.get("PSS_DEFAULT_DIR", "~")
 EXIFTOOL = os.environ.get("PSS_EXIFTOOL", shutil.which("exiftool") or "exiftool")
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
@@ -25,4 +27,14 @@ DEFAULT_SETTINGS = {
 
 
 def ensure_dirs() -> None:
-    PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
+        probe = PROJECTS_DIR / ".write-test"
+        probe.touch()
+        probe.unlink()
+    except PermissionError:
+        raise SystemExit(
+            f"Pas de droit d'écriture dans {DATA_DIR} (utilisateur {os.getuid()}:{os.getgid()}). "
+            "Avec Docker : créer les dossiers montés avant le premier lancement (mkdir -p data photos exports) "
+            "et régler PUID/PGID dans .env sur leur propriétaire."
+        ) from None

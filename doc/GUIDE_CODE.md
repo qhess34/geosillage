@@ -40,6 +40,15 @@ frontend/src/
 tools/make_samples.py  générateur de sorties GoPro MAX simulées + vérité terrain
 ```
 
+## Docker
+
+`Dockerfile` en deux étapes : construction de l'interface (`node:22`), puis exécution sur `ubuntu:24.04` (Python 3.12
+dans `/opt/venv`, ExifTool 12.76 du paquet `libimage-exiftool-perl`, la version utilisée par les tests). Variables :
+`PSS_DATA_DIR=/data`, `PSS_DEFAULT_DIR=/photos` (dossier ouvert par défaut par les sélecteurs de dossiers, via
+`config.DEFAULT_DIR`). `docker-compose.yml` : utilisateur `PUID:PGID`, port publié sur `127.0.0.1` seulement,
+volumes `/data`, `/photos`, `/exports`, contrôle de santé sur `/api/projects`. `config.ensure_dirs` vérifie le droit
+d'écriture dans `/data` et s'arrête avec un message explicite sinon.
+
 ## Données
 
 Un projet = un dossier `<PROJECTS_DIR>/<uuid hex>/` contenant `project.sqlite` et `thumbs/<photo_id>.jpg`.

@@ -62,7 +62,33 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    `upload` avec `--no-split` et `--duplicates-checks disabled` (sinon le serveur peut redécouper ou dédoublonner,
    voir `doc/ETUDE_PHASE1.md` §2.2).
 
-## Installation (Linux)
+## Lancement avec Docker (recommandé)
+
+```sh
+cp .env.example .env        # puis indiquer PHOTOS_DIR (vos sorties GoPro), et PUID/PGID (commande : id -u ; id -g)
+mkdir -p data photos exports  # (ou les dossiers indiqués dans .env) : à créer AVANT le premier lancement
+docker compose up -d --build
+```
+
+Puis ouvrir http://127.0.0.1:8765 (publié sur cette machine uniquement : l'API donne accès aux dossiers montés).
+
+Dans l'application, les dossiers montés apparaissent ainsi :
+
+| Dans l'application | Sur votre machine (`.env`) | Rôle |
+|---|---|---|
+| `/photos` | `PHOTOS_DIR` | photos à importer ; modes d'export *Déplacer* / *Sur place* (ex. `/photos/sequences`) |
+| `/exports` | `EXPORTS_DIR` | exports en mode *Copier* |
+| `/data` | `DATA_DIR` | projets (bases SQLite, miniatures) |
+
+- Le conteneur tourne avec l'utilisateur `PUID:PGID` : les exports et les photos modifiées ou déplacées gardent ce
+  propriétaire. Si les dossiers n'existent pas, Docker les crée en root et l'application s'arrête avec un message
+  explicite (`docker compose logs`).
+- Les chemins enregistrés dans un projet sont ceux vus par le conteneur (`/photos/…`) : un projet créé avec Docker
+  s'utilise avec Docker (et inversement pour `run.sh`).
+- Mise à jour : `git pull && docker compose up -d --build`. Arrêt : `docker compose down` (les projets restent dans
+  `DATA_DIR`).
+
+## Installation sans Docker (Linux)
 
 Prérequis : Python ≥ 3.11, Node.js ≥ 20, ExifTool.
 

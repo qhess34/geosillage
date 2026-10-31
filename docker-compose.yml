@@ -1,0 +1,16 @@
+# Lancement : docker compose up -d --build   puis   http://127.0.0.1:8765
+# Réglages dans .env (voir .env.example).
+services:
+  studio:
+    build: .
+    image: panoramax-sequence-studio
+    # Même utilisateur que sur l'hôte : les photos déplacées ou modifiées et les exports gardent leur propriétaire
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      # Uniquement sur cette machine : l'API donne accès aux fichiers des dossiers montés
+      - "127.0.0.1:${PORT:-8765}:8765"
+    volumes:
+      - "${DATA_DIR:-./data}:/data"
+      - "${PHOTOS_DIR:-./photos}:/photos"
+      - "${EXPORTS_DIR:-./exports}:/exports"
+    restart: unless-stopped
