@@ -4,7 +4,16 @@
 //   layer "pictures"  (zoom >= 15): ts (date/time), heading, type, model
 import maplibregl, { Map as MlMap } from 'maplibre-gl'
 
-export const DEFAULT_PANORAMAX_URL = 'https://panoramax.openstreetmap.fr'
+// Federated meta-catalogue: harvests the metadata of all the referenced instances (the one panoramax.fr uses) and
+// serves the same vector tiles as an instance
+export const META_CATALOG_URL = 'https://api.panoramax.xyz'
+export const DEFAULT_PANORAMAX_URL = META_CATALOG_URL
+const OLD_DEFAULT_URL = 'https://panoramax.openstreetmap.fr'
+export const PANORAMAX_PRESETS = [
+  { url: META_CATALOG_URL, label: 'Toutes les instances (méta-catalogue panoramax.fr)' },
+  { url: 'https://panoramax.openstreetmap.fr', label: 'OpenStreetMap France' },
+  { url: 'https://panoramax.ign.fr', label: 'IGN' },
+]
 const KEY = 'pss-panoramax-overlay'
 
 export interface OverlaySettings {
@@ -15,7 +24,9 @@ export interface OverlaySettings {
 export function loadOverlay(): OverlaySettings {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}')
-    return { enabled: !!v.enabled, url: typeof v.url === 'string' && v.url ? v.url : DEFAULT_PANORAMAX_URL }
+    let url = typeof v.url === 'string' && v.url ? v.url : DEFAULT_PANORAMAX_URL
+    if (!v.v && url === OLD_DEFAULT_URL) url = DEFAULT_PANORAMAX_URL // former default: now all the instances
+    return { enabled: !!v.enabled, url }
   } catch {
     return { enabled: false, url: DEFAULT_PANORAMAX_URL }
   }
@@ -23,7 +34,7 @@ export function loadOverlay(): OverlaySettings {
 
 export function saveOverlay(s: OverlaySettings): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(s))
+    localStorage.setItem(KEY, JSON.stringify({ ...s, v: 2 }))
   } catch {
     /* storage unavailable */
   }
@@ -53,7 +64,8 @@ function ageColor(prop: string): maplibregl.ExpressionSpecification {
   ]
 }
 
-const IS_360: maplibregl.FilterSpecification = ['==', ['get', 'type'], 'equirectangular']
+// 360° only; a feature without "type" is kept (in case a catalogue does not provide it)
+const IS_360: maplibregl.FilterSpecification = ['any', ['!', ['has', 'type']], ['==', ['get', 'type'], 'equirectangular']]
 export const OVERLAY_LAYERS = ['pnx-sequences', 'pnx-pictures']
 
 function tilesUrl(base: string): string {

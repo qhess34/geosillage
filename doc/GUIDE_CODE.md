@@ -219,7 +219,10 @@ sous-secondes (`TimeBySource.getBest`) : c'est l'heure GPS qui sera affichée.
 `frontend/src/panoramaxLayer.ts` : source vectorielle `{instance}/api/map/{z}/{x}/{y}.mvt` (tuiles publiques de
 l'API Panoramax, lues directement par le navigateur ; documentées dans `geovisio/web/map.py`) : couche `sequences`
 (zoom ≥ 7 : `date` AAAA-MM-JJ, `type`, `model`) et `pictures` (zoom ≥ 15 : `ts`, `heading`, `type`, `model`).
-Seules les photos `equirectangular` sont affichées ; couleur selon l'âge par comparaison de chaînes ISO
+Source par défaut : le méta-catalogue fédéré `https://api.panoramax.xyz` (toutes les instances référencées, comme
+panoramax.fr ; mêmes tuiles qu'une instance), ou une instance au choix (`PANORAMAX_PRESETS`, adresse libre) ;
+l'ancien défaut enregistré (panoramax.openstreetmap.fr, sans marqueur `v`) bascule sur le méta-catalogue.
+Seules les photos `equirectangular` sont affichées (un objet sans `type` est gardé) ; couleur selon l'âge par comparaison de chaînes ISO
 (`>=` sur la date d'il y a 1 et 3 ans). Couches ajoutées sous celles du projet, infobulle au survol (texte inséré
 avec `textContent`). Réglages (affichage, instance) dans le stockage local du navigateur. Testé avec un faux
 serveur de tuiles (`mapbox-vector-tile`), l'accès aux instances n'étant pas possible depuis l'environnement de

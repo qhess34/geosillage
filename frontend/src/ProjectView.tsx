@@ -9,7 +9,7 @@ import PhotoMap from './PhotoMap'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
-import { AGE_CLASSES, loadOverlay, OverlaySettings, saveOverlay } from './panoramaxLayer'
+import { AGE_CLASSES, loadOverlay, OverlaySettings, PANORAMAX_PRESETS, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
 
@@ -113,7 +113,26 @@ function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o:
   return (
     <div className="small-text">
       <h3>Surcouche Panoramax</h3>
-      <p className="muted">Instance dont les photos 360° déjà publiées sont affichées (bouton « Panoramax » de la barre d'outils).</p>
+      <p className="muted">
+        Photos 360° déjà publiées affichées par le bouton « Panoramax » de la barre d'outils : toutes les instances
+        (méta-catalogue) ou une seule instance.
+      </p>
+      <div className="row wrap">
+        {PANORAMAX_PRESETS.map((p) => (
+          <label key={p.url}>
+            <input
+              type="radio"
+              name="pnx-source"
+              checked={overlay.url === p.url}
+              onChange={() => {
+                setUrl(p.url)
+                onSave({ ...overlay, url: p.url })
+              }}
+            />{' '}
+            {p.label}
+          </label>
+        ))}
+      </div>
       <form
         className="row"
         onSubmit={(e) => {
@@ -122,7 +141,7 @@ function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o:
           if (/^https?:\/\//.test(u)) onSave({ ...overlay, url: u })
         }}
       >
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.openstreetmap.fr" aria-label="Instance Panoramax" />
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.example.org" aria-label="Autre instance Panoramax" />
         <button className="small" type="submit">
           Enregistrer
         </button>
