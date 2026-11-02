@@ -249,8 +249,8 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
             {photo.sequence_offset ? ` ${photo.sequence_offset > 0 ? '+' : ''}${photo.sequence_offset}° (séquence)` : ''}
           </div>
           {photo.yaw_offset != null && photo.yaw_offset !== 0 && (
-            <div title="Caméra sur casque : écrit dans XMP-GPano:PoseHeadingDegrees">
-              Tête : {photo.yaw_offset > 0 ? '+' : ''}
+            <div title="Orientation de l'image (caméra sur casque, ou montée à l'envers) : écrite dans XMP-GPano:PoseHeadingDegrees, le JPEG n'est pas modifié">
+              Orientation : {photo.yaw_offset > 0 ? '+' : ''}
               {photo.yaw_offset}° par rapport au vélo
             </div>
           )}
@@ -298,6 +298,13 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
           </button>
           <button className="small" onClick={() => rangeOp('clear')}>
             Caps calculés
+          </button>
+          <button
+            className="small"
+            onClick={() => api.rotateYaw(projectId, { start_idx: range[0], end_idx: range[1] }, 180).then((r) => onChanged(r.undo), (e) => onError(e.message))}
+            title="Caméra montée à l'envers : tourne les photos de la plage de 180° (XMP, le JPEG n'est pas modifié)"
+          >
+            ↻ 180°
           </button>
         </div>
       )}
@@ -837,6 +844,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   setRange(null)
                 }}
                 onGo={(idx) => goIdx(idx)}
+                onRefresh={() => {
+                  setNotice('Séquence tournée de 180°')
+                  afterHeadingChange()
+                }}
                 onError={fail}
               />
             )}

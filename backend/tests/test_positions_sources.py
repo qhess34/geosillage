@@ -297,3 +297,31 @@ def test_all_unclassified_in_sequences(samples):
         r = client.post(f"/api/projects/{pid}/sequences/from-unclassified").json()
         assert len(r["sequences"]) == 1 and r["sequences"][0]["count"] == 116  # usable photos of the ride
         assert client.post(f"/api/projects/{pid}/sequences/from-unclassified").status_code == 409
+
+
+def test_camera_backwards_sequence_rotation(project, tmp_path):
+    """Camera mounted backwards: +180° on a whole sequence (on top of per-photo head angles), JPEG untouched."""
+    from .test_export import scan_hash
+
+    client, pid, src, seqs = project
+    ph = [x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"]]
+    client.post(f"/api/projects/{pid}/headings/yaw", json={"photo_ids": [ph[3]["id"]], "yaw": 30})
+    r = client.post(f"/api/projects/{pid}/headings/yaw", json={"sequence_id": seqs[0]["id"], "add": 180}).json()
+    assert r["changed"] == seqs[0]["count"] and r["undo"]["undo"].startswith("Rotation de +180°")
+    assert client.get(f"/api/projects/{pid}/photos/{ph[0]['id']}").json()["yaw_offset"] == -180
+    assert client.get(f"/api/projects/{pid}/photos/{ph[3]['id']}").json()["yaw_offset"] == -150  # 30 + 180
+    other = next(x for x in rows(client, pid) if x["sequence_id"] == seqs[1]["id"])
+    assert client.get(f"/api/projects/{pid}/photos/{other['id']}").json()["yaw_offset"] is None
+
+    out = tmp_path / "out"
+    client.post(f"/api/projects/{pid}/export", json={"out_dir": str(out), "sequence_ids": [seqs[0]["id"]]})
+    assert wait_jobs(client, pid)[0]["state"] == "done"
+    f = next((out / "01_Sequence_1").glob("0001_*"))
+    src_file = Path(client.get(f"/api/projects/{pid}/photos/{ph[0]['id']}").json()["path"])
+    assert writer.read_tags([str(f)])[str(f)]["PoseHeadingDegrees"] == 180
+    assert scan_hash(f) == scan_hash(src_file)  # image data untouched
+
+    # Rotating again by 180° goes back to the original values
+    client.post(f"/api/projects/{pid}/headings/yaw", json={"sequence_id": seqs[0]["id"], "add": 180})
+    assert client.get(f"/api/projects/{pid}/photos/{ph[0]['id']}").json()["yaw_offset"] is None
+    assert client.get(f"/api/projects/{pid}/photos/{ph[3]['id']}").json()["yaw_offset"] == 30

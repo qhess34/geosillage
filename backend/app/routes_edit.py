@@ -233,24 +233,45 @@ class YawIn(BaseModel):
     photo_ids: list[int] | None = None
     start_idx: int | None = None
     end_idx: int | None = None
+    sequence_id: int | None = None
     yaw: float | None = Field(default=None, ge=-360, le=360)  # None = back to the camera's value (0)
+    # instead of yaw: rotate by this angle, added to each photo's current value (camera mounted backwards: 180)
+    add: float | None = Field(default=None, ge=-360, le=360)
+
+
+def _norm180(v: float) -> float:
+    return round(((v + 180) % 360) - 180, 2)
 
 
 @router.post("/headings/yaw")
 def heading_yaw(pid: str, body: YawIn):
-    """Angle of the image centre relative to the bike (helmet camera: where the head looks). Undoable."""
+    """Angle of the image centre relative to the bike (XMP PoseHeadingDegrees). The JPEG is never rotated.
+
+    yaw: set this angle (helmet camera: where the head looks); add: rotate every photo by this angle on top of
+    its current value (camera mounted backwards on a whole sequence: 180). Undoable."""
     with db.open_project(pid) as conn:
         if body.photo_ids:
             ids = body.photo_ids
+        elif body.sequence_id is not None:
+            ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE sequence_id=?", (body.sequence_id,))]
         elif body.start_idx is not None and body.end_idx is not None:
             ids = positions.ids_in_range(conn, body.start_idx, body.end_idx)
         else:
-            raise HTTPException(400, "Indiquez des photos ou une plage")
-        v = None if body.yaw is None else round(((body.yaw + 180) % 360) - 180, 2)
-        label = f"Direction du vélo fixée ({v:+g}°) sur {len(ids)} photo(s)" if v is not None else f"Lacet remis à 0 sur {len(ids)} photo(s)"
+            raise HTTPException(400, "Indiquez des photos, une séquence ou une plage")
+        if not ids:
+            raise HTTPException(400, "Aucune photo")
+        if body.add is not None:
+            ph = ",".join("?" * len(ids))
+            rows = conn.execute(f"SELECT id, yaw_offset FROM photo WHERE id IN ({ph})", ids).fetchall()
+            updates = [(_norm180((r["yaw_offset"] or 0) + body.add) or None, r["id"]) for r in rows]
+            label = f"Rotation de {body.add:+g}° de {len(ids)} photo(s)"
+        else:
+            v = None if body.yaw is None else _norm180(body.yaw)
+            updates = [(v, i) for i in ids]
+            label = f"Direction du vélo fixée ({v:+g}°) sur {len(ids)} photo(s)" if v is not None else f"Lacet remis à 0 sur {len(ids)} photo(s)"
         with undo.undoable(conn, label):
-            conn.executemany("UPDATE photo SET yaw_offset=? WHERE id=?", [(v, i) for i in ids])
-        return {"changed": len(ids), "yaw": v, "undo": undo.state(conn)}
+            conn.executemany("UPDATE photo SET yaw_offset=? WHERE id=?", updates)
+        return {"changed": len(ids), "yaw": updates[0][0] if body.add is None else None, "undo": undo.state(conn)}
 
 
 @router.post("/headings/range")

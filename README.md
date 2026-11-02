@@ -63,6 +63,9 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    la route devant le vélo puis *🚲 Fixer la direction du vélo* (sur la photo, ou sur toute la plage sélectionnée) :
    l'angle de la tête est écrit dans `XMP-GPano:PoseHeadingDegrees` (lacet, lu par Panoramax pour orienter la
    sphère), `GPSImgDirection` reste la direction du vélo, et la visionneuse s'ouvre alors face à la route.
+   **Caméra montée à l'envers** : *↻ 180°* sur la séquence (onglet *Séquences*) ou sur une plage (onglet *Photo*)
+   ajoute 180° à l'orientation de toutes ses photos (en plus des angles de tête déjà fixés) ; le JPEG n'est pas
+   modifié, seule `PoseHeadingDegrees` change. Recliquer revient à l'état précédent.
 6. **Exporter** (onglet *Export*), trois modes :
    - *Copier* (par défaut) : copies, sources intactes ;
    - *Déplacer* : les photos sources sont déplacées et renommées dans un dossier par séquence, EXIF modifiés ;

@@ -313,7 +313,7 @@ def list_with_stats(conn) -> list[dict]:
     for s in seqs:
         pts = conn.execute(
             f"""SELECT p.idx, p.ts, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon,
-                      {db.EFF_FLAGS_SQL} flags, p.lat IS NOT NULL corrected
+                      {db.EFF_FLAGS_SQL} flags, p.lat IS NOT NULL corrected, p.yaw_offset
                FROM photo p WHERE p.sequence_id=? ORDER BY p.idx""",
             (s["id"],),
         ).fetchall()
@@ -337,6 +337,8 @@ def list_with_stats(conn) -> list[dict]:
                 "anomalies": anomalies,
                 "gps_jumps": jumps,
                 "corrected": sum(1 for p in pts if p["corrected"]),
+                "backwards": sum(1 for p in pts if p["yaw_offset"] is not None and abs(abs(p["yaw_offset"]) - 180) < 0.01),
+                "rotated": sum(1 for p in pts if p["yaw_offset"] is not None),
                 "headings": headings.stats(conn, s["id"]),
             }
         )

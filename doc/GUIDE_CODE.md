@@ -149,7 +149,8 @@ right = 90° ») et que Photo Sphere Viewer applique comme correction de sphère
 30°, l'avant de la vue montre ce qui est à 30° à gauche du centre de l'image (vérifié dans le navigateur).
 `GPSImgDirection` reste la direction du vélo. Fixer : la vue est dans le repère corrigé, donc si l'on regarde la
 route à l'angle `y`, le nouveau lacet vaut `lacet_actuel − y`. La visionneuse impose ce lacet (fournisseur
-`panoData`) au lieu de lire le XMP du fichier. Sans lacet fixé, l'export ne touche pas la balise, sauf pour remettre
+`panoData`) au lieu de lire le XMP du fichier. `POST …/headings/yaw` accepte `yaw` (valeur fixée) ou `add` (rotation ajoutée à la valeur
+de chaque photo : caméra montée à l'envers = 180°), sur des photos, une plage ou une séquence (`sequence_id`). Sans lacet fixé, l'export ne touche pas la balise, sauf pour remettre
 la valeur d'origine d'une source déjà modifiée.
 
 ## Retard GPS (synchronisation temporelle)

@@ -132,7 +132,7 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
           </button>
           {yaw != null && yaw !== 0 && onResetYaw && (
             <button className="small" onClick={onResetYaw} title="Le centre de l'image regarde dans la direction du vélo">
-              Tête {yaw > 0 ? '+' : ''}
+              ↻ {yaw > 0 ? '+' : ''}
               {yaw}° ✕
             </button>
           )}

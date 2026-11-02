@@ -9,6 +9,7 @@ interface Props {
   range: [number, number] | null
   onState: (s: SeqState) => void
   onGo: (idx: number) => void
+  onRefresh: () => void // reload photos and sequences after an edit that does not return them
   onError: (msg: string) => void
 }
 
@@ -56,6 +57,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         {h.missing > 0 && <span className="warn-text"> · {h.missing} manquants</span>}
         {h.stale > 0 && <span className="warn-text"> · {h.stale} à revoir</span>}
         {s.anomalies > 0 && <span className="warn-text"> · {s.anomalies} anomalies GPS</span>}
+        {s.backwards > 0 && <span> · ↻ {s.backwards === s.count ? 'tournée de 180°' : `${s.backwards} photos tournées de 180°`}</span>}
       </div>
       <div className="seq-actions">
         <label className="small-text" title="Décalage angulaire appliqué à tous les caps calculés de la séquence">
@@ -73,6 +75,13 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         </label>
         <button className="small" onClick={() => setEditing(true)}>
           Renommer
+        </button>
+        <button
+          className="small"
+          onClick={() => api.rotateYaw(projectId, { sequence_id: s.id }, 180).then(() => props.onRefresh(), (e) => onError(e.message))}
+          title="Caméra montée à l'envers : tourne toutes les photos de 180° (XMP PoseHeadingDegrees, le JPEG n'est pas modifié). Recliquer annule."
+        >
+          ↻ 180°
         </button>
         {inThis && current && current.idx !== s.start_idx && (
           <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title="Couper avant la photo courante (C)">

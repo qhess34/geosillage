@@ -135,6 +135,8 @@ export interface Sequence {
   anomalies: number
   gps_jumps: number
   corrected: number
+  backwards: number // photos rotated by 180° (camera mounted backwards)
+  rotated: number // photos with an orientation angle (yaw)
   headings: HeadingStats
 }
 
@@ -278,6 +280,9 @@ export const api = {
     req<SeqState & { changed: number }>('POST', `/api/projects/${id}/photos/exclude`, { ...target, excluded }),
   setYaw: (id: string, target: { photo_ids?: number[]; start_idx?: number; end_idx?: number }, yaw: number | null) =>
     req<{ changed: number; yaw: number | null; undo: UndoState }>('POST', `/api/projects/${id}/headings/yaw`, { ...target, yaw }),
+  // rotate by `add` degrees on top of each photo's orientation (camera mounted backwards: 180); JPEG untouched
+  rotateYaw: (id: string, target: { photo_ids?: number[]; start_idx?: number; end_idx?: number; sequence_id?: number }, add: number) =>
+    req<{ changed: number; undo: UndoState }>('POST', `/api/projects/${id}/headings/yaw`, { ...target, add }),
   seqFromUnclassified: (id: string) => req<SeqState>('POST', `/api/projects/${id}/sequences/from-unclassified`),
   cutAt: (id: string, photo: number) => req<SeqState & { done: string }>('POST', `/api/projects/${id}/sequences/cut?photo_id=${photo}`),
   trashExcluded: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/sources/trash-excluded`),
