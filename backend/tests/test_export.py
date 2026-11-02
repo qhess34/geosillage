@@ -129,7 +129,7 @@ def test_export_folders_and_exif(project, samples, tmp_path):
     assert jobs[0]["kind"] == "export" and jobs[0]["state"] == "done", jobs[0]
 
     dirs = sorted(p.name for p in out.iterdir())
-    assert dirs == ["01_Matin_a_velo", "02_Sequence_2"]  # accents removed in folder names
+    assert dirs == ["Export_1", "Export_2"]  # <project name>_<n>
     from app import db as _db
 
     with _db.open_project(pid) as conn:
@@ -207,3 +207,30 @@ def test_speeds_along_trajectory():
     v = speeds_kmh(items)
     assert v[:4] == [pytest.approx(18, abs=0.01)] * 4
     assert v[4] is None
+
+
+def test_gopro_maker_notes_warnings_are_not_errors(samples, tmp_path):
+    """Real GoPro MAX photos make ExifTool warn "[minor] Maker notes could not be parsed" when written:
+    a warning, not a failure (it used to be reported as a verification problem on every file but the first)."""
+    import shutil
+
+    import piexif
+
+    src = tmp_path / "gopro"
+    shutil.copytree(samples / "100GOPRO", src)
+    for f in sorted(src.glob("*.JPG"))[:30]:
+        d = piexif.load(str(f))
+        d["Exif"][piexif.ExifIFD.MakerNote] = bytes(range(7, 200))  # unparsable maker notes, like the GoPro MAX
+        piexif.insert(piexif.dump(d), str(f))
+    with TestClient(main.app) as client:
+        pid = client.post("/api/projects", json={"name": "GoPro"}).json()["id"]
+        client.post(f"/api/projects/{pid}/import", json={"paths": [str(src)]})
+        wait_jobs(client, pid)
+        client.post(f"/api/projects/{pid}/sequences/from-unclassified")
+        client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.5, "scope": "all"})
+        client.post(f"/api/projects/{pid}/export", json={"out_dir": str(tmp_path / "out")})
+        j = wait_jobs(client, pid)[0]
+        assert j["state"] == "done", j
+        reports = client.get(f"/api/projects/{pid}/exports").json()
+        assert reports and all(r["report"]["problems"] == {} for r in reports)
+        assert reports[0]["report"]["corrected_positions"] > 20

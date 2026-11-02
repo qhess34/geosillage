@@ -76,7 +76,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
     <div>
       <p className="small-text muted">
         EXIF écrits : cap (GPSImgDirection, référence nord vrai), vitesse (GPSSpeed), GPSVersionID, et position quand elle
-        a été corrigée. Les images ne sont jamais recompressées. Un dossier par séquence (<span className="mono">NN_nom/</span>)
+        a été corrigée. Les images ne sont jamais recompressées. Un dossier par séquence (<span className="mono">NomDuProjet_1/</span>, <span className="mono">_2/</span>…)
         sauf en mode « sur place ».
       </p>
       <fieldset className="modes">
@@ -245,7 +245,18 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
                   </div>
                 )}
                 {Object.keys(h.report.problems).length > 0 && (
-                  <div className="error">{Object.keys(h.report.problems).length} problème(s) de vérification</div>
+                  <details className="error">
+                    <summary>{Object.keys(h.report.problems).length} problème(s) de vérification</summary>
+                    <ul className="problems">
+                      {Object.entries(h.report.problems)
+                        .slice(0, 20)
+                        .map(([f, msg]) => (
+                          <li key={f}>
+                            <span className="mono">{f.split('/').pop()}</span> : {msg}
+                          </li>
+                        ))}
+                    </ul>
+                  </details>
                 )}
               </li>
             ))}

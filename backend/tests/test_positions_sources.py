@@ -144,7 +144,7 @@ def test_move_export_rename_and_restore(project, tmp_path):
     assert j["state"] == "done", j
 
     dirs = sorted(p.name for p in out.iterdir())
-    assert dirs == ["01_Sequence_1", "02_Sequence_2"]
+    assert dirs == ["Positions_1", "Positions_2"]
     moved = sorted((out / dirs[0]).glob("*.JPG"))
     assert moved and moved[0].name.startswith("0001_GSAC")
     ph = {x["id"]: x for x in rows(client, pid)}
@@ -153,15 +153,18 @@ def test_move_export_rename_and_restore(project, tmp_path):
     assert r0 is not None and not Path(r0["moved_from"]).exists()  # the file really moved
     assert reader.read_batch([str(moved[0])])[0].heading is not None
 
-    # Rename the sequence and export again: files follow, original path is kept
-    client.patch(f"/api/projects/{pid}/sequences/{seqs[0]['id']}", json={"name": "Matin"})
+    # Cut the first sequence and export again: files follow their new sequence folder, original path is kept
+    first_seq = [x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"]]
+    client.post(f"/api/projects/{pid}/sequences/cut", params={"photo_id": first_seq[50]["id"]})
     client.post(f"/api/projects/{pid}/export", json={"mode": "move", "out_dir": str(out)})
     j = wait_jobs(client, pid)[0]
     assert j["state"] == "done", j
-    assert len(list((out / "01_Matin").glob("*.JPG"))) == len(moved)
-    assert not list((out / "01_Sequence_1").glob("*.JPG"))
+    assert sorted(p.name for p in out.iterdir()) == ["Positions_1", "Positions_2", "Positions_3"]
+    n1 = len(list((out / "Positions_1").glob("*.JPG")))
+    n2 = len(list((out / "Positions_2").glob("*.JPG")))
+    assert n1 + n2 == len(moved) and n1 == 50 - sum(1 for x in first_seq[:50] if x["flags"] & 16)
     with db.open_project(pid) as conn:
-        r1 = conn.execute("SELECT moved_from FROM photo WHERE path LIKE ?", (str(out / "01_Matin" / "0001_%"),)).fetchone()
+        r1 = conn.execute("SELECT moved_from FROM photo WHERE path LIKE ?", (str(out / "Positions_1" / "0001_%"),)).fetchone()
     assert r1["moved_from"] == r0["moved_from"]
 
     # Re-import of the source folder does not duplicate moved photos
@@ -272,10 +275,10 @@ def test_helmet_yaw_written_to_xmp(project, tmp_path):
     client.post(f"/api/projects/{pid}/export", json={"out_dir": str(out), "sequence_ids": [seqs[0]["id"]]})
     assert wait_jobs(client, pid)[0]["state"] == "done"
     name = Path(client.get(f"/api/projects/{pid}/photos/{a['id']}").json()["path"]).name
-    f = next((out / "01_Sequence_1").glob(f"*_{name}"))
+    f = next((out / "Positions_1").glob(f"*_{name}"))
     t = writer.read_tags([str(f)])[str(f)]
     assert t["PoseHeadingDegrees"] == 330 and t["GPSImgDirection"] == pytest.approx(a["heading"], abs=0.01)
-    other = next((out / "01_Sequence_1").glob("0001_*"))
+    other = next((out / "Positions_1").glob("0001_*"))
     assert writer.read_tags([str(other)])[str(other)]["PoseHeadingDegrees"] == 0  # untouched
 
     # In place, then back to 0: the camera's value is written again
@@ -316,7 +319,7 @@ def test_camera_backwards_sequence_rotation(project, tmp_path):
     out = tmp_path / "out"
     client.post(f"/api/projects/{pid}/export", json={"out_dir": str(out), "sequence_ids": [seqs[0]["id"]]})
     assert wait_jobs(client, pid)[0]["state"] == "done"
-    f = next((out / "01_Sequence_1").glob("0001_*"))
+    f = next((out / "Positions_1").glob("0001_*"))
     src_file = Path(client.get(f"/api/projects/{pid}/photos/{ph[0]['id']}").json()["path"])
     assert writer.read_tags([str(f)])[str(f)]["PoseHeadingDegrees"] == 180
     assert scan_hash(f) == scan_hash(src_file)  # image data untouched
@@ -325,3 +328,14 @@ def test_camera_backwards_sequence_rotation(project, tmp_path):
     client.post(f"/api/projects/{pid}/headings/yaw", json={"sequence_id": seqs[0]["id"], "add": 180})
     assert client.get(f"/api/projects/{pid}/photos/{ph[0]['id']}").json()["yaw_offset"] is None
     assert client.get(f"/api/projects/{pid}/photos/{ph[3]['id']}").json()["yaw_offset"] == 30
+
+
+def test_rotate_all_photos(project):
+    client, pid, _, seqs = project
+    allp = rows(client, pid)
+    r = client.post(f"/api/projects/{pid}/headings/yaw", json={"all": True, "add": 180}).json()
+    assert r["changed"] == len(allp)
+    unclassified = next(x for x in allp if x["sequence_id"] is None)
+    assert client.get(f"/api/projects/{pid}/photos/{unclassified['id']}").json()["yaw_offset"] == -180
+    client.post(f"/api/projects/{pid}/undo")
+    assert client.get(f"/api/projects/{pid}/photos/{unclassified['id']}").json()["yaw_offset"] is None

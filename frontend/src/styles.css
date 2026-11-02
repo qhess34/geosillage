@@ -182,11 +182,19 @@ select {
 .toolbar button {
   white-space: nowrap;
 }
-.toolbar .notice {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.toast {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  background: var(--panel);
+  color: #059669;
+  border: 1px solid #059669;
+  border-radius: 8px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  max-width: 80vw;
 }
 .toolbar {
   display: flex;
@@ -732,4 +740,9 @@ input.coord {
 .seq-buttons button.active {
   border-color: #facc15;
   box-shadow: 0 0 0 2px #facc15;
+}
+.problems {
+  margin: 4px 0;
+  padding-left: 18px;
+  font-size: 12px;
 }

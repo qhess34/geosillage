@@ -234,6 +234,7 @@ class YawIn(BaseModel):
     start_idx: int | None = None
     end_idx: int | None = None
     sequence_id: int | None = None
+    all: bool = False  # every photo of the project (classified or not)
     yaw: float | None = Field(default=None, ge=-360, le=360)  # None = back to the camera's value (0)
     # instead of yaw: rotate by this angle, added to each photo's current value (camera mounted backwards: 180)
     add: float | None = Field(default=None, ge=-360, le=360)
@@ -250,14 +251,16 @@ def heading_yaw(pid: str, body: YawIn):
     yaw: set this angle (helmet camera: where the head looks); add: rotate every photo by this angle on top of
     its current value (camera mounted backwards on a whole sequence: 180). Undoable."""
     with db.open_project(pid) as conn:
-        if body.photo_ids:
+        if body.all:
+            ids = [r[0] for r in conn.execute("SELECT id FROM photo")]
+        elif body.photo_ids:
             ids = body.photo_ids
         elif body.sequence_id is not None:
             ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE sequence_id=?", (body.sequence_id,))]
         elif body.start_idx is not None and body.end_idx is not None:
             ids = positions.ids_in_range(conn, body.start_idx, body.end_idx)
         else:
-            raise HTTPException(400, "Indiquez des photos, une séquence ou une plage")
+            raise HTTPException(400, "Indiquez des photos, une séquence, une plage ou toutes les photos")
         if not ids:
             raise HTTPException(400, "Aucune photo")
         if body.add is not None:

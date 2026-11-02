@@ -91,7 +91,9 @@ def run_batch(items: list[tuple[str, list[str]]], on_source: bool = False) -> di
     items = [(p, a) for p, a in items if a]
     if not items:
         return {}
-    common = ["-n", "-charset", "filename=utf8"]
+    # Options apply to one command only: with -execute they must be repeated for every file. -q -q silences
+    # warnings such as "[minor] Maker notes could not be parsed" (GoPro MAX): they are not write errors.
+    common = ["-q", "-q", "-n", "-charset", "filename=utf8"]
     common += ["-overwrite_original_in_place", "-P"] if on_source else ["-overwrite_original"]
     with tempfile.NamedTemporaryFile("w", suffix=".args", encoding="utf-8") as f:
         for path, a in items:
@@ -101,12 +103,13 @@ def run_batch(items: list[tuple[str, list[str]]], on_source: bool = False) -> di
             [config.EXIFTOOL, "-q", "-q", "-@", f.name], capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
     errors = {}
-    if res.returncode != 0 or res.stderr.strip():
-        # The caller also re-reads every written file to verify the values
-        for line in res.stderr.splitlines():
-            for path, _ in items:
-                if path in line:
-                    errors[path] = line.strip()[:300]
+    # Only "Error" lines are failures (warnings may still be printed); the caller also re-reads every file
+    for line in res.stderr.splitlines():
+        if not line.lstrip().startswith("Error"):
+            continue
+        for path, _ in items:
+            if path in line:
+                errors[path] = line.strip()[:300]
     return errors
 
 

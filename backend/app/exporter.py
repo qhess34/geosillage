@@ -2,8 +2,9 @@
 
 Three modes:
 
-- ``copy`` (default, originals untouched): <out_dir>/<NN>_<sequence>/<n>_<file name>.jpg are copies.
-- ``move`` (user's choice): the *source photos* are moved into <out_dir>/<NN>_<sequence>/ and their EXIF
+- ``copy`` (default, originals untouched): <out_dir>/<project>_<n>/<rank>_<file name>.jpg are copies
+  (n = 1, 2, 3… in the order of the ride).
+- ``move`` (user's choice): the *source photos* are moved into <out_dir>/<project>_<n>/ and their EXIF
   are modified in place. photo.path follows the file; photo.moved_from keeps the very first path.
 - ``in_place`` (user's choice): the source photos keep their place and their EXIF are modified.
 
@@ -79,6 +80,7 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
     order = {r[0]: r[1] for r in conn.execute("SELECT sequence_id, MIN(idx) FROM photo WHERE sequence_id IS NOT NULL GROUP BY sequence_id")}
     seqs = sorted([s for s in seqs if s["id"] in order], key=lambda s: order[s["id"]])
     numbered = {s["id"]: i + 1 for i, s in enumerate(seqs)}
+    project = slug(db.get_meta(conn, "name", "projet") or "projet")
     if sequence_ids:
         seqs = [s for s in seqs if s["id"] in set(sequence_ids)]
     out = []
@@ -91,7 +93,8 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
                 WHERE p.sequence_id=? ORDER BY p.rank""",
             (s["id"],),
         ).fetchall()
-        out.append({"id": s["id"], "name": s["name"], "dir": f"{numbered[s['id']]:02d}_{slug(s['name'])}", "photos": [dict(p) for p in photos]})
+        # folder: <project name>_<n>, n = 1, 2, 3… in the order of the ride
+        out.append({"id": s["id"], "name": s["name"], "dir": f"{project}_{numbered[s['id']]}", "photos": [dict(p) for p in photos]})
     return out
 
 

@@ -145,6 +145,13 @@ export default function SequencesTab(props: Props) {
           <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
             Tout en séquences
           </button>
+          <button
+            className="small"
+            onClick={() => api.rotateYaw(projectId, { all: true }, 180).then(() => props.onRefresh(), (e) => onError(e.message))}
+            title="Caméra montée à l'envers sur toute la sortie : tourne toutes les photos du projet de 180° (XMP PoseHeadingDegrees, le JPEG n'est pas modifié). Recliquer annule."
+          >
+            ↻ 180° toutes les photos
+          </button>
         </div>
         <span className="muted small-text">
           {range

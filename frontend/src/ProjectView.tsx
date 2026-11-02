@@ -754,12 +754,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         >
           ✥ Positions
         </button>
-        <button onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
-          Vérifier les fichiers
-        </button>
-        {project.summary.thumbs_failed > 0 && <button onClick={() => api.retryThumbs(projectId).then(refresh)}>Relancer les miniatures</button>}
         <span className="spacer" />
-        {notice && <span className="notice small-text">✓ {notice}</span>}
+        {notice && <div className="toast small-text">✓ {notice}</div>}
         <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)">
           ?
         </button>
@@ -845,7 +841,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 }}
                 onGo={(idx) => goIdx(idx)}
                 onRefresh={() => {
-                  setNotice('Séquence tournée de 180°')
+                  setNotice('Photos tournées de 180°')
                   afterHeadingChange()
                 }}
                 onError={fail}
@@ -884,6 +880,16 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <>
                 <Summary p={project} />
+                <div className="row wrap">
+                  <button className="small" onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
+                    Vérifier les fichiers
+                  </button>
+                  {project.summary.thumbs_failed > 0 && (
+                    <button className="small" onClick={() => api.retryThumbs(projectId).then(refresh)}>
+                      Relancer les miniatures en échec
+                    </button>
+                  )}
+                </div>
                 <HeadingSettings
                   key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`}
                   p={project}

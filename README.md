@@ -63,7 +63,8 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    la route devant le vélo puis *🚲 Fixer la direction du vélo* (sur la photo, ou sur toute la plage sélectionnée) :
    l'angle de la tête est écrit dans `XMP-GPano:PoseHeadingDegrees` (lacet, lu par Panoramax pour orienter la
    sphère), `GPSImgDirection` reste la direction du vélo, et la visionneuse s'ouvre alors face à la route.
-   **Caméra montée à l'envers** : *↻ 180°* sur la séquence (onglet *Séquences*) ou sur une plage (onglet *Photo*)
+   **Caméra montée à l'envers** : *↻ 180° toutes les photos* (onglet *Séquences*, tout le projet, photos non classées
+   comprises), *↻ 180°* sur une séquence (onglet *Séquences*) ou sur une plage (onglet *Photo*)
    ajoute 180° à l'orientation de toutes ses photos (en plus des angles de tête déjà fixés) ; le JPEG n'est pas
    modifié, seule `PoseHeadingDegrees` change. Recliquer revient à l'état précédent.
 6. **Exporter** (onglet *Export*), trois modes :
@@ -74,7 +75,8 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    Dans les deux derniers cas une confirmation est demandée ; les valeurs d'origine des balises écrites sont
    sauvegardées dans le projet avant la première modification, et *Restaurer les photos sources* les remet et
    ramène les fichiers à leur emplacement et leur nom d'origine (positions restaurées à mieux que 0,1 mm : elles
-   sont réencodées ; les données image ne sont jamais touchées). Un dossier par séquence (`01_Nom/0001_GSAC….JPG`…), avec
+   sont réencodées ; les données image ne sont jamais touchées). Un dossier par séquence, nommé `<nom du projet>_<n>` avec n = 1, 2, 3… dans l'ordre de la sortie
+   (`Sortie_14_juin_1/0001_GSAC….JPG`…), avec
    `GPSImgDirection` / `GPSImgDirectionRef=T`, `GPSSpeed` (km/h, calculée sur la trajectoire), `GPSVersionID` 2.3,
    et la position si elle a été corrigée, sans recompression. `XMP-GPano:PoseHeadingDegrees` reçoit l'angle de
    tête fixé (sinon il garde le 0,0 de la GoPro) ; le tangage et le roulis ne sont pas modifiés (Panoramax redresse

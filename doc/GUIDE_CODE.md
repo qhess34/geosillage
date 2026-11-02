@@ -216,6 +216,13 @@ un dossier source (les copies seraient ré-importées). Puis par lots de 200 en 
 relecture et comparaison des valeurs. Le test `test_export.py` vérifie aussi que les données image (après le
 marqueur SOS) sont identiques à l'original : pas de recompression.
 
+Dossiers : `<nom du projet>_<n>` (`exporter.plan`), n = 1, 2, 3… dans l'ordre des séquences dans la sortie.
+
+ExifTool en lot (`writer.run_batch`) : avec `-execute`, les options ne valent que pour une commande ; elles sont donc
+répétées pour chaque fichier (`-q -q`, `-n`…). Seules les lignes « Error » sont des échecs : les vraies photos
+GoPro MAX produisent « Warning: [minor] Maker notes could not be parsed », qui était compté à tort comme un problème
+de vérification sur tous les fichiers sauf le premier du lot (`test_gopro_maker_notes_warnings_are_not_errors`).
+
 Règle Panoramax (option, activée par défaut) : un cap qui s'arrondit à 0° est écrit 0,6°, car Panoramax arrondit à
 l'entier et recalcule les caps nuls.
 
@@ -242,7 +249,7 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 
 ## Tests
 
-`backend/tests` (pytest, 51 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
+`backend/tests` (pytest, 54 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
 persistance après redémarrage, originaux inchangés par comparaison de hash), fichiers introuvables, suppression de
 projet ; calcul du cap (lignes droites, passage 359°/0°, arrêts, interruptions, précision sur sortie simulée) ;
 séquences et annuler/rétablir ; export (dossiers, EXIF relus, données image identiques, métadonnées GoPro/GPano
