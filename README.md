@@ -47,7 +47,9 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    - Bouton *Panoramax* : surcouche facultative des photos 360° **déjà publiées** sur Panoramax, colorées selon leur
      âge (moins d'un an / 1 à 3 ans / plus de 3 ans), date et appareil au survol ; séquences à partir du zoom 7,
      photos à partir du zoom 15. Instance réglable dans l'onglet *Bilan* (par défaut panoramax.openstreetmap.fr).
-3. **Corriger le retard GPS** (onglet *Synchro*, fond *Satellite*) : la GoPro enregistre la position avec 0,5 à 3 s
+3. **Corriger le retard GPS** (onglet *Synchro*, fond satellite : en France, *Satellite IGN Ortho* — orthophotos
+   IGN d'environ 20 cm, souvent plus nettes qu'Esri ; la variante *zoom max* demande les dalles jusqu'au zoom 21
+   là où l'IGN a de la très haute résolution, et peut rester vide ailleurs aux plus forts zooms) : la GoPro enregistre la position avec 0,5 à 3 s
    de retard. Choisir une photo où l'on voit un repère visible sur la vue satellite (passage piéton, angle de
    bâtiment…), l'agrandir (molette dans la visionneuse), puis faire glisser le marqueur orange : il ne peut aller
    que **le long de la trace**, et le décalage en secondes s'affiche ; toutes les photos se décalent en aperçu

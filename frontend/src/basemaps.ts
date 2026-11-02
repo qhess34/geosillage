@@ -9,6 +9,10 @@ export interface Basemap {
   custom?: boolean
 }
 
+const IGN_ORTHO =
+  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS' +
+  '&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
+
 export const BUILTIN_BASEMAPS: Basemap[] = [
   {
     id: 'osm',
@@ -19,10 +23,26 @@ export const BUILTIN_BASEMAPS: Basemap[] = [
   },
   {
     id: 'esri',
-    name: 'Satellite (Esri World Imagery)',
+    name: 'Satellite Esri World Imagery',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
     maxzoom: 19,
+  },
+  // IGN orthophotos (France, about 20 cm per pixel, very high resolution in some areas), Géoplateforme WMTS,
+  // open data (Licence Ouverte Etalab 2.0), no key. Tiles beyond maxzoom are enlarged by the map.
+  {
+    id: 'ign-ortho',
+    name: 'Satellite IGN Ortho (France, 20 cm)',
+    url: IGN_ORTHO,
+    attribution: '© <a href="https://geoservices.ign.fr" target="_blank">IGN</a> – Géoplateforme (orthophotographies)',
+    maxzoom: 19,
+  },
+  {
+    id: 'ign-ortho-max',
+    name: 'Satellite IGN Ortho — zoom max (selon zones)',
+    url: IGN_ORTHO,
+    attribution: '© <a href="https://geoservices.ign.fr" target="_blank">IGN</a> – Géoplateforme (orthophotographies)',
+    maxzoom: 21,
   },
   {
     id: 'opentopomap',
