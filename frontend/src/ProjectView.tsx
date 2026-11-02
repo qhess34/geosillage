@@ -10,6 +10,7 @@ import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
 import Timeline from './Timeline'
+import Viewer360 from './Viewer360'
 
 const JOB_LABELS: Record<string, string> = {
   import: 'Import',
@@ -33,8 +34,9 @@ const SHORTCUTS: [string, string][] = [
   ['Page ↑ / Page ↓', 'Séquence précédente / suivante'],
   ['D / F', 'Début / fin de la plage sur la photo courante'],
   ['S', 'Créer une séquence avec la plage'],
-  ['C', 'Couper la séquence avant la photo courante'],
-  ['Suppr', 'Retirer la photo courante de sa séquence'],
+  ['C', 'Découper ici : coupe la séquence avant la photo courante (photo non classée : crée la séquence autour, puis coupe)'],
+  ['X ou Suppr', 'Exclure la photo courante et passer à la suivante (avec une plage : exclure la plage)'],
+  ['Maj+X', 'Réintégrer la photo courante'],
   ['Échap', 'Effacer la plage'],
   ['[ / ]', 'Cap de la photo −1° / +1° (Maj : 5°)'],
   ['M', 'Mode positions : glisser le marqueur violet, ou cliquer la carte pour placer une photo sans GPS'],
@@ -90,6 +92,7 @@ function Summary({ p }: { p: Project }) {
         {row('Anomalies GPS', `${s.gps_anomalies} (sauts : ${s.gps_jumps})`, s.gps_anomalies > 0)}
         {row('Interruptions', s.interruptions, s.interruptions > 0)}
         {row('Illisibles', s.unreadable, s.unreadable > 0)}
+        {row('Exclues', s.excluded, s.excluded > 0)}
         {s.missing_files > 0 && row('Fichiers introuvables', s.missing_files, true)}
         {row('Photos 360°', s.is_360)}
         {row('Début', fmtTime(s.start))}
@@ -158,12 +161,23 @@ function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onErro
 
   return (
     <div className="photo-panel">
-      {photo.thumb === 1 ? (
-        <a href={api.imageUrl(projectId, photo.id)} target="_blank" rel="noreferrer" title="Ouvrir l'original">
-          <img className="thumb" src={api.thumbUrl(projectId, photo.id)} alt={photo.filename} />
-        </a>
+      {photo.thumb === -1 ? (
+        <div className="thumb placeholder">Image illisible</div>
       ) : (
-        <div className="thumb placeholder">{photo.thumb === -1 ? 'Image illisible' : 'Miniature en cours…'}</div>
+        <Viewer360
+          thumbUrl={photo.thumb === 1 ? api.thumbUrl(projectId, photo.id) : api.imageUrl(projectId, photo.id)}
+          imageUrl={api.imageUrl(projectId, photo.id)}
+          alt={photo.filename}
+          height={280}
+          yaw={photo.yaw_offset}
+          fixLabel={range ? `Direction du vélo (plage ${range[0] + 1}→${range[1] + 1})` : 'Fixer la direction du vélo'}
+          onFixYaw={(y) =>
+            api
+              .setYaw(projectId, range ? { start_idx: range[0], end_idx: range[1] } : { photo_ids: [photo.id] }, y)
+              .then((r) => onChanged(r.undo), (e) => onError(e.message))
+          }
+          onResetYaw={() => api.setYaw(projectId, { photo_ids: [photo.id] }, null).then((r) => onChanged(r.undo), (e) => onError(e.message))}
+        />
       )}
       <div className="photo-title">
         <strong>{photo.filename}</strong>
@@ -171,6 +185,14 @@ function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onErro
           {photo.idx + 1} / {count}
         </span>
       </div>
+      {photo.excluded ? (
+        <div className="excluded-box small-text">
+          Photo exclue (hors séquences, jamais exportée).{' '}
+          <button className="small" onClick={() => api.excludePhotos(projectId, { photo_ids: [photo.id] }, false).then(() => onChanged(), (e) => onError(e.message))}>
+            Réintégrer (Maj+X)
+          </button>
+        </div>
+      ) : null}
       <div className="small-text">
         {seq ? (
           <>
@@ -189,6 +211,12 @@ function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onErro
             Calculé : {photo.heading_auto != null ? `${photo.heading_auto.toFixed(1)}°` : photo.heading_auto_state === 'uncertain' ? 'incertain (arrêt)' : 'impossible'}
             {photo.sequence_offset ? ` ${photo.sequence_offset > 0 ? '+' : ''}${photo.sequence_offset}° (séquence)` : ''}
           </div>
+          {photo.yaw_offset != null && photo.yaw_offset !== 0 && (
+            <div title="Caméra sur casque : écrit dans XMP-GPano:PoseHeadingDegrees">
+              Tête : {photo.yaw_offset > 0 ? '+' : ''}
+              {photo.yaw_offset}° par rapport au vélo
+            </div>
+          )}
           <div>
             Final : <strong>{shown != null ? `${shown.toFixed(1)}°` : '—'}</strong>{' '}
             {photo.heading_manual != null && <span className="badge">manuel</span>}
@@ -559,9 +587,20 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       } else if (e.key === 's' || e.key === 'S') {
         if (range) api.createSequence(projectId, range[0], range[1]).then((s) => { applyState(s); setRange(null) }, (er) => setError(er.message))
       } else if (e.key === 'c' || e.key === 'C') {
-        if (current?.sequence_id != null) api.splitSequence(projectId, current.sequence_id, current.id).then(applyState, (er) => setError(er.message))
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (current?.sequence_id != null) api.removePhotos(projectId, [current.id]).then(applyState, (er) => setError(er.message))
+        if (current) api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))
+      } else if (e.key === 'X' && e.shiftKey) {
+        if (current?.excluded) api.excludePhotos(projectId, { photo_ids: [current.id] }, false).then(applyState, (er) => setError(er.message))
+      } else if (e.key === 'x' || e.key === 'Delete') {
+        if (range) {
+          api.excludePhotos(projectId, { start_idx: range[0], end_idx: range[1] }).then((s) => {
+            applyState(s)
+            setRange(null)
+          }, (er) => setError(er.message))
+        } else if (current) {
+          // exclude and move on: pressing the key repeatedly removes a series of photos
+          if (!current.excluded) api.excludePhotos(projectId, { photo_ids: [current.id] }).then(applyState, (er) => setError(er.message))
+          goIdx(current.idx + 1)
+        }
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)
       } else if (e.key === 'Escape') {
@@ -628,6 +667,20 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </button>
         <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? `Rétablir : ${undoState.redo} (Ctrl+Y)` : 'Rien à rétablir'}>
           ↷ Rétablir
+        </button>
+        <button
+          disabled={!current}
+          onClick={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
+          title="Découper la sortie avant la photo courante (C)"
+        >
+          ✂ Couper ici
+        </button>
+        <button
+          disabled={!range}
+          onClick={() => range && api.createSequence(projectId, range[0], range[1]).then((s) => { applyState(s); setRange(null) }, (er) => setError(er.message))}
+          title={range ? 'Créer une séquence avec la plage (S)' : 'Sélectionnez d\'abord une plage : D puis F, ou glisser sur la timeline'}
+        >
+          ＋ Séquence
         </button>
         <button
           className={editMode ? 'primary' : ''}
@@ -739,7 +792,15 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               />
             )}
             {tab === 'export' && (
-              <ExportTab projectId={projectId} sequences={sequences} jobs={project.jobs} sources={project.sources} onStarted={refresh} onError={fail} />
+              <ExportTab
+                projectId={projectId}
+                sequences={sequences}
+                jobs={project.jobs}
+                sources={project.sources}
+                excludedPhotos={project.summary.excluded}
+                onStarted={refresh}
+                onError={fail}
+              />
             )}
             {tab === 'summary' && (
               <>

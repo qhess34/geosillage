@@ -85,7 +85,7 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
     for s in seqs:
         photos = conn.execute(
             f"""SELECT p.id, p.rank, p.ts, p.path, p.filename, p.flags, p.lat, p.lon, p.lat_orig, p.lon_orig, p.pos_method,
-                       p.heading_auto, p.heading_auto_state, p.heading_manual, p.orig_tags, p.moved_from,
+                       p.heading_auto, p.heading_auto_state, p.heading_manual, p.orig_tags, p.moved_from, p.yaw_offset,
                        {headings.FINAL_SQL} AS heading
                 FROM photo p JOIN sequence s ON s.id = p.sequence_id
                 WHERE p.sequence_id=? ORDER BY p.rank""",
@@ -225,7 +225,7 @@ def run(
                     shutil.copystat(it["path"], tmp)
                     os.replace(tmp, it["dest"])
             edits = [
-                writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"], it["speed"], _orig_pose_heading(it))
+                writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"], it["speed"], _pose_heading(it))
                 for it in batch
             ]
             errors = writer.write_batch(edits, panoramax_compat, on_source=on_source)
@@ -295,8 +295,14 @@ def run(
         raise ExportError(f"{bad} fichier(s) en échec de vérification (voir l'historique des exports)")
 
 
-def _orig_pose_heading(it: dict) -> float | None:
-    """Original PoseHeadingDegrees of a photo that a previous version may have overwritten (else None: untouched)."""
+def _pose_heading(it: dict) -> float | None:
+    """Value for XMP-GPano:PoseHeadingDegrees (yaw for Panoramax), or None to leave the tag untouched.
+
+    - yaw fixed by the user (helmet camera): that angle, in [0, 360);
+    - otherwise, for a source photo already modified by the application: its original value (0.0 on the GoPro),
+      which also undoes a yaw written by a previous export or the heading written by versions before 2026-11."""
+    if it.get("yaw_offset") is not None:
+        return round(it["yaw_offset"] % 360.0, 2)
     if not it.get("orig_tags"):
         return None
     return json.loads(it["orig_tags"]).get("PoseHeadingDegrees")
@@ -305,7 +311,7 @@ def _orig_pose_heading(it: dict) -> float | None:
 def _write_csv(path: Path, items: list[dict], panoramax_compat: bool) -> None:
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["fichier", "source", "latitude", "longitude", "position", "cap", "origine_cap"])
+        w.writerow(["fichier", "source", "latitude", "longitude", "position", "cap", "origine_cap", "lacet"])
         for it in items:
             lat = it["lat"] if it["lat"] is not None else it["lat_orig"]
             lon = it["lon"] if it["lon"] is not None else it["lon_orig"]
@@ -320,14 +326,54 @@ def _write_csv(path: Path, items: list[dict], panoramax_compat: bool) -> None:
                 it["pos_method"] or "originale",
                 "" if it["heading"] is None else writer.heading_value(it["heading"], panoramax_compat),
                 origin,
+                "" if it["yaw_offset"] is None else it["yaw_offset"],
             ])
+
+
+TRASH_DIR = "_exclues"
+
+
+def trash_excluded(ctx: jobs.JobContext) -> None:
+    """Move the files of excluded photos to <their folder>/_exclues/ (photo.moved_from keeps the original path,
+    so « Restaurer les photos sources » puts them back). Nothing is ever deleted."""
+    pid = ctx.project_id
+    with db.open_project(pid) as conn:
+        rows = [dict(r) for r in conn.execute(
+            "SELECT id, path, moved_from FROM photo WHERE excluded=1 AND path NOT LIKE ? ORDER BY idx", (f"%/{TRASH_DIR}/%",)
+        )]
+    total = len(rows)
+    ctx.progress(0, total, "Déplacement des photos exclues…", force=True)
+    moved, problems = 0, []
+    with db.open_project(pid) as conn:
+        for i, r in enumerate(rows):
+            ctx.check()
+            src = Path(r["path"])
+            if not src.exists():
+                problems.append(f"{src} introuvable")
+                continue
+            dst = src.parent / TRASH_DIR / src.name
+            if dst.exists():
+                problems.append(f"{dst} existe déjà")
+                continue
+            dst.parent.mkdir(exist_ok=True)
+            shutil.move(str(src), str(dst))
+            with db.transaction(conn):
+                conn.execute(
+                    "UPDATE photo SET path=?, moved_from=COALESCE(moved_from, ?) WHERE id=?", (str(dst), str(src), r["id"])
+                )
+            moved += 1
+            ctx.progress(i + 1, total)
+    ctx.progress(total, total, f"{moved} photo(s) exclue(s) déplacée(s) dans {TRASH_DIR}/" + (f", {len(problems)} en échec" if problems else ""), force=True)
+    if problems:
+        raise ExportError(f"{len(problems)} photo(s) non déplacée(s), par ex. {problems[0]}")
 
 
 def modified_sources(conn) -> dict:
     r = conn.execute(
         "SELECT SUM(orig_tags IS NOT NULL AND source_written_at IS NOT NULL), SUM(moved_from IS NOT NULL) FROM photo"
     ).fetchone()
-    return {"modified": r[0] or 0, "moved": r[1] or 0}
+    trashed = conn.execute("SELECT COUNT(*) FROM photo WHERE path LIKE ?", (f"%/{TRASH_DIR}/%",)).fetchone()[0]
+    return {"modified": r[0] or 0, "moved": r[1] or 0, "trashed": trashed}
 
 
 def restore_sources(ctx: jobs.JobContext) -> None:

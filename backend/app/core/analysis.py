@@ -117,6 +117,7 @@ def summary(conn) -> dict:
         "same_time": flag(db.SAME_TIME),
         "unreadable": flag(db.UNREADABLE),
         "missing_files": flag(db.MISSING_FILE),
+        "excluded": c("SELECT COUNT(*) FROM photo WHERE excluded = 1"),
         "is_360": c("SELECT COUNT(*) FROM photo WHERE is_360 = 1"),
         "start": ts[0],
         "end": ts[1],

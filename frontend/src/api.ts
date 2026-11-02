@@ -31,6 +31,7 @@ export interface Summary {
   same_time: number
   unreadable: number
   missing_files: number
+  excluded: number
   is_360: number
   start: number | null
   end: number | null
@@ -57,6 +58,7 @@ export interface Project {
 export interface SourcesState {
   modified: number
   moved: number
+  trashed: number
 }
 
 export type ExportMode = 'copy' | 'move' | 'in_place'
@@ -79,6 +81,7 @@ export interface PhotoRow {
   heading_state: string | null
   heading_manual: number | null
   pos_method: string | null // corrected position method, null = original
+  excluded: number // 1 = excluded by the user (out of sequences, never exported)
 }
 
 export interface PhotoDetail extends PhotoRow {
@@ -104,6 +107,7 @@ export interface PhotoDetail extends PhotoRow {
   moved_from: string | null
   source_written_at: number | null
   time_offset: number | null
+  yaw_offset: number | null // helmet camera: angle of the image centre relative to the bike (right > 0)
   flag_names: string[]
 }
 
@@ -270,6 +274,13 @@ export const api = {
   ) => req<{ changed: number; kept_manual: number; uncovered: number; undo: UndoState }>('POST', `/api/projects/${id}/timesync/apply`, body),
   syncPoints: (id: string) => req<{ points: SyncPoint[]; last_offset_s: number | null }>('GET', `/api/projects/${id}/timesync/points`),
   saveSyncPoints: (id: string, points: SyncPoint[]) => req<{ points: SyncPoint[] }>('PUT', `/api/projects/${id}/timesync/points`, points),
+  excludePhotos: (id: string, target: { photo_ids?: number[]; start_idx?: number; end_idx?: number }, excluded = true) =>
+    req<SeqState & { changed: number }>('POST', `/api/projects/${id}/photos/exclude`, { ...target, excluded }),
+  setYaw: (id: string, target: { photo_ids?: number[]; start_idx?: number; end_idx?: number }, yaw: number | null) =>
+    req<{ changed: number; yaw: number | null; undo: UndoState }>('POST', `/api/projects/${id}/headings/yaw`, { ...target, yaw }),
+  seqFromUnclassified: (id: string) => req<SeqState>('POST', `/api/projects/${id}/sequences/from-unclassified`),
+  cutAt: (id: string, photo: number) => req<SeqState & { done: string }>('POST', `/api/projects/${id}/sequences/cut?photo_id=${photo}`),
+  trashExcluded: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/sources/trash-excluded`),
   restoreSources: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/sources/restore`),
   setPosition: (id: string, photo: number, lat: number | null, lon: number | null) =>
     req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/position`, lat == null ? {} : { lat, lon }),

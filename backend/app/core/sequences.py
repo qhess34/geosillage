@@ -3,6 +3,7 @@
 All mutating functions must be called inside `undo.undoable(...)` (they do not open transactions).
 """
 
+import re
 import time
 
 from .. import db
@@ -21,6 +22,19 @@ def _renumber(conn, sid: int) -> None:
     conn.executemany("UPDATE photo SET rank=? WHERE id=?", [(i + 1, pid) for i, pid in enumerate(ids)])
 
 
+DEFAULT_NAME = re.compile(r"^Séquence \d+$")
+
+
+def renumber_default_names(conn) -> None:
+    """Sequences still named "Séquence N" are renumbered in chronological order (custom names are kept)."""
+    rows = conn.execute(
+        "SELECT s.id, s.name FROM sequence s JOIN photo p ON p.sequence_id = s.id GROUP BY s.id ORDER BY MIN(p.idx)"
+    ).fetchall()
+    for i, r in enumerate(rows, 1):
+        if DEFAULT_NAME.match(r["name"]) and r["name"] != f"Séquence {i}":
+            conn.execute("UPDATE sequence SET name=? WHERE id=?", (f"Séquence {i}", r["id"]))
+
+
 def _next_name(conn) -> str:
     n = conn.execute("SELECT COUNT(*) FROM sequence").fetchone()[0] + 1
     names = {r[0] for r in conn.execute("SELECT name FROM sequence")}
@@ -34,12 +48,13 @@ def _eligible(conn, start_idx: int, end_idx: int, allow_sid=None) -> tuple[list[
     if start_idx > end_idx:
         start_idx, end_idx = end_idx, start_idx
     rows = conn.execute(
-        f"SELECT p.id, {db.EFF_FLAGS_SQL} flags, p.sequence_id FROM photo p WHERE p.idx BETWEEN ? AND ? ORDER BY p.idx",
+        f"""SELECT p.id, {db.EFF_FLAGS_SQL} flags, p.sequence_id, p.excluded FROM photo p
+            WHERE p.idx BETWEEN ? AND ? ORDER BY p.idx""",
         (start_idx, end_idx),
     ).fetchall()
     ids, excluded, conflicts = [], 0, set()
     for r in rows:
-        if r["flags"] & EXCLUDED:
+        if r["flags"] & EXCLUDED or r["excluded"]:
             excluded += 1
         elif r["sequence_id"] is not None and r["sequence_id"] != allow_sid:
             conflicts.add(r["sequence_id"])
@@ -61,6 +76,7 @@ def create(conn, start_idx: int, end_idx: int, name: str | None = None) -> dict:
     sid = cur.lastrowid
     conn.executemany("UPDATE photo SET sequence_id=? WHERE id=?", [(sid, i) for i in ids])
     _renumber(conn, sid)
+    renumber_default_names(conn)
     return {"id": sid, "count": len(ids), "excluded": excluded}
 
 
@@ -99,6 +115,7 @@ def delete(conn, sid: int) -> None:
     _get(conn, sid)
     conn.execute("UPDATE photo SET sequence_id=NULL, rank=NULL WHERE sequence_id=?", (sid,))
     conn.execute("DELETE FROM sequence WHERE id=?", (sid,))
+    renumber_default_names(conn)
 
 
 def split(conn, sid: int, photo_id: int) -> int:
@@ -110,14 +127,17 @@ def split(conn, sid: int, photo_id: int) -> int:
     first = conn.execute("SELECT MIN(idx) FROM photo WHERE sequence_id=?", (sid,)).fetchone()[0]
     if row["idx"] == first:
         raise SequenceError("Impossible de couper avant la première photo")
+    # default names are renumbered by position; a custom name gets " (suite)"
+    name = _next_name(conn) if DEFAULT_NAME.match(seq["name"]) else f"{seq['name']} (suite)"
     cur = conn.execute(
         "INSERT INTO sequence(name, heading_offset, created_at) VALUES(?, ?, ?)",
-        (f"{seq['name']} (suite)", seq["heading_offset"], time.time()),
+        (name, seq["heading_offset"], time.time()),
     )
     new = cur.lastrowid
     conn.execute("UPDATE photo SET sequence_id=? WHERE sequence_id=? AND idx>=?", (new, sid, row["idx"]))
     _renumber(conn, sid)
     _renumber(conn, new)
+    renumber_default_names(conn)
     return new
 
 
@@ -142,6 +162,7 @@ def merge(conn, ids: list[int]) -> int:
     conn.execute(f"UPDATE photo SET sequence_id=? WHERE sequence_id IN ({oh})", (target, *others))
     conn.execute(f"DELETE FROM sequence WHERE id IN ({oh})", others)
     _renumber(conn, target)
+    renumber_default_names(conn)
     return target
 
 
@@ -156,6 +177,7 @@ def remove_photos(conn, photo_ids: list[int]) -> None:
             _renumber(conn, sid)
         else:
             conn.execute("DELETE FROM sequence WHERE id=?", (sid,))
+    renumber_default_names(conn)
 
 
 def propose_cuts(conn, gap_s: float | None = None, max_dist_m: float = 100.0, min_photos: int = 5) -> list[dict]:
@@ -168,7 +190,7 @@ def propose_cuts(conn, gap_s: float | None = None, max_dist_m: float = 100.0, mi
     rows = conn.execute(
         f"""SELECT p.id, p.idx, p.ts, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon,
                    {db.EFF_FLAGS_SQL} flags, p.sequence_id
-            FROM photo p WHERE {db.EFF_FLAGS_SQL} & ? = 0 ORDER BY p.idx""",
+            FROM photo p WHERE {db.EFF_FLAGS_SQL} & ? = 0 AND p.excluded = 0 ORDER BY p.idx""",
         (EXCLUDED,),
     ).fetchall()
     segments: list[dict] = []
@@ -197,6 +219,88 @@ def propose_cuts(conn, gap_s: float | None = None, max_dist_m: float = 100.0, mi
         cur.append(r)
     close("")
     return [seg for seg in segments if seg["count"] >= min_photos]
+
+
+def cut_at(conn, photo_id: int) -> str:
+    """One key to cut the ride while browsing it.
+
+    - photo in a sequence: the sequence is split before this photo;
+    - unclassified photo: a sequence is created over the whole block of unclassified photos around it
+      (bounded by existing sequences), then split before this photo — so pressing the key at every cut point,
+      from the start of a ride, produces all the sequences.
+    Returns a short description of what was done."""
+    row = conn.execute("SELECT idx, sequence_id FROM photo WHERE id=?", (photo_id,)).fetchone()
+    if not row:
+        raise SequenceError("Photo introuvable")
+    if row["sequence_id"] is not None:
+        split(conn, row["sequence_id"], photo_id)
+        return "Séquence coupée"
+    idx = row["idx"]
+    before = conn.execute("SELECT MAX(idx) FROM photo WHERE sequence_id IS NOT NULL AND idx < ?", (idx,)).fetchone()[0]
+    after = conn.execute("SELECT MIN(idx) FROM photo WHERE sequence_id IS NOT NULL AND idx > ?", (idx,)).fetchone()[0]
+    lo = (before + 1) if before is not None else 0
+    hi = (after - 1) if after is not None else conn.execute("SELECT MAX(idx) FROM photo").fetchone()[0]
+    ids, _, _ = _eligible(conn, lo, hi)
+    if not ids:
+        raise SequenceError("Aucune photo utilisable autour de cette photo")
+    first = conn.execute(f"SELECT MIN(idx) FROM photo WHERE id IN ({','.join('?' * len(ids))})", ids).fetchone()[0]
+    res = create(conn, lo, hi)
+    # cut before the first usable photo at or after the current one
+    cut = conn.execute("SELECT id, idx FROM photo WHERE sequence_id=? AND idx>=? ORDER BY idx LIMIT 1", (res["id"], idx)).fetchone()
+    if cut is None or cut["idx"] == first:
+        return "Séquence créée"
+    split(conn, res["id"], cut["id"])
+    return "Séquence créée et coupée"
+
+
+def create_from_unclassified(conn) -> list[dict]:
+    """One sequence per block of unclassified photos (blocks are bounded by existing sequences).
+    On a new project: the whole ride in one sequence, to be cut afterwards (key C)."""
+    rows = conn.execute("SELECT idx, sequence_id FROM photo ORDER BY idx").fetchall()
+    blocks, start = [], None
+    for r in rows:
+        if r["sequence_id"] is None:
+            start = r["idx"] if start is None else start
+        elif start is not None:
+            blocks.append((start, r["idx"] - 1))
+            start = None
+    if start is not None:
+        blocks.append((start, rows[-1]["idx"]))
+    out = []
+    for a, b in blocks:
+        if _eligible(conn, a, b)[0]:
+            out.append(create(conn, a, b))
+    if not out:
+        raise SequenceError("Aucune photo non classée utilisable")
+    return out
+
+
+def set_excluded(conn, photo_ids: list[int], excluded: bool) -> int:
+    """Exclude photos (out of their sequence, never exported) or put them back.
+
+    A photo put back between two photos of the same sequence returns into that sequence."""
+    if not photo_ids:
+        return 0
+    if excluded:
+        remove_photos(conn, photo_ids)
+        ph = ",".join("?" * len(photo_ids))
+        return conn.execute(f"UPDATE photo SET excluded=1 WHERE id IN ({ph}) AND excluded=0", photo_ids).rowcount
+    n = 0
+    touched = set()
+    for pid in photo_ids:
+        r = conn.execute("SELECT idx, excluded FROM photo WHERE id=?", (pid,)).fetchone()
+        if not r or not r["excluded"]:
+            continue
+        conn.execute("UPDATE photo SET excluded=0 WHERE id=?", (pid,))
+        n += 1
+        prev = conn.execute("SELECT sequence_id FROM photo WHERE idx<? AND sequence_id IS NOT NULL ORDER BY idx DESC LIMIT 1", (r["idx"],)).fetchone()
+        nxt = conn.execute("SELECT sequence_id FROM photo WHERE idx>? AND sequence_id IS NOT NULL ORDER BY idx LIMIT 1", (r["idx"],)).fetchone()
+        if prev and nxt and prev[0] == nxt[0] and _eligible(conn, r["idx"], r["idx"])[0]:
+            conn.execute("UPDATE photo SET sequence_id=? WHERE id=?", (prev[0], pid))
+            touched.add(prev[0])
+    for sid in touched:
+        _renumber(conn, sid)
+    return n
 
 
 def create_many(conn, segments: list[tuple[int, int]]) -> list[dict]:

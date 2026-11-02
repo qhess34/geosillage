@@ -57,6 +57,7 @@ function toGeoJSON(photos: PhotoRow[], sequences: Sequence[]): GeoJSON.FeatureCo
           id: p.id,
           idx: p.idx,
           color: p.sequence_id != null ? colors.get(p.sequence_id) ?? '#9ca3af' : '#9ca3af',
+          excluded: p.excluded ? 1 : 0,
           anomaly: p.flags & ANOMALY && !p.pos_method ? 1 : 0,
           corrected: p.pos_method ? 1 : 0,
           heading: p.heading ?? -1, // -1 = no heading (null is not usable in filters)
@@ -175,7 +176,8 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       source: 'photos',
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2, 16, 5, 19, 8],
-        'circle-color': ['case', ['==', ['get', 'anomaly'], 1], '#dc2626', ['get', 'color']],
+        'circle-color': ['case', ['==', ['get', 'excluded'], 1], '#6b7280', ['==', ['get', 'anomaly'], 1], '#dc2626', ['get', 'color']],
+        'circle-opacity': ['case', ['==', ['get', 'excluded'], 1], 0.35, 1],
         // zoom must stay at the top level of the expression
         'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, ['case', ['==', ['get', 'corrected'], 1], 2, 0], 16, ['case', ['==', ['get', 'corrected'], 1], 2, 1]],
         'circle-stroke-color': ['case', ['==', ['get', 'corrected'], 1], '#7c3aed', '#ffffff'],
@@ -186,7 +188,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       type: 'symbol',
       source: 'photos',
       minzoom: 15,
-      filter: ['>=', ['get', 'heading'], 0],
+      filter: ['all', ['>=', ['get', 'heading'], 0], ['==', ['get', 'excluded'], 0]],
       layout: {
         'icon-image': 'arrow',
         'icon-size': ['interpolate', ['linear'], ['zoom'], 15, 0.45, 19, 0.9],

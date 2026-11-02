@@ -130,7 +130,7 @@ def test_in_place_export_and_restore(project):
         assert restored[k] == (pytest.approx(v, abs=1e-9) if isinstance(v, float) else v), k
     assert reader.read_batch([str(path)])[0].heading is None
     assert scan_hash(path) == before_scan
-    assert client.get(f"/api/projects/{pid}/sources").json() == {"modified": 0, "moved": 0}
+    assert client.get(f"/api/projects/{pid}/sources").json() == {"modified": 0, "moved": 0, "trashed": 0}
 
 
 def test_move_export_rename_and_restore(project, tmp_path):
@@ -196,3 +196,104 @@ def test_pose_heading_written_by_older_version_is_restored(project):
     client.post(f"/api/projects/{pid}/export", json={"mode": "in_place"})
     assert wait_jobs(client, pid)[0]["state"] == "done"
     assert writer.read_tags([path])[path]["PoseHeadingDegrees"] == 0
+
+
+def test_exclude_cut_and_trash(samples, tmp_path):
+    import shutil
+
+    src = tmp_path / "src"
+    shutil.copytree(samples, src)
+    with TestClient(main.app) as client:
+        pid = client.post("/api/projects", json={"name": "Découpe"}).json()["id"]
+        client.post(f"/api/projects/{pid}/import", json={"paths": [str(src)]})
+        wait_jobs(client, pid)
+        ph = [x for x in rows(client, pid) if x["flags"] == 0]
+
+        # One key, from scratch: cut at photo 40, then at photo 80 -> 3 sequences covering the ride
+        r = client.post(f"/api/projects/{pid}/sequences/cut", params={"photo_id": ph[40]["id"]}).json()
+        assert r["done"] == "Séquence créée et coupée" and len(r["sequences"]) == 2
+        r = client.post(f"/api/projects/{pid}/sequences/cut", params={"photo_id": ph[80]["id"]}).json()
+        assert r["done"] == "Séquence coupée" and len(r["sequences"]) == 3
+        assert r["sequences"][1]["start_idx"] == ph[40]["idx"] and r["sequences"][2]["start_idx"] == ph[80]["idx"]
+        assert client.post(f"/api/projects/{pid}/sequences/cut", params={"photo_id": ph[80]["id"]}).status_code == 409
+        total = sum(s["count"] for s in r["sequences"])
+
+        # Exclude a series of photos while browsing, put one back: it returns into its sequence
+        ids = [ph[i]["id"] for i in (50, 51, 52)]
+        r = client.post(f"/api/projects/{pid}/photos/exclude", json={"photo_ids": ids}).json()
+        assert r["changed"] == 3 and sum(s["count"] for s in r["sequences"]) == total - 3
+        r = client.post(f"/api/projects/{pid}/photos/exclude", json={"photo_ids": [ids[1]], "excluded": False}).json()
+        assert sum(s["count"] for s in r["sequences"]) == total - 2
+        assert next(x for x in rows(client, pid) if x["id"] == ids[1])["sequence_id"] == r["sequences"][1]["id"]
+        assert client.get(f"/api/projects/{pid}").json()["summary"]["excluded"] == 2
+        # Excluded photos cannot be put in a sequence
+        seq_ids = {x["id"] for x in rows(client, pid) if x["sequence_id"] is not None}
+        assert ids[0] not in seq_ids and ids[2] not in seq_ids
+        u = client.post(f"/api/projects/{pid}/undo").json()
+        assert u["done"].startswith("Réintégration")
+
+        # Trash: files of excluded photos go to _exclues/ next to them, and come back on restore
+        before = Path(client.get(f"/api/projects/{pid}/photos/{ids[0]}").json()["path"])
+        client.post(f"/api/projects/{pid}/sources/trash-excluded")
+        j = wait_jobs(client, pid)[0]
+        assert j["kind"] == "trash" and j["state"] == "done", j
+        after = Path(client.get(f"/api/projects/{pid}/photos/{ids[0]}").json()["path"])
+        assert after == before.parent / "_exclues" / before.name and after.exists() and not before.exists()
+        assert client.get(f"/api/projects/{pid}/sources").json()["trashed"] == 3
+        client.post(f"/api/projects/{pid}/sources/restore")
+        assert wait_jobs(client, pid)[0]["state"] == "done"
+        assert before.exists() and not after.exists()
+        assert client.get(f"/api/projects/{pid}/sources").json() == {"modified": 0, "moved": 0, "trashed": 0}
+
+
+def test_default_names_follow_the_ride(project):
+    client, pid, _, seqs = project
+    ph = [x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"]]
+    client.patch(f"/api/projects/{pid}/sequences/{seqs[1]['id']}", json={"name": "Retour"})
+    r = client.post(f"/api/projects/{pid}/sequences/cut", params={"photo_id": ph[30]["id"]}).json()
+    assert [s["name"] for s in r["sequences"]] == ["Séquence 1", "Séquence 2", "Retour"]
+    r = client.post(f"/api/projects/{pid}/sequences/cut", params={"photo_id": ph[10]["id"]}).json()
+    assert [s["name"] for s in r["sequences"]] == ["Séquence 1", "Séquence 2", "Séquence 3", "Retour"]
+    r = client.post(f"/api/projects/{pid}/sequences/merge", json={"ids": [r["sequences"][0]["id"], r["sequences"][1]["id"]]}).json()
+    assert [s["name"] for s in r["sequences"]] == ["Séquence 1", "Séquence 2", "Retour"]
+
+
+def test_helmet_yaw_written_to_xmp(project, tmp_path):
+    """Helmet camera: the bike direction stays in GPSImgDirection, the head angle goes to PoseHeadingDegrees."""
+    client, pid, src, seqs = project
+    ph = [x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"] and x["heading"] is not None]
+    a, b = ph[5], ph[7]
+    r = client.post(f"/api/projects/{pid}/headings/yaw", json={"photo_ids": [a["id"], ph[6]["id"], b["id"]], "yaw": -30}).json()
+    assert r["changed"] == 3 and r["undo"]["undo"].startswith("Direction du vélo fixée")
+    d = client.get(f"/api/projects/{pid}/photos/{a['id']}").json()
+    assert d["yaw_offset"] == -30 and d["heading_final"] == pytest.approx(a["heading"])  # bike direction unchanged
+
+    out = tmp_path / "out"
+    client.post(f"/api/projects/{pid}/export", json={"out_dir": str(out), "sequence_ids": [seqs[0]["id"]]})
+    assert wait_jobs(client, pid)[0]["state"] == "done"
+    name = Path(client.get(f"/api/projects/{pid}/photos/{a['id']}").json()["path"]).name
+    f = next((out / "01_Sequence_1").glob(f"*_{name}"))
+    t = writer.read_tags([str(f)])[str(f)]
+    assert t["PoseHeadingDegrees"] == 330 and t["GPSImgDirection"] == pytest.approx(a["heading"], abs=0.01)
+    other = next((out / "01_Sequence_1").glob("0001_*"))
+    assert writer.read_tags([str(other)])[str(other)]["PoseHeadingDegrees"] == 0  # untouched
+
+    # In place, then back to 0: the camera's value is written again
+    client.post(f"/api/projects/{pid}/export", json={"mode": "in_place", "sequence_ids": [seqs[0]["id"]]})
+    assert wait_jobs(client, pid)[0]["state"] == "done"
+    path = client.get(f"/api/projects/{pid}/photos/{a['id']}").json()["path"]
+    assert writer.read_tags([path])[path]["PoseHeadingDegrees"] == 330
+    client.post(f"/api/projects/{pid}/headings/yaw", json={"photo_ids": [a["id"]], "yaw": None})
+    client.post(f"/api/projects/{pid}/export", json={"mode": "in_place", "sequence_ids": [seqs[0]["id"]]})
+    assert wait_jobs(client, pid)[0]["state"] == "done"
+    assert writer.read_tags([path])[path]["PoseHeadingDegrees"] == 0
+
+
+def test_all_unclassified_in_sequences(samples):
+    with TestClient(main.app) as client:
+        pid = client.post("/api/projects", json={"name": "Tout"}).json()["id"]
+        client.post(f"/api/projects/{pid}/import", json={"paths": [str(samples)]})
+        wait_jobs(client, pid)
+        r = client.post(f"/api/projects/{pid}/sequences/from-unclassified").json()
+        assert len(r["sequences"]) == 1 and r["sequences"][0]["count"] == 116  # usable photos of the ride
+        assert client.post(f"/api/projects/{pid}/sequences/from-unclassified").status_code == 409

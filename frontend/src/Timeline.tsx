@@ -37,8 +37,14 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
       }
       for (let i = 0; i < n; i++) {
         const p = photos[i]
-        g.fillStyle = p.sequence_id != null ? (colors.get(p.sequence_id) as string) : '#9ca3af'
-        g.fillRect(x(i), 10, Math.max(1, w / n), h - 20)
+        if (p.excluded) {
+          // excluded photos: a hole in the strip
+          g.fillStyle = '#d1d5db'
+          g.fillRect(x(i), 18, Math.max(1, w / n), h - 36)
+        } else {
+          g.fillStyle = p.sequence_id != null ? (colors.get(p.sequence_id) as string) : '#9ca3af'
+          g.fillRect(x(i), 10, Math.max(1, w / n), h - 20)
+        }
         if (p.flags & (FLAGS.GPS_JUMP | FLAGS.INVALID_COORD | FLAGS.NO_GPS)) {
           g.fillStyle = '#dc2626'
           g.fillRect(x(i), h - 8, Math.max(1, w / n), 6)

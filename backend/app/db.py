@@ -112,6 +112,16 @@ MIGRATIONS = [
     -- Time synchronisation: offset (s) used to place the photo on the GPS track (pos_method = 'time')
     ALTER TABLE photo ADD COLUMN time_offset REAL;
     """,
+    """
+    -- Photos excluded by the user (not in any sequence, never exported); files may be moved to a _exclues folder
+    ALTER TABLE photo ADD COLUMN excluded INTEGER NOT NULL DEFAULT 0;
+    CREATE INDEX photo_excluded ON photo(excluded);
+    """,
+    """
+    -- Yaw (helmet camera): angle of the image centre relative to the direction of the bike, degrees, right > 0.
+    -- Written to XMP-GPano:PoseHeadingDegrees (read as yaw by Panoramax); GPSImgDirection stays the bike direction.
+    ALTER TABLE photo ADD COLUMN yaw_offset REAL;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

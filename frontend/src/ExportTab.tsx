@@ -7,6 +7,7 @@ interface Props {
   sequences: Sequence[]
   jobs: Job[]
   sources: SourcesState
+  excludedPhotos: number // photos excluded by the user
   onStarted: () => void
   onError: (msg: string) => void
 }
@@ -23,7 +24,7 @@ const MODES: { id: ExportMode; label: string; help: string }[] = [
   { id: 'in_place', label: 'Modifier les EXIF des photos sources sur place', help: 'Les fichiers ne bougent pas.' },
 ]
 
-export default function ExportTab({ projectId, sequences, jobs, sources, onStarted, onError }: Props) {
+export default function ExportTab({ projectId, sequences, jobs, sources, excludedPhotos, onStarted, onError }: Props) {
   const [dir, setDir] = useState(() => {
     try {
       return localStorage.getItem(KEY) || ''
@@ -36,9 +37,9 @@ export default function ExportTab({ projectId, sequences, jobs, sources, onStart
   const [compat, setCompat] = useState(true)
   const [excludeJumps, setExcludeJumps] = useState(true)
   const [mode, setMode] = useState<ExportMode>('copy')
-  const [confirm, setConfirm] = useState<null | 'export' | 'restore'>(null)
+  const [confirm, setConfirm] = useState<null | 'export' | 'restore' | 'trash'>(null)
   const [history, setHistory] = useState<ExportRecord[]>([])
-  const running = jobs.some((j) => (j.kind === 'export' || j.kind === 'restore_sources') && j.state === 'running')
+  const running = jobs.some((j) => ['export', 'restore_sources', 'trash'].includes(j.kind) && j.state === 'running')
 
   useEffect(() => {
     api.exports(projectId).then(setHistory, () => undefined)
@@ -60,6 +61,11 @@ export default function ExportTab({ projectId, sequences, jobs, sources, onStart
       .exportSequences(projectId, mode === 'in_place' ? null : dir, chosen.map((s) => s.id), compat, excludeJumps, mode)
       .then(onStarted, (e) => onError(e.message))
   }
+  const trash = () => {
+    setConfirm(null)
+    api.trashExcluded(projectId).then(onStarted, (e) => onError(e.message))
+  }
+  const toTrash = excludedPhotos - sources.trashed
   const restore = () => {
     setConfirm(null)
     api.restoreSources(projectId).then(onStarted, (e) => onError(e.message))
@@ -146,10 +152,19 @@ export default function ExportTab({ projectId, sequences, jobs, sources, onStart
         </button>
       </div>
 
+      {toTrash > 0 && (
+        <div className="small-text trash-box">
+          {toTrash} photo(s) exclue(s) (touche X) : elles ne sont pas exportées.{' '}
+          <button className="small" disabled={running} onClick={() => setConfirm('trash')}>
+            Déplacer leurs fichiers dans « _exclues »
+          </button>
+        </div>
+      )}
       {(sources.modified > 0 || sources.moved > 0) && (
         <div className="sources-box small-text">
           <strong>Photos sources modifiées par l'application :</strong> {sources.modified} avec EXIF modifiés
-          {sources.moved > 0 && `, ${sources.moved} déplacées`}.
+          {sources.moved > 0 && `, ${sources.moved} déplacées`}
+          {sources.trashed > 0 && ` (dont ${sources.trashed} exclues dans « _exclues »)`}.
           <div className="actions">
             <button className="danger small" disabled={running} onClick={() => setConfirm('restore')}>
               Restaurer les photos sources
@@ -160,7 +175,21 @@ export default function ExportTab({ projectId, sequences, jobs, sources, onStart
       {confirm && (
         <div className="modal-backdrop">
           <div className="modal small-modal" role="alertdialog">
-            {confirm === 'export' ? (
+            {confirm === 'trash' ? (
+              <>
+                <h2>Déplacer les photos exclues ?</h2>
+                <p>
+                  Les fichiers des {toTrash} photo(s) exclue(s) vont être déplacés dans un dossier « _exclues » à côté d'eux. Rien n'est
+                  supprimé : « Restaurer les photos sources » les remet en place.
+                </p>
+                <div className="actions">
+                  <button onClick={() => setConfirm(null)}>Annuler</button>
+                  <button className="danger" onClick={trash}>
+                    Déplacer
+                  </button>
+                </div>
+              </>
+            ) : confirm === 'export' ? (
               <>
                 <h2>Modifier les photos sources ?</h2>
                 <p>

@@ -21,6 +21,7 @@ async def lifespan(app):
     for p in db.list_projects():
         with db.open_project(p["id"]) as conn:
             jobs.mark_interrupted(conn)
+            headings.recompute(conn)  # computed headings follow the current algorithm / defaults
         importer.start_thumbnails(p["id"])
     yield
 
@@ -145,7 +146,7 @@ def job_cancel(pid: str, job_id: str):
 
 PHOTO_FIELDS = [
     "id", "idx", "ts", "lat", "lon", "lat_orig", "lon_orig", "flags", "thumb", "sequence_id", "rank", "is_360",
-    "heading", "heading_state", "heading_manual", "pos_method",
+    "heading", "heading_state", "heading_manual", "pos_method", "excluded",
 ]
 
 
@@ -156,7 +157,7 @@ def photos_list(pid: str):
         rows = conn.execute(
             f"""SELECT p.id, p.idx, p.ts, COALESCE(p.lat, p.lat_orig), COALESCE(p.lon, p.lon_orig), p.lat_orig,
                       p.lon_orig, p.flags, p.thumb, p.sequence_id, p.rank, p.is_360,
-                      {headings.FINAL_SQL}, p.heading_auto_state, p.heading_manual, p.pos_method
+                      {headings.FINAL_SQL}, p.heading_auto_state, p.heading_manual, p.pos_method, p.excluded
                FROM photo p LEFT JOIN sequence s ON s.id = p.sequence_id ORDER BY p.idx"""
         ).fetchall()
     return {"fields": PHOTO_FIELDS, "rows": [list(r) for r in rows], "flags": db.FLAG_NAMES}

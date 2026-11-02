@@ -92,7 +92,7 @@ dérivés : ils sont recalculés après annuler/rétablir. **Toute nouvelle colo
 
 ## Cap
 
-`headings.compute` : pour chaque photo, azimut vers le premier point suivant à au moins `heading_min_m` (15 m par
+`headings.compute` : pour chaque photo, azimut vers le premier point suivant à au moins `heading_min_m` (3 m par
 défaut), cherché dans `heading_window_s` (12 s), sans traverser une interruption ; en fin de parcours, direction
 d'arrivée. Points inutilisables (saut GPS, sans GPS, doublon…) : `missing` ; arrêt (aucun point assez loin) :
 `uncertain` — jamais de valeur inventée.
@@ -101,8 +101,11 @@ Cap final = `heading_manual` s'il existe, sinon `(heading_auto + sequence.headin
 (`headings.FINAL_SQL`, `final_heading`). Attention : le `%` de SQLite travaille sur des entiers, d'où la
 normalisation explicite dans `FINAL_SQL`.
 
-Choix de 15 m : mesuré sur une sortie simulée de 5 000 photos (bruit GPS ~2 m, retard 0,5–3 s, virages serrés) par
-rapport à la vraie direction : erreur médiane 7,2° / 90e centile 29° avec 5 m, 3,9° / 15,8° avec 15 m, 3,4° / 14,5°
+Choix de 3 m (par défaut) : la référence est le point suivant (cahier des charges) ; le seuil ne sert qu'à sauter les
+points quasi confondus (arrêt). Un seuil de 15 m avait été retenu d'après une sortie simulée très bruitée (bruit GPS
+~2 m pour 10 m entre photos), mais sur de vraies photos plus rapprochées il prenait comme référence un point 2 ou 3
+photos plus loin et les flèches coupaient les virages. Mesures sur la sortie simulée : erreur médiane
+7,2° / 90e centile 29° avec 5 m, 3,9° / 15,8° avec 15 m, 3,4° / 14,5°
 avec 20 m mais 16 photos incertaines. À revalider sur de vraies photos.
 
 ## Positions

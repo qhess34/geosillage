@@ -94,3 +94,17 @@ def test_accuracy_on_simulated_ride(samples):
     median = errors[len(errors) // 2]
     assert len(errors) > 100
     assert median < 12, median
+
+
+def test_default_points_to_the_next_photo_in_a_turn():
+    """Photos ~5 m apart in a bend: with the default setting each arrow points to the next photo."""
+    from app import config
+
+    pts, lat, lon, az = [], 43.6, 3.87, 180.0
+    for i in range(12):
+        pts.append(Pt(i + 1, 1000 + 2 * i, lat, lon, 0))
+        lon, lat, _ = geo.GEOD.fwd(lon, lat, az, 5)
+        az = (az - 20) % 360  # turning left by 20° per photo
+    res = headings.compute(pts, config.DEFAULT_SETTINGS["heading_min_m"], config.DEFAULT_SETTINGS["heading_window_s"])
+    for a, b in zip(pts, pts[1:]):
+        assert res[a.id][0] == pytest.approx(geo.azimuth(a.lat, a.lon, b.lat, b.lon), abs=0.01)

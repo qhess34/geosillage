@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 from . import db
 
-PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset"]
+PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset"]
 SEQ_COLS = ["id", "name", "heading_offset", "created_at"]
 MAX_OPS = 200
 

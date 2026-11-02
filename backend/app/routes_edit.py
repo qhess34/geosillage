@@ -122,6 +122,46 @@ def seq_remove_photos(pid: str, body: IdsIn):
         return _state(conn)
 
 
+class ExcludeIn(BaseModel):
+    photo_ids: list[int] | None = None
+    start_idx: int | None = None
+    end_idx: int | None = None
+    excluded: bool = True
+
+
+@router.post("/photos/exclude")
+def photos_exclude(pid: str, body: ExcludeIn):
+    """Exclude photos (out of sequences, never exported) or put them back. Undoable."""
+    with db.open_project(pid) as conn:
+        if body.photo_ids:
+            ids = body.photo_ids
+        elif body.start_idx is not None and body.end_idx is not None:
+            ids = positions.ids_in_range(conn, body.start_idx, body.end_idx)
+        else:
+            raise HTTPException(400, "Indiquez des photos ou une plage")
+        label = f"Exclusion de {len(ids)} photo(s)" if body.excluded else f"Réintégration de {len(ids)} photo(s)"
+        with undo.undoable(conn, label):
+            n = sequences.set_excluded(conn, ids, body.excluded)
+        return {"changed": n, **_state(conn)}
+
+
+@router.post("/sequences/from-unclassified", status_code=201)
+def seq_from_unclassified(pid: str):
+    with db.open_project(pid) as conn:
+        with undo.undoable(conn, "Séquences créées avec les photos non classées"):
+            res = _seq_errors(lambda: sequences.create_from_unclassified(conn))
+        return {"created": res, **_state(conn)}
+
+
+@router.post("/sequences/cut")
+def sequences_cut(pid: str, photo_id: int):
+    """Cut the ride at this photo (split its sequence, or create the sequence around it and split it)."""
+    with db.open_project(pid) as conn:
+        with undo.undoable(conn, "Découpe"):
+            what = _seq_errors(lambda: sequences.cut_at(conn, photo_id))
+        return {"done": what, **_state(conn)}
+
+
 # ---- Undo / redo ----
 
 
@@ -187,6 +227,30 @@ def heading_set(pid: str, photo_id: int, body: HeadingIn):
                 (None if body.value is None else round(body.value, 2), photo_id),
             )
         return {"undo": undo.state(conn)}
+
+
+class YawIn(BaseModel):
+    photo_ids: list[int] | None = None
+    start_idx: int | None = None
+    end_idx: int | None = None
+    yaw: float | None = Field(default=None, ge=-360, le=360)  # None = back to the camera's value (0)
+
+
+@router.post("/headings/yaw")
+def heading_yaw(pid: str, body: YawIn):
+    """Angle of the image centre relative to the bike (helmet camera: where the head looks). Undoable."""
+    with db.open_project(pid) as conn:
+        if body.photo_ids:
+            ids = body.photo_ids
+        elif body.start_idx is not None and body.end_idx is not None:
+            ids = positions.ids_in_range(conn, body.start_idx, body.end_idx)
+        else:
+            raise HTTPException(400, "Indiquez des photos ou une plage")
+        v = None if body.yaw is None else round(((body.yaw + 180) % 360) - 180, 2)
+        label = f"Direction du vélo fixée ({v:+g}°) sur {len(ids)} photo(s)" if v is not None else f"Lacet remis à 0 sur {len(ids)} photo(s)"
+        with undo.undoable(conn, label):
+            conn.executemany("UPDATE photo SET yaw_offset=? WHERE id=?", [(v, i) for i in ids])
+        return {"changed": len(ids), "yaw": v, "undo": undo.state(conn)}
 
 
 @router.post("/headings/range")
@@ -416,6 +480,18 @@ def sources_state(pid: str):
     """How many source photos were modified / moved by the application."""
     with db.open_project(pid) as conn:
         return exporter.modified_sources(conn)
+
+
+@router.post("/sources/trash-excluded", status_code=202)
+def sources_trash_excluded(pid: str):
+    """Move the files of excluded photos into a `_exclues` folder next to them (restorable)."""
+    with db.open_project(pid) as conn:
+        n = conn.execute("SELECT COUNT(*) FROM photo WHERE excluded=1 AND path NOT LIKE '%/_exclues/%'").fetchone()[0]
+    if not n:
+        raise HTTPException(400, "Aucune photo exclue à déplacer")
+    if _running(pid, {"export", "restore_sources", "import", "trash"}):
+        raise HTTPException(409, "Une autre tâche sur les fichiers est en cours")
+    return {"job_id": jobs.start(pid, "trash", exporter.trash_excluded)}
 
 
 @router.post("/sources/restore", status_code=202)

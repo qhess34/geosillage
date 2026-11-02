@@ -13,9 +13,10 @@ from dataclasses import dataclass
 from .. import config
 
 # Tags this application may write; their original values are saved before touching a source photo.
-# XMP-GPano:PoseHeadingDegrees is only written back to its original value: versions before 2026-11 wrote the
-# heading there, but Panoramax reads it as the yaw (rotation of the sphere relative to GPSImgDirection), and a
-# correctly tagged GoPro MAX photo keeps the camera's 0.0.
+# XMP-GPano:PoseHeadingDegrees is the yaw for Panoramax (and Photo Sphere Viewer): angle of the image centre
+# relative to GPSImgDirection, right > 0. It is written only when the user fixed the bike direction on a photo
+# (helmet camera), or to put back the original value (GoPro: 0.0); versions before 2026-11 wrongly wrote the
+# heading there.
 WRITTEN_TAGS = [
     "EXIF:GPSVersionID",
     "EXIF:GPSLatitude",

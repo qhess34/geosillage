@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, PhotoDetail, PhotoRow, Sequence, SyncPoint } from './api'
-import PhotoViewer from './PhotoViewer'
+import Viewer360 from './Viewer360'
 
 interface Props {
   projectId: string
@@ -75,7 +75,7 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
     <div className="sync">
       {photo ? (
         <>
-          <PhotoViewer thumbUrl={api.thumbUrl(projectId, photo.id)} imageUrl={api.imageUrl(projectId, photo.id)} alt={photo.filename} height={240} />
+          <Viewer360 thumbUrl={api.thumbUrl(projectId, photo.id)} imageUrl={api.imageUrl(projectId, photo.id)} alt={photo.filename} height={260} />
           <div className="photo-title">
             <strong>{photo.filename}</strong>
             <span className="muted">

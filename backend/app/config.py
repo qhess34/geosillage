@@ -21,7 +21,7 @@ DEFAULT_SETTINGS = {
     "gap_seconds": 10.0,  # capture interruption when time gap exceeds this
     "jump_speed_ms": 20.0,  # implied speed above which a GPS position is a jump (~72 km/h)
     "jump_min_m": 25.0,  # ...only if the displacement is at least this long
-    "heading_min_m": 15.0,  # heading target: first next point at least this far (tuned on simulated rides)
+    "heading_min_m": 3.0,  # heading target: the next point, skipping points closer than this (stops)
     "heading_window_s": 12.0,  # ...looked for within this time window
 }
 

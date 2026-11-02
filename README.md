@@ -16,7 +16,8 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 2a | Projets, import récursif, lecture EXIF par lots, bilan d'import, anomalies, miniatures en tâche de fond, carte | ✅ |
 | 2c | Séquences (plage, découpage proposé, couper, fusionner, limites), timeline, annuler/rétablir, raccourcis | ✅ |
 | 2d (partiel) | Cap : calcul automatique, manuel, par plage, décalage par séquence ; **export d'un dossier par séquence avec EXIF corrigés** | ✅ |
-| 2b | Visionneuse 360°, liste virtualisée | à faire |
+| 2b | Visionneuse 360° (Photo Sphere Viewer), direction du vélo pour caméra sur casque | ✅ |
+| 2b (reste) | Liste virtualisée | à faire |
 | 2d | Correction GPS : glisser sur la carte, saisie, placer une photo sans GPS, décalage et déplacement le long du trajet sur une plage ; export en copie, en déplaçant les sources, ou sur place ; restauration des sources | ✅ |
 | 2d (reste) | Exports GeoJSON/CSV des positions | à faire |
 | 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
@@ -26,9 +27,17 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 ## Préparer une sortie
 
 1. **Importer** les dossiers de la sortie (bouton *Importer*). Le bilan s'affiche dans l'onglet *Bilan*.
-2. **Découper** (onglet *Séquences*) : *Découpage proposé* coupe aux interruptions de prise de vue et aux sauts de
-   position ; on coche les segments à garder. Ou à la main : `D` / `F` sur la photo courante (ou glisser sur la
-   timeline), puis `S`. `C` coupe la séquence avant la photo courante. `Ctrl+Z` / `Ctrl+Y` annulent / rétablissent.
+2. **Découper** en parcourant la sortie dans la visionneuse 360° (← → ; Maj : par 10) :
+   - `C` (ou *✂ Couper ici*) sur la première photo de chaque nouvelle séquence : sur une photo non classée, la
+     séquence est créée autour d'elle puis coupée ; il suffit donc d'appuyer sur `C` à chaque coupure ;
+   - *Tout en séquences* (onglet *Séquences*) : une séquence par bloc de photos non classées ;
+   - plage : `D` / `F` (ou glisser sur la timeline) puis `S` (ou *＋ Séquence*) ;
+   - *Découpage proposé* : coupe aux interruptions de prise de vue et aux sauts de position, à valider ;
+   - `X` (ou `Suppr`) **exclut** la photo et passe à la suivante (appuyer plusieurs fois supprime une série ;
+     avec une plage : toute la plage) ; `Maj+X` la réintègre. Une photo exclue n'est dans aucune séquence et n'est
+     jamais exportée ; onglet *Export* : ses fichiers peuvent être déplacés dans un dossier `_exclues` (rien
+     n'est supprimé, *Restaurer les photos sources* les remet).
+   - `Ctrl+Z` / `Ctrl+Y` annulent / rétablissent ; `?` affiche tous les raccourcis.
 3. **Corriger le retard GPS** (onglet *Synchro*, fond *Satellite*) : la GoPro enregistre la position avec 0,5 à 3 s
    de retard. Choisir une photo où l'on voit un repère visible sur la vue satellite (passage piéton, angle de
    bâtiment…), l'agrandir (molette dans la visionneuse), puis faire glisser le marqueur orange : il ne peut aller
@@ -43,8 +52,13 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    photo sans GPS se place d'un clic sur la carte. Onglet *Photo* : saisie des coordonnées, retour à l'original ;
    sur une plage : décalage (m vers l'est / le nord) ou déplacement le long du trajet. La position d'origine reste
    visible (cercle violet et pointillés) ; un saut GPS corrigé redevient utilisable (cap, séquences, export).
-5. **Vérifier les caps** : flèches sur la carte (zoom ≥ 15) ; onglet *Photo* : cadran, `[` / `]`, cap manuel ;
-   décalage par séquence ; décalage ou cap fixe sur une plage. Les caps manuels ne sont jamais écrasés.
+5. **Vérifier les caps** : flèches sur la carte (zoom ≥ 15), chacune vers la photo suivante ; onglet *Photo* :
+   cadran, `[` / `]`, cap manuel ; décalage par séquence ; décalage ou cap fixe sur une plage. Les caps manuels ne
+   sont jamais écrasés.
+   **Caméra sur casque** : le centre de l'image suit la tête, pas le vélo. Dans la visionneuse, tourner la vue vers
+   la route devant le vélo puis *🚲 Fixer la direction du vélo* (sur la photo, ou sur toute la plage sélectionnée) :
+   l'angle de la tête est écrit dans `XMP-GPano:PoseHeadingDegrees` (lacet, lu par Panoramax pour orienter la
+   sphère), `GPSImgDirection` reste la direction du vélo, et la visionneuse s'ouvre alors face à la route.
 6. **Exporter** (onglet *Export*), trois modes :
    - *Copier* (par défaut) : copies, sources intactes ;
    - *Déplacer* : les photos sources sont déplacées et renommées dans un dossier par séquence, EXIF modifiés ;
