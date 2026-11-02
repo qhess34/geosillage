@@ -536,6 +536,22 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       /* ignore */
     }
   }
+  // Positions mode: → carries the current photo's correction (offset from its original position) to the next photo
+  const [carryPos, setCarryPosState] = useState(() => {
+    try {
+      return localStorage.getItem('pss-carry-position') !== '0' // on by default
+    } catch {
+      return true
+    }
+  })
+  const setCarryPos = (v: boolean) => {
+    setCarryPosState(v)
+    try {
+      localStorage.setItem('pss-carry-position', v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }
   const mapPhotos = useMemo(() => (showExcluded ? photos : photos.filter((p) => !p.excluded)), [photos, showExcluded])
   const [centerTick, setCenterTick] = useState(0)
   const setOverlay = (o: OverlaySettings) => {
@@ -752,6 +768,37 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     setRange([Math.min(seqStart, current.idx), Math.max(seqStart, current.idx)])
   }, [seqStart, current])
 
+  const lastCarry = useRef<{ id: number; east: number; north: number } | null>(null)
+  // Only needed until the photos are reloaded with the carried correction
+  useEffect(() => {
+    const c = lastCarry.current
+    if (c && photos.find((p) => p.id === c.id)?.pos_method != null) lastCarry.current = null
+  }, [photos])
+  // Same correction as `from` (moved by hand, or itself carried) applied to `to`, if `to` has no correction yet
+  const carryCorrection = useCallback(
+    (from: PhotoRow, to: PhotoRow | undefined) => {
+      if (!to || to.pos_method != null || to.lat_orig == null || to.lon_orig == null) return
+      let east: number, north: number
+      if (from.pos_method == null && lastCarry.current?.id === from.id) {
+        // just carried to `from` (photos not reloaded yet when → is pressed quickly)
+        ;({ east, north } = lastCarry.current)
+      } else {
+        if (from.pos_method !== 'manual' && from.pos_method !== 'offset') return
+        if (from.lat == null || from.lon == null || from.lat_orig == null || from.lon_orig == null) return
+        north = (from.lat - from.lat_orig) * 111320
+        east = (from.lon - from.lon_orig) * 111320 * Math.cos((from.lat_orig * Math.PI) / 180)
+      }
+      if (Math.hypot(east, north) < 0.05 || Math.abs(east) > 1000 || Math.abs(north) > 1000) return
+      const r2 = (v: number) => Math.round(v * 100) / 100
+      lastCarry.current = { id: to.id, east, north }
+      api.positionsBatch(projectId, { start_idx: to.idx, end_idx: to.idx, mode: 'offset', east_m: r2(east), north_m: r2(north) }).then((r) => {
+        afterHeadingChange(r.undo)
+        setNotice(`Correction reportée sur la photo ${to.idx + 1} : ${Math.round(Math.hypot(east, north) * 10) / 10} m`)
+      }, (er) => setError(er.message))
+    },
+    [projectId, afterHeadingChange],
+  )
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -771,7 +818,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         const i = current ? current.idx : -1
         const dir = e.key === 'ArrowRight' ? 1 : -1
-        goIdx(i < 0 ? stepIdx(-1, 1) : stepIdx(i, dir, e.shiftKey ? 10 : 1))
+        const target = i < 0 ? stepIdx(-1, 1) : stepIdx(i, dir, e.shiftKey ? 10 : 1)
+        if (dir === 1 && !e.shiftKey && editMode && carryPos && current && target !== i) carryCorrection(current, photos[target])
+        goIdx(target)
       } else if (e.key === 'Home') goIdx(stepIdx(-1, 1))
       else if (e.key === 'End') goIdx(stepIdx(photos.length, -1))
       else if (e.key === 'PageDown' || e.key === 'PageUp') {
@@ -826,7 +875,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection])
 
   const chooseBasemap = (id: string) => {
     if (id === '__add') {
@@ -941,9 +990,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               const p = photos.find((x) => x.id === id)
               if (p) goIdx(p.idx, extend)
             }}
-            onMove={(id, lat, lon) =>
+            onMove={(id, lat, lon) => {
+              lastCarry.current = null // the photo's own (new) correction is used from now on
               api.setPosition(projectId, id, lat, lon).then((r) => afterHeadingChange(r.undo), (er) => setError(er.message))
-            }
+            }}
           />
           <div className="map-follow small-text">
             <button className="small" disabled={!current} onClick={() => setCenterTick((t) => t + 1)} title="Centrer la carte sur la photo courante">
@@ -955,6 +1005,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             <label title="Photos exclues (X) : masquées sur la carte et sautées par ← → ; cocher pour les revoir et les réintégrer (Maj+X)">
               <input type="checkbox" checked={showExcluded} onChange={(e) => { setShowExcluded(e.target.checked); e.target.blur() }} /> Exclues
             </label>
+            {editMode && (
+              <label title="Mode Positions : → reporte sur la photo suivante la correction de la photo courante (même décalage par rapport à sa position d'origine), si la suivante n'est pas déjà corrigée. Ctrl+Z annule.">
+                <input type="checkbox" checked={carryPos} onChange={(e) => { setCarryPos(e.target.checked); e.target.blur() }} /> Reporter la correction (→)
+              </label>
+            )}
           </div>
           {overlay.enabled && (
             <div className="pnx-legend small-text" title={overlay.url}>

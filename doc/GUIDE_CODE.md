@@ -121,6 +121,13 @@ caps manuels voisins (±3 photos) marqués `heading_stale` (« à revoir »), ja
 Interface : mode `M` → marqueur MapLibre déplaçable sur la photo courante (`dragend` → `PUT …/position`) ; clic sur la
 carte pour placer une photo sans position ; couches `moves-*` : position d'origine et lien vers la corrigée.
 
+Report de la correction (`carryPos`, case « Reporter la correction (→) », visible en mode Positions,
+`localStorage['pss-carry-position']`, cochée par défaut) : `→` (sans Maj) depuis une photo corrigée `manual` ou
+`offset` applique le même décalage est / nord (écart à sa position d'origine) à la photo suivante non exclue, via
+`POST …/positions/batch` mode `offset` (`pos_method = 'offset'`), si elle n'a pas déjà de correction ; on enchaîne
+donc les `→` après une correction à la main. `lastCarry` garde le dernier report jusqu'au rechargement des photos
+(touches rapides). `←`, `Maj+→` et les clics ne reportent rien ; chaque report s'annule avec `Ctrl+Z`.
+
 ## Exclusion, découpe en un geste
 
 `photo.excluded` (annulable) : la photo sort de sa séquence et ne peut plus y entrer (`sequences._eligible`) ; elle
