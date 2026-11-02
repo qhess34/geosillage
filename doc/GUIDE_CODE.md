@@ -137,7 +137,9 @@ renumérotées dans l'ordre de la sortie après chaque opération (`renumber_def
 « Fin » crée la séquence `[début, photo courante]` (ou la plage tracée sur la timeline), puis pose `seqStart` sur
 la photo suivante non exclue (`nextKept`) si elle n'est dans aucune séquence : on enchaîne les `F`. `X` sur la photo
 de début déplace le début sur la suivante non exclue ; tant qu'un début est posé, `X` n'exclut que la photo
-courante (pas la plage). Photos exclues : `showExcluded` (case « Exclues » de la carte,
+courante (pas la plage). Sans début posé, `X` sur une plage de plusieurs photos demande confirmation
+(`window.confirm`, nombre de photos) : un clic un peu glissé sur la timeline sélectionnait des centaines de photos,
+d'où aussi le seuil de glisser `DRAG_PX` (8 px) de `Timeline`. Photos exclues : `showExcluded` (case « Exclues » de la carte,
 `localStorage['pss-show-excluded']`, décochée par défaut) ; décochée, la carte reçoit `mapPhotos` (sans les
 exclues) et `stepIdx` fait sauter les exclues à ← →, Début/Fin et après `X` (la timeline les montre toujours en
 creux et permet d'y aller). La visionneuse signale sa

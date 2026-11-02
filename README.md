@@ -38,7 +38,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    - une plage tracée sur la timeline (glisser, ou Maj+clic) se transforme aussi en séquence avec *⏹ Fin* ;
    - *Découpage proposé* : coupe aux interruptions de prise de vue et aux sauts de position, à valider ;
    - `X` (ou `Suppr`) **exclut** la photo et passe à la suivante (appuyer plusieurs fois supprime une série ;
-     avec une plage : toute la plage) ; les photos exclues sont masquées sur la carte et sautées par ← → (case
+     avec une plage tracée sur la timeline : toute la plage, après confirmation ; `Ctrl+Z` annule) ; les photos exclues sont masquées sur la carte et sautées par ← → (case
      *Exclues* de la carte pour les revoir) ; `Maj+X` réintègre la photo courante. Une photo exclue n'est dans aucune séquence et n'est
      jamais exportée ; onglet *Export* : ses fichiers peuvent être déplacés dans un dossier `_exclues` (rien
      n'est supprimé, *Restaurer les photos sources* les remet).

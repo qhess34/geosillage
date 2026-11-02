@@ -36,7 +36,7 @@ const SHORTCUTS: [string, string][] = [
   ['D', 'Début de séquence sur la photo courante (la plage suit ensuite la navigation)'],
   ['F', 'Fin de séquence : crée la séquence du début jusqu\'à la photo courante ; la photo suivante devient le début de la séquence suivante (Échap pour annuler)'],
   ['C', 'Découper ici : coupe la séquence avant la photo courante (photo non classée : crée la séquence autour, puis coupe)'],
-  ['X ou Suppr', 'Exclure la photo courante et passer à la suivante (exclure la photo de début déplace le début à la suivante ; plage tracée sur la timeline : exclure la plage)'],
+  ['X ou Suppr', 'Exclure la photo courante et passer à la suivante (exclure la photo de début déplace le début à la suivante ; plage tracée sur la timeline : exclure la plage, après confirmation ; Ctrl+Z annule)'],
   ['Maj+X', 'Réintégrer la photo courante'],
   ['Échap', 'Effacer la plage'],
   ['[ / ]', 'Cap de la photo −1° / +1° (Maj : 5°)'],
@@ -789,10 +789,15 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       } else if (e.key === 'X' && e.shiftKey) {
         if (current?.excluded) api.excludePhotos(projectId, { photo_ids: [current.id] }, false).then(applyState, (er) => setError(er.message))
       } else if (e.key === 'x' || e.key === 'Delete') {
-        if (range && seqStart == null) {
-          // a range drawn on the timeline: exclude it all
+        if (range && seqStart == null && range[1] > range[0]) {
+          // a range drawn on the timeline: exclude it all, after confirmation
+          const n = photos.slice(range[0], range[1] + 1).filter((p) => !p.excluded).length
+          if (n > 1 && !window.confirm(`Exclure les ${n} photos de la plage ${range[0] + 1} → ${range[1] + 1} ?\n(Échap désélectionne la plage ; Ctrl+Z annule une exclusion)`)) {
+            e.preventDefault()
+            return
+          }
           api.excludePhotos(projectId, { start_idx: range[0], end_idx: range[1] }).then((s) => {
-            applyState(s)
+            applyState({ ...s, done: `${n} photo(s) exclue(s) — Ctrl+Z pour annuler` })
             setRange(null)
           }, (er) => setError(er.message))
         } else if (current) {

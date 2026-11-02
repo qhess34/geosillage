@@ -11,9 +11,12 @@ interface Props {
 
 // Chronological strip: one column per photo (x = index), coloured by sequence.
 // Click: go to photo. Shift+click or drag: select a range.
+const DRAG_PX = 8 // minimal horizontal movement for a drag to select a range
+
 export default function Timeline({ photos, sequences, selectedIdx, range, onPick }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const dragging = useRef(false)
+  const downX = useRef(0)
 
   useEffect(() => {
     const c = canvas.current
@@ -88,10 +91,12 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
         if (!photos.length) return
         ;(e.target as Element).setPointerCapture(e.pointerId)
         dragging.current = true
+        downX.current = e.clientX
         onPick(idxAt(e), e.shiftKey)
       }}
       onPointerMove={(e) => {
-        if (dragging.current && e.buttons & 1) onPick(idxAt(e), true)
+        // a range only after a real drag: a click with a slight mouse movement must not select hundreds of photos
+        if (dragging.current && e.buttons & 1 && Math.abs(e.clientX - downX.current) >= DRAG_PX) onPick(idxAt(e), true)
       }}
       onPointerUp={() => (dragging.current = false)}
     />
