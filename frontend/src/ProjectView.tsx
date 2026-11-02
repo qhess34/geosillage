@@ -108,6 +108,15 @@ function Summary({ p }: { p: Project }) {
   )
 }
 
+// Small displacements (local flat approximation, enough for a few hundred meters)
+const M_PER_DEG = 111320
+function metersBetween(lat0: number, lon0: number, lat1: number, lon1: number): { east: number; north: number } {
+  return { north: (lat1 - lat0) * M_PER_DEG, east: (lon1 - lon0) * M_PER_DEG * Math.cos((lat0 * Math.PI) / 180) }
+}
+function shifted(lat: number, lon: number, east: number, north: number): { lat: number; lon: number } {
+  return { lat: lat + north / M_PER_DEG, lon: lon + east / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)) }
+}
+
 function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o: OverlaySettings) => void }) {
   const [url, setUrl] = useState(overlay.url)
   return (
@@ -703,8 +712,14 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     [byIdx],
   )
 
+  // Last position correction made by hand (east / north m), and the photo that holds it now (moved by hand, or
+  // carried to with →) with its expected position: the rows may not be reloaded yet when → is pressed right away
+  const lastCarry = useRef<{ id: number; east: number; north: number; lat: number; lon: number } | null>(null)
   const undoRedo = useCallback(
-    (which: 'undo' | 'redo') => (which === 'undo' ? api.undo(projectId) : api.redo(projectId)).then(applyState, (e) => setError(e.message)),
+    (which: 'undo' | 'redo') => {
+      lastCarry.current = null
+      return (which === 'undo' ? api.undo(projectId) : api.redo(projectId)).then(applyState, (e) => setError(e.message))
+    },
     [projectId, applyState],
   )
 
@@ -768,33 +783,16 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     setRange([Math.min(seqStart, current.idx), Math.max(seqStart, current.idx)])
   }, [seqStart, current])
 
-  const lastCarry = useRef<{ id: number; east: number; north: number } | null>(null)
-  // Only needed until the photos are reloaded with that correction
-  useEffect(() => {
-    const c = lastCarry.current
-    const p = c && photos.find((x) => x.id === c.id)
-    if (!c || !p || p.pos_method == null || p.lat == null || p.lon == null || p.lat_orig == null || p.lon_orig == null) return
-    const north = (p.lat - p.lat_orig) * 111320
-    const east = (p.lon - p.lon_orig) * 111320 * Math.cos((p.lat_orig * Math.PI) / 180)
-    if (Math.hypot(east - c.east, north - c.north) < 0.5) lastCarry.current = null // the row now holds it
-  }, [photos])
-  // Same correction as `from` (moved by hand, or itself carried) applied to `to`, if `to` has no correction yet
+  // Same correction applied to `to`: the shift last made by hand (drop position minus position before the drag),
+  // carried along the → presses; photos corrected by hand are never moved
   const carryCorrection = useCallback(
     (from: PhotoRow, to: PhotoRow | undefined) => {
-      if (!to || to.pos_method != null || to.lat_orig == null || to.lon_orig == null) return
-      let east: number, north: number
-      if (lastCarry.current?.id === from.id) {
-        // `from` was just moved by hand or carried to: its row is not reloaded yet when → is pressed right away
-        ;({ east, north } = lastCarry.current)
-      } else {
-        if (from.pos_method !== 'manual' && from.pos_method !== 'offset') return
-        if (from.lat == null || from.lon == null || from.lat_orig == null || from.lon_orig == null) return
-        north = (from.lat - from.lat_orig) * 111320
-        east = (from.lon - from.lon_orig) * 111320 * Math.cos((from.lat_orig * Math.PI) / 180)
-      }
+      const c = lastCarry.current
+      if (!c || c.id !== from.id || !to || to.pos_method === 'manual' || to.lat == null || to.lon == null) return
+      const { east, north } = c
       if (Math.hypot(east, north) < 0.05 || Math.abs(east) > 1000 || Math.abs(north) > 1000) return
       const r2 = (v: number) => Math.round(v * 100) / 100
-      lastCarry.current = { id: to.id, east, north }
+      lastCarry.current = { id: to.id, east, north, ...shifted(to.lat, to.lon, east, north) }
       api.positionsBatch(projectId, { start_idx: to.idx, end_idx: to.idx, mode: 'offset', east_m: r2(east), north_m: r2(north) }).then((r) => {
         afterHeadingChange(r.undo)
         setNotice(`Correction reportée sur la photo ${to.idx + 1} : ${Math.round(Math.hypot(east, north) * 10) / 10} m`)
@@ -995,12 +993,16 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               if (p) goIdx(p.idx, extend)
             }}
             onMove={(id, lat, lon) => {
-              // remembered at once: → pressed right after the drop must carry this new correction
+              // remembered at once (→ may be pressed before the photos are reloaded): the shift just made, added to the
+              // correction this photo already carried if it is the one holding it
               const p = photos.find((x) => x.id === id)
-              lastCarry.current =
-                p && p.lat_orig != null && p.lon_orig != null
-                  ? { id, north: (lat - p.lat_orig) * 111320, east: (lon - p.lon_orig) * 111320 * Math.cos((p.lat_orig * Math.PI) / 180) }
-                  : null
+              const c = lastCarry.current
+              const before = c?.id === id ? { lat: c.lat, lon: c.lon } : p?.lat != null && p.lon != null ? { lat: p.lat, lon: p.lon } : null
+              if (before) {
+                const d = metersBetween(before.lat, before.lon, lat, lon)
+                const base = c?.id === id ? c : { east: 0, north: 0 }
+                lastCarry.current = { id, east: base.east + d.east, north: base.north + d.north, lat, lon }
+              } else lastCarry.current = null
               api.setPosition(projectId, id, lat, lon).then((r) => afterHeadingChange(r.undo), (er) => setError(er.message))
             }}
           />

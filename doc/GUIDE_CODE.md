@@ -122,12 +122,13 @@ Interface : mode `M` → marqueur MapLibre déplaçable sur la photo courante (`
 carte pour placer une photo sans position ; couches `moves-*` : position d'origine et lien vers la corrigée.
 
 Report de la correction (`carryPos`, case « Reporter la correction (→) », visible en mode Positions,
-`localStorage['pss-carry-position']`, cochée par défaut) : `→` (sans Maj) depuis une photo corrigée `manual` ou
-`offset` applique le même décalage est / nord (écart à sa position d'origine) à la photo suivante non exclue, via
-`POST …/positions/batch` mode `offset` (`pos_method = 'offset'`), si elle n'a pas déjà de correction ; on enchaîne
-donc les `→` après une correction à la main. `lastCarry` garde la dernière correction (posée à la main dès le
-`dragend`, ou reportée) jusqu'à ce que les photos rechargées la contiennent : `→` juste après avoir lâché le point
-reporte bien la nouvelle correction. `←`, `Maj+→` et les clics ne reportent rien ; chaque report s'annule avec `Ctrl+Z`.
+`localStorage['pss-carry-position']`, cochée par défaut) : `lastCarry` retient, dès le `dragend`, le déplacement fait
+à la main (est / nord en m entre la position avant le glisser, d'origine ou déjà corrigée — synchro comprise — et
+le point lâché ; un nouveau glisser de la même photo s'ajoute) et la photo qui le porte. `→` (sans Maj) depuis
+cette photo applique le même déplacement à la photo suivante non exclue (`POST …/positions/batch` mode `offset`, à
+partir de sa position actuelle), sauf si elle a été corrigée à la main (`manual`), et la chaîne continue. `←`,
+`Maj+→` et les clics ne reportent rien ; annuler / rétablir vide `lastCarry` ; chaque report s'annule avec
+`Ctrl+Z`. Ne dépend pas du rechargement des photos (`→` juste après avoir lâché le point).
 
 ## Exclusion, découpe en un geste
 

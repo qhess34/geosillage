@@ -68,8 +68,9 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    sur une plage : décalage (m vers l'est / le nord) ou déplacement le long du trajet. La position d'origine reste
    visible (cercle violet et pointillés) ; un saut GPS corrigé redevient utilisable (cap, séquences, export).
    *Reporter la correction (→)* (case sur la carte en mode Positions, cochée par défaut, désactivable) : après avoir
-   corrigé une photo à la main, `→` applique le même décalage à la photo suivante si elle n'est pas déjà corrigée ;
-   on corrige la première d'une série décalée puis on avance (`Ctrl+Z` annule un report).
+   déplacé le point d'une photo à la main, `→` déplace de la même façon la photo suivante (y compris une position
+   synchronisée), sauf si elle a été corrigée à la main ; on corrige la première d'une série décalée puis on avance
+   (`Ctrl+Z` annule un report).
 5. **Vérifier les caps** : flèches sur la carte (zoom ≥ 15), chacune vers la photo suivante ; onglet *Photo* :
    cadran, `[` / `]`, cap manuel ; décalage par séquence ; décalage ou cap fixe sur une plage. Les caps manuels ne
    sont jamais écrasés.
