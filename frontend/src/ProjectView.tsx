@@ -574,16 +574,20 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   }, [refresh])
 
   const running = project?.jobs.some((j) => j.state === 'running')
-  // When a job ends (export…), the sequences' export state may have changed
-  const wasRunning = useRef(false)
+  // When a job ends (export…), the sequences' export state may have changed. Keyed on the finished jobs, so that a
+  // job that ends before the first poll (a short re-export) is not missed.
+  const finishedJobs = (project?.jobs ?? []).filter((j) => j.state !== 'running').map((j) => j.id).join(',')
+  const lastFinished = useRef<string | null>(null)
   useEffect(() => {
-    if (wasRunning.current && !running)
+    if (!project) return
+    if (lastFinished.current != null && lastFinished.current !== finishedJobs)
       api.sequences(projectId).then((s) => {
         setSequences(s.sequences)
         setUndoState(s.undo)
       }, () => undefined)
-    wasRunning.current = !!running
-  }, [running, projectId])
+    lastFinished.current = finishedJobs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finishedJobs, projectId])
   useEffect(() => {
     if (!running) return
     const t = setInterval(refresh, 1000)

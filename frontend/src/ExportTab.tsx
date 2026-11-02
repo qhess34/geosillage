@@ -40,15 +40,13 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
     }
   })
   const [picking, setPicking] = useState(false)
-  // Unticked sequences. By default: those already exported and unchanged since (export or re-export); recomputed
-  // whenever a sequence's export state changes (e.g. at the end of an export)
-  const upToDate = () => new Set(sequences.filter((s) => !s.needs_export).map((s) => s.id))
-  const [excluded, setExcluded] = useState<Set<number>>(upToDate)
+  // Ticked by default: the sequences to export (never exported, or changed since their last export / re-export).
+  // The user's own ticks override that default, and are forgotten when a sequence's export state changes.
+  const [overrides, setOverrides] = useState<Map<number, boolean>>(new Map())
   const stateKey = sequences.map((s) => `${s.id}:${s.needs_export ? 1 : 0}`).join(',')
-  useEffect(() => {
-    setExcluded(upToDate())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stateKey])
+  useEffect(() => setOverrides(new Map()), [stateKey])
+  const isTicked = (s: Sequence) => overrides.get(s.id) ?? s.needs_export
+  const tickAll = (v: boolean | null) => setOverrides(v == null ? new Map() : new Map(sequences.map((s) => [s.id, v])))
   const [compat, setCompat] = useState(true)
   const [excludeJumps, setExcludeJumps] = useState(true)
   const [mode, setMode] = useState<ExportMode>('copy')
@@ -60,7 +58,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
     api.exports(projectId).then(setHistory, () => undefined)
   }, [projectId, running])
 
-  const chosen = sequences.filter((s) => !excluded.has(s.id))
+  const chosen = sequences.filter(isTicked)
   const jumps = chosen.reduce((n, s) => n + s.gps_jumps, 0)
   // Jump photos have no computed heading: they are counted apart
   const noHeading = chosen.reduce((n, s) => n + s.headings.uncertain + s.headings.missing, 0) - jumps
@@ -124,10 +122,10 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           {sequences.some((s) => !s.needs_export) && (
             <span className="muted">Les séquences déjà exportées et inchangées sont décochées.</span>
           )}
-          <button className="small" onClick={() => setExcluded(new Set())}>
+          <button className="small" onClick={() => tickAll(true)}>
             Tout cocher
           </button>
-          <button className="small" onClick={() => setExcluded(upToDate())}>
+          <button className="small" onClick={() => tickAll(null)}>
             Seulement les séquences à exporter ({sequences.filter((s) => s.needs_export).length})
           </button>
         </div>
@@ -141,13 +139,8 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
               <label>
                 <input
                   type="checkbox"
-                  checked={!excluded.has(s.id)}
-                  onChange={() => {
-                    const n = new Set(excluded)
-                    if (n.has(s.id)) n.delete(s.id)
-                    else n.add(s.id)
-                    setExcluded(n)
-                  }}
+                  checked={isTicked(s)}
+                  onChange={() => setOverrides(new Map(overrides).set(s.id, !isTicked(s)))}
                 />{' '}
                 <span className="chip" style={{ background: seqColor(sequences, s.id) }} /> {i + 1} · {s.name}{' '}
                 <span className="muted">({s.count} photos)</span>{' '}

@@ -238,6 +238,10 @@ de chaque séquence (dossier racine, mode et options, enregistrés dans le rappo
 exportée, modifiée depuis, ou dernier export avec des problèmes. `POST …/sequences/{id}/reexport` relance
 `export_start` avec ces réglages pour cette seule séquence. `modified_at` fait partie de `undo.SEQ_COLS` pour
 survivre à la réécriture de la table par annuler / rétablir (anciennes entrées du journal : complétées par NULL).
+Onglet Export : une séquence est cochée par défaut si `needs_export` ; les clics de l'utilisateur sont des
+exceptions (`overrides`) oubliées dès que l'état d'export d'une séquence change. `ProjectView` recharge les
+séquences quand la liste des tâches terminées change (`finishedJobs`), y compris pour une tâche finie avant le
+premier rafraîchissement (réexport court).
 
 ## Export
 
