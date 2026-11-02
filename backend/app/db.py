@@ -122,6 +122,13 @@ MIGRATIONS = [
     -- Written to XMP-GPano:PoseHeadingDegrees (read as yaw by Panoramax); GPSImgDirection stays the bike direction.
     ALTER TABLE photo ADD COLUMN yaw_offset REAL;
     """,
+    """
+    -- yaw_offset follows the Panoramax viewer convention (sphereCorrection pan = yaw: the view's front shows the
+    -- image at +yaw from its centre). Values fixed before used the opposite (GPano pose) convention: flip them so
+    -- that what was seen in the application is what Panoramax shows. ±180 is unchanged.
+    UPDATE photo SET yaw_offset = CASE WHEN -yaw_offset >= 180 THEN -yaw_offset - 360 ELSE -yaw_offset END
+        WHERE yaw_offset IS NOT NULL AND abs(yaw_offset) < 180;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

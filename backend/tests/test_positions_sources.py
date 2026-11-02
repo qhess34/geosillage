@@ -278,8 +278,11 @@ def test_helmet_yaw_written_to_xmp(project, tmp_path):
     f = next((out / "Positions_1").glob(f"*_{name}"))
     t = writer.read_tags([str(f)])[str(f)]
     assert t["PoseHeadingDegrees"] == 330 and t["GPSImgDirection"] == pytest.approx(a["heading"], abs=0.01)
+    # Panoramax only applies the orientation when pitch AND roll are non-zero: the GoPro's 0.0 become 0.01
+    assert (t["PosePitchDegrees"], t["PoseRollDegrees"]) == (writer.NUDGE, writer.NUDGE)
     other = next((out / "Positions_1").glob("0001_*"))
-    assert writer.read_tags([str(other)])[str(other)]["PoseHeadingDegrees"] == 0  # untouched
+    o = writer.read_tags([str(other)])[str(other)]
+    assert (o["PoseHeadingDegrees"], o["PosePitchDegrees"], o["PoseRollDegrees"]) == (0, 0, 0)  # untouched
 
     # In place, then back to 0: the camera's value is written again
     client.post(f"/api/projects/{pid}/export", json={"mode": "in_place", "sequence_ids": [seqs[0]["id"]]})
@@ -289,7 +292,8 @@ def test_helmet_yaw_written_to_xmp(project, tmp_path):
     client.post(f"/api/projects/{pid}/headings/yaw", json={"photo_ids": [a["id"]], "yaw": None})
     client.post(f"/api/projects/{pid}/export", json={"mode": "in_place", "sequence_ids": [seqs[0]["id"]]})
     assert wait_jobs(client, pid)[0]["state"] == "done"
-    assert writer.read_tags([path])[path]["PoseHeadingDegrees"] == 0
+    t = writer.read_tags([path])[path]
+    assert (t["PoseHeadingDegrees"], t["PosePitchDegrees"], t["PoseRollDegrees"]) == (0, 0, 0)  # camera values back
 
 
 def test_all_unclassified_in_sequences(samples):
@@ -321,7 +325,8 @@ def test_camera_backwards_sequence_rotation(project, tmp_path):
     assert wait_jobs(client, pid)[0]["state"] == "done"
     f = next((out / "Positions_1").glob("0001_*"))
     src_file = Path(client.get(f"/api/projects/{pid}/photos/{ph[0]['id']}").json()["path"])
-    assert writer.read_tags([str(f)])[str(f)]["PoseHeadingDegrees"] == 180
+    t = writer.read_tags([str(f)])[str(f)]
+    assert (t["PoseHeadingDegrees"], t["PosePitchDegrees"], t["PoseRollDegrees"]) == (180, writer.NUDGE, writer.NUDGE)
     assert scan_hash(f) == scan_hash(src_file)  # image data untouched
 
     # Rotating again by 180° goes back to the original values
@@ -339,3 +344,16 @@ def test_rotate_all_photos(project):
     assert client.get(f"/api/projects/{pid}/photos/{unclassified['id']}").json()["yaw_offset"] == -180
     client.post(f"/api/projects/{pid}/undo")
     assert client.get(f"/api/projects/{pid}/photos/{unclassified['id']}").json()["yaw_offset"] is None
+
+
+
+def test_yaw_sign_migration(project):
+    """Yaws fixed with the former (GPano pose) convention are flipped to the Panoramax viewer convention."""
+    client, pid, _, seqs = project
+    ph = [x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"]]
+    with db.open_project(pid) as conn:
+        conn.executemany("UPDATE photo SET yaw_offset=? WHERE id=?", [(30, ph[0]["id"]), (-180, ph[1]["id"]), (-170, ph[2]["id"])])
+        conn.execute(f"PRAGMA user_version={len(db.MIGRATIONS) - 1}")
+        db.migrate(conn)
+        got = [conn.execute("SELECT yaw_offset FROM photo WHERE id=?", (ph[i]["id"],)).fetchone()[0] for i in range(3)]
+    assert got == [-30, -180, 170]

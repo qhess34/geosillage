@@ -227,10 +227,17 @@ def run(
                     shutil.copyfile(it["path"], tmp)
                     shutil.copystat(it["path"], tmp)
                     os.replace(tmp, it["dest"])
-            edits = [
-                writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"], it["speed"], _pose_heading(it))
-                for it in batch
-            ]
+            poses = {it["dest"]: _pose_heading(it) for it in batch}
+            # An orientation is only shown by Panoramax if pitch and roll are both non-zero: read the current
+            # values of the files that get one, a 0 (GoPro) becomes writer.NUDGE
+            oriented = [d for d, v in poses.items() if v not in (None, 0)]
+            current = writer.read_tags(oriented) if oriented else {}
+            edits = []
+            for it in batch:
+                pitch, roll = _pose_pitch_roll(it, poses[it["dest"]], current.get(it["dest"]))
+                edits.append(
+                    writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"], it["speed"], poses[it["dest"]], pitch, roll)
+                )
             errors = writer.write_batch(edits, panoramax_compat, on_source=on_source)
             check = {m.path: m for m in reader.read_batch([it["dest"] for it in batch])}
             problems = dict(errors)
@@ -296,6 +303,21 @@ def run(
     ctx.progress(total, total, f"{len(results)} séquence(s) exportée(s){where}" + (f" — {bad} problème(s)" if bad else ""), force=True)
     if bad:
         raise ExportError(f"{bad} fichier(s) en échec de vérification (voir l'historique des exports)")
+
+
+def _pose_pitch_roll(it: dict, pose_heading: float | None, current: dict | None) -> tuple[float | None, float | None]:
+    """PosePitchDegrees / PoseRollDegrees to write (None = untouched).
+
+    - an orientation is written: a 0 (or absent) pitch / roll becomes NUDGE, otherwise untouched;
+    - no orientation but the source was modified before: its original values are put back (if they were saved)."""
+    if pose_heading not in (None, 0):
+        cur = current or {}
+        return tuple(writer.NUDGE if not cur.get(k) else None for k in ("PosePitchDegrees", "PoseRollDegrees"))
+    if it.get("orig_tags"):
+        orig = json.loads(it["orig_tags"])
+        if "XMP-GPano:PosePitchDegrees" in orig.get("_captured", []):
+            return orig.get("PosePitchDegrees"), orig.get("PoseRollDegrees")
+    return None, None
 
 
 def _pose_heading(it: dict) -> float | None:
@@ -405,7 +427,7 @@ def restore_sources(ctx: jobs.JobContext) -> None:
         for r in tagged:
             want = json.loads(r["orig_tags"])
             got = now.get(r["path"], {})
-            for k in set(want) | set(got):
+            for k in (t.split(":", 1)[1] for t in want.get("_captured", writer.LEGACY_CAPTURED)):
                 a, b = want.get(k), got.get(k)
                 if not (a == b or (isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) < 1e-6)):
                     problems[r["path"]] = f"{k} : {b} au lieu de {a}"

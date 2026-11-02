@@ -8,8 +8,9 @@ interface Props {
   imageUrl: string
   alt: string
   height?: number
-  // Helmet camera: angle of the image centre relative to the bike (degrees, right > 0), i.e. the value of
-  // XMP-GPano:PoseHeadingDegrees. The view's front is then the direction of the bike.
+  // Orientation of the photo (helmet camera, camera mounted backwards): the value written to
+  // XMP-GPano:PoseHeadingDegrees, i.e. Panoramax's yaw. Shown exactly like the Panoramax viewer does:
+  // sphereCorrection pan = yaw, so the view's front shows the image at +yaw degrees from its centre.
   yaw?: number | null
   onFixYaw?: (yaw: number) => void // "the bike goes where I am looking now"
   onResetYaw?: () => void
@@ -75,12 +76,13 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
     if (!v) return
     let cancelled = false
     setError(null)
-    // The XMP of the file is overridden by the project's value (the photo may not be exported yet)
+    // Like the Panoramax viewer: the XMP pose of the file is ignored, the orientation is a sphere correction
     const keep = () => ({
       position: v.getPosition(),
       zoom: v.getZoomLevel(),
       transition: false as const,
       showLoader: false,
+      sphereCorrection: { pan: (pose * Math.PI) / 180 },
       panoData: (image: HTMLImageElement, xmp?: PanoData): PanoData => ({
         ...xmp,
         isEquirectangular: true,
@@ -88,7 +90,9 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
         fullHeight: xmp?.fullHeight ?? image.naturalHeight,
         croppedX: xmp?.croppedX ?? 0,
         croppedY: xmp?.croppedY ?? 0,
-        poseHeading: pose,
+        poseHeading: 0,
+        posePitch: 0,
+        poseRoll: 0,
       }),
     })
     v.setPanorama(thumbUrl, keep())
@@ -108,9 +112,10 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
     if (!v || !onFixYaw) return
     // stop the inertia of a mouse drag first, so the direction read is the one on screen
     await v.stopAnimation()
-    // The view is in the corrected frame (front = bike for the current yaw): the bike is where we look now
+    // The view is in the corrected frame (front = image at +pose): the bike is where we look now, i.e. at
+    // pose + look from the image centre, which becomes the new orientation
     const look = norm180((v.getPosition().yaw * 180) / Math.PI)
-    onFixYaw(Math.round(norm180(pose - look) * 10) / 10)
+    onFixYaw(Math.round(norm180(pose + look) * 10) / 10)
     v.rotate({ yaw: 0, pitch: v.getPosition().pitch })
   }
 

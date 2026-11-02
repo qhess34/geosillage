@@ -67,6 +67,9 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    comprises), *↻ 180°* sur une séquence (onglet *Séquences*) ou sur une plage (onglet *Photo*)
    ajoute 180° à l'orientation de toutes ses photos (en plus des angles de tête déjà fixés) ; le JPEG n'est pas
    modifié, seule `PoseHeadingDegrees` change. Recliquer revient à l'état précédent.
+   Le viewer Panoramax n'applique cette orientation que si le tangage et le roulis sont non nuls : l'export remplace
+   alors le 0,0 de la GoPro par 0,01° (invisible), comme [pan360-fixexif](https://github.com/qhess34/pan360-fixexif).
+   Photos déjà publiées sans ce correctif : les corriger dans pan360-fixexif, ou les republier depuis un nouvel export.
 6. **Exporter** (onglet *Export*), trois modes :
    - *Copier* (par défaut) : copies, sources intactes ;
    - *Déplacer* : les photos sources sont déplacées et renommées dans un dossier par séquence, EXIF modifiés ;
@@ -78,9 +81,9 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    sont réencodées ; les données image ne sont jamais touchées). Un dossier par séquence, nommé `<nom du projet>_<n>` avec n = 1, 2, 3… dans l'ordre de la sortie
    (`Sortie_14_juin_1/0001_GSAC….JPG`…), avec
    `GPSImgDirection` / `GPSImgDirectionRef=T`, `GPSSpeed` (km/h, calculée sur la trajectoire), `GPSVersionID` 2.3,
-   et la position si elle a été corrigée, sans recompression. `XMP-GPano:PoseHeadingDegrees` reçoit l'angle de
-   tête fixé (sinon il garde le 0,0 de la GoPro) ; le tangage et le roulis ne sont pas modifiés (Panoramax redresse
-   l'horizon). Chaque dossier contient `photos.csv` (source, position, cap et son origine) et
+   et la position si elle a été corrigée, sans recompression. `XMP-GPano:PoseHeadingDegrees` reçoit l'orientation
+   fixée (sinon il garde le 0,0 de la GoPro) ; dans ce cas seulement, un tangage / roulis nul devient 0,01° pour que
+   Panoramax l'applique (sinon ils ne sont pas modifiés : Panoramax redresse l'horizon). Chaque dossier contient `photos.csv` (source, position, cap et son origine) et
    `.pss-export.json`. Les photos en saut GPS non corrigé sont exclues par défaut (leur position est fausse).
    Ré-exporter remplace l'export précédent du même projet ; un dossier étranger non vide est refusé.
    Pour envoyer plus tard un dossier comme **une seule** séquence avec la CLI Panoramax, utiliser la commande

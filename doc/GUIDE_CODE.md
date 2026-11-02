@@ -141,17 +141,28 @@ par inertie : « Fixer la direction du vélo » appelle `stopAnimation()` avant 
 Positions ou Synchro, le zoom au double-clic de la carte est désactivé (sélectionner une photo puis saisir son
 marqueur faisait un double-clic) ; la carte ne se recentre que lorsque la photo sélectionnée change.
 
-## Caméra sur casque : lacet
+## Orientation (caméra sur casque, caméra à l'envers)
 
-`photo.yaw_offset` = angle du centre de l'image par rapport à la direction du vélo (degrés, droite > 0, annulable).
-C'est la valeur écrite dans `XMP-GPano:PoseHeadingDegrees`, que Panoramax lit comme le lacet (« front = 0°,
-right = 90° ») et que Photo Sphere Viewer applique comme correction de sphère (`pan = PoseHeadingDegrees`) : avec
-30°, l'avant de la vue montre ce qui est à 30° à gauche du centre de l'image (vérifié dans le navigateur).
-`GPSImgDirection` reste la direction du vélo. Fixer : la vue est dans le repère corrigé, donc si l'on regarde la
-route à l'angle `y`, le nouveau lacet vaut `lacet_actuel − y`. La visionneuse impose ce lacet (fournisseur
-`panoData`) au lieu de lire le XMP du fichier. `POST …/headings/yaw` accepte `yaw` (valeur fixée) ou `add` (rotation ajoutée à la valeur
-de chaque photo : caméra montée à l'envers = 180°), sur des photos, une plage ou une séquence (`sequence_id`). Sans lacet fixé, l'export ne touche pas la balise, sauf pour remettre
-la valeur d'origine d'une source déjà modifiée.
+`photo.yaw_offset` = lacet Panoramax, écrit dans `XMP-GPano:PoseHeadingDegrees` (modulo 360). Convention du viewer
+Panoramax (repris de [pan360-fixexif](https://github.com/qhess34/pan360-fixexif), copie de `getSphereCorrection()`
+de `@panoramax/web-viewer`) : `sphereCorrection = {pan: yaw, tilt: -pitch, roll: roll}`, et le XMP de l'image est
+ignoré. Avec `pan = +30°`, l'avant de la vue montre l'image à +30° de son centre (vérifié dans le navigateur ; la
+« pose » GPano de Photo Sphere Viewer tourne dans l'autre sens, ce qu'utilisait la visionneuse avant : la migration
+n° 7 a inversé le signe des valeurs déjà fixées, ±180° inchangé).
+
+**Le viewer Panoramax n'applique l'orientation d'une photo 360° que si le tangage ET le roulis sont non nuls.** La
+GoPro écrit `PosePitchDegrees = PoseRollDegrees = 0.0` : à l'export, quand une orientation non nulle est écrite, un
+0 (ou une balise absente) devient `writer.NUDGE` = 0,01° (invisible), comme dans pan360-fixexif. Sans orientation,
+ces balises ne sont pas touchées (ou reprennent leur valeur d'origine sur une source déjà modifiée ; `orig_tags`
+contient `_captured`, la liste des balises sauvegardées, pour ne pas effacer celles que les anciennes versions ne
+sauvegardaient pas).
+
+Visionneuse : `sphereCorrection` = orientation de la photo, pose XMP forcée à 0. « Fixer la direction du vélo » :
+la vue est dans le repère corrigé ; si l'on regarde la route à l'angle `y`, la nouvelle orientation vaut
+`orientation + y`. `GPSImgDirection` reste la direction du vélo (le viewer Panoramax ouvre la photo en comparant
+ce cap à la direction vers la photo précédente). `POST …/headings/yaw` : `yaw` (valeur fixée) ou `add` (ajoutée à
+chaque photo : caméra à l'envers = 180°), sur des photos, une plage, une séquence (`sequence_id`) ou tout le projet
+(`all`).
 
 ## Retard GPS (synchronisation temporelle)
 
@@ -249,7 +260,7 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 
 ## Tests
 
-`backend/tests` (pytest, 54 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
+`backend/tests` (pytest, 55 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
 persistance après redémarrage, originaux inchangés par comparaison de hash), fichiers introuvables, suppression de
 projet ; calcul du cap (lignes droites, passage 359°/0°, arrêts, interruptions, précision sur sortie simulée) ;
 séquences et annuler/rétablir ; export (dossiers, EXIF relus, données image identiques, métadonnées GoPro/GPano

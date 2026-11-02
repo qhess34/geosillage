@@ -28,7 +28,16 @@ WRITTEN_TAGS = [
     "EXIF:GPSSpeed",
     "EXIF:GPSSpeedRef",
     "XMP-GPano:PoseHeadingDegrees",
+    "XMP-GPano:PosePitchDegrees",
+    "XMP-GPano:PoseRollDegrees",
 ]
+# Tags saved by versions that did not save pitch/roll yet (orig_tags without "_captured")
+LEGACY_CAPTURED = [t for t in WRITTEN_TAGS if not t.endswith(("PosePitchDegrees", "PoseRollDegrees"))]
+
+# The Panoramax viewer applies a 360° photo's orientation (yaw) only when pitch AND roll are both non-zero
+# (getSphereCorrection of @panoramax/web-viewer; see the pan360-fixexif project): a 0 is replaced by this
+# invisible angle when an orientation must be shown.
+NUDGE = 0.01
 
 
 @dataclass
@@ -38,7 +47,9 @@ class Edit:
     lat: float | None = None  # corrected position (None = keep the current tags)
     lon: float | None = None
     speed_kmh: float | None = None  # speed along the (corrected) trajectory
-    pose_heading: float | None = None  # original PoseHeadingDegrees to put back (photo modified by an older version)
+    pose_heading: float | None = None  # XMP-GPano:PoseHeadingDegrees to write (None = untouched)
+    pose_pitch: float | None = None  # XMP-GPano:PosePitchDegrees to write (None = untouched)
+    pose_roll: float | None = None
 
 
 def heading_value(h: float, panoramax_compat: bool) -> float:
@@ -61,6 +72,10 @@ def tag_args(e: Edit, panoramax_compat: bool) -> list[str]:
         args += [f"-GPSSpeed={e.speed_kmh:.2f}", "-GPSSpeedRef=K"]
     if e.pose_heading is not None:
         args += [f"-XMP-GPano:PoseHeadingDegrees={e.pose_heading}"]
+    if e.pose_pitch is not None:
+        args += [f"-XMP-GPano:PosePitchDegrees={e.pose_pitch}"]
+    if e.pose_roll is not None:
+        args += [f"-XMP-GPano:PoseRollDegrees={e.pose_roll}"]
     if e.lat is not None and e.lon is not None:
         args += [
             f"-GPSLatitude={abs(e.lat):.8f}",
@@ -74,9 +89,10 @@ def tag_args(e: Edit, panoramax_compat: bool) -> list[str]:
 
 
 def restore_args(orig: dict) -> list[str]:
-    """Arguments putting back the saved values (a tag absent at the time is deleted)."""
+    """Arguments putting back the saved values (a tag absent at the time is deleted). Only the tags that were
+    captured are restored (older saves did not include pitch/roll)."""
     args = []
-    for t in WRITTEN_TAGS:
+    for t in orig.get("_captured", LEGACY_CAPTURED):
         name = t.split(":", 1)[1]
         v = orig.get(name)
         args.append(f"-{t}={v}" if v is not None else f"-{t}=")
@@ -136,6 +152,7 @@ def read_tags(paths: list[str]) -> dict[str, dict]:
     for d in data:
         src = d.pop("SourceFile")
         out[src] = {k: v for k, v in d.items() if k in {t.split(":", 1)[1] for t in WRITTEN_TAGS}}
+        out[src]["_captured"] = WRITTEN_TAGS
     missing = [p for p in paths if p not in out]
     if missing:
         raise OSError(f"Lecture des métadonnées impossible : {missing[0]}")
