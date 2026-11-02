@@ -30,13 +30,13 @@ function distanceM(lat1: number, lon1: number, lat2: number, lon2: number): numb
 }
 
 const SHORTCUTS: [string, string][] = [
-  ['← / →', 'Photo précédente / suivante (Maj : par 10)'],
+  ['← / →', 'Photo précédente / suivante (Maj : par 10) ; les photos exclues sont sautées (sauf case « Exclues » cochée)'],
   ['Début / Fin', 'Première / dernière photo'],
   ['Page ↑ / Page ↓', 'Séquence précédente / suivante'],
   ['D', 'Début de séquence sur la photo courante (la plage suit ensuite la navigation)'],
-  ['F', 'Fin de séquence : crée la séquence du début jusqu\'à la photo courante'],
+  ['F', 'Fin de séquence : crée la séquence du début jusqu\'à la photo courante ; la photo suivante devient le début de la séquence suivante (Échap pour annuler)'],
   ['C', 'Découper ici : coupe la séquence avant la photo courante (photo non classée : crée la séquence autour, puis coupe)'],
-  ['X ou Suppr', 'Exclure la photo courante et passer à la suivante (avec une plage : exclure la plage)'],
+  ['X ou Suppr', 'Exclure la photo courante et passer à la suivante (exclure la photo de début déplace le début à la suivante ; plage tracée sur la timeline : exclure la plage)'],
   ['Maj+X', 'Réintégrer la photo courante'],
   ['Échap', 'Effacer la plage'],
   ['[ / ]', 'Cap de la photo −1° / +1° (Maj : 5°)'],
@@ -501,6 +501,23 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       /* ignore */
     }
   }
+  // Excluded photos: hidden on the map and skipped by ← → unless shown
+  const [showExcluded, setShowExcludedState] = useState(() => {
+    try {
+      return localStorage.getItem('pss-show-excluded') === '1'
+    } catch {
+      return false
+    }
+  })
+  const setShowExcluded = (v: boolean) => {
+    setShowExcludedState(v)
+    try {
+      localStorage.setItem('pss-show-excluded', v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }
+  const mapPhotos = useMemo(() => (showExcluded ? photos : photos.filter((p) => !p.excluded)), [photos, showExcluded])
   const [centerTick, setCenterTick] = useState(0)
   const setOverlay = (o: OverlaySettings) => {
     setOverlayState(o)
@@ -659,6 +676,26 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     anchor.current = current.idx
     setNotice(`Début : photo ${current.idx + 1} — naviguez puis « Fin »`)
   }, [current])
+  // Index reached by moving `count` photos from idx in direction dir, skipping excluded photos unless shown
+  const stepIdx = useCallback(
+    (idx: number, dir: 1 | -1, count = 1) => {
+      if (showExcluded) return idx + dir * count
+      let i = idx
+      let last = idx
+      for (let left = count; left > 0; ) {
+        i += dir
+        if (i < 0 || i >= photos.length) break
+        if (!photos[i].excluded) {
+          last = i
+          left--
+        }
+      }
+      return last
+    },
+    [photos, showExcluded],
+  )
+  // First photo after idx that is not excluded
+  const nextKept = useCallback((idx: number) => photos.slice(idx + 1).find((p) => !p.excluded) ?? null, [photos])
   const finishSequence = useCallback(() => {
     // from the marked start (or a range drawn on the timeline) to the current photo
     const r: [number, number] | null =
@@ -668,11 +705,24 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       return
     }
     api.createSequence(projectId, r[0], r[1]).then((s) => {
-      applyState({ ...s, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` })
-      setRange(null)
-      setSeqStart(null)
+      // Chain: the next photo not excluded becomes the start of the next sequence (unless it already belongs to one)
+      const next = nextKept(r[1])
+      const chain = next != null && next.sequence_id == null
+      applyState({
+        ...s,
+        done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` + (chain ? ` · début suivant : photo ${next!.idx + 1}` : ''),
+      })
+      if (chain) {
+        setSeqStart(next.idx)
+        setRange([next.idx, next.idx])
+        anchor.current = next.idx
+        setSelected(next.id)
+      } else {
+        setRange(null)
+        setSeqStart(null)
+      }
     }, (er) => setError(er.message))
-  }, [seqStart, current, range, projectId, applyState])
+  }, [seqStart, current, range, projectId, applyState, nextKept])
   // While a start is marked, the range follows the current photo
   useEffect(() => {
     if (seqStart == null || !current) return
@@ -697,10 +747,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         return
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         const i = current ? current.idx : -1
-        const step = (e.shiftKey ? 10 : 1) * (e.key === 'ArrowRight' ? 1 : -1)
-        goIdx(i < 0 ? 0 : i + step)
-      } else if (e.key === 'Home') goIdx(0)
-      else if (e.key === 'End') goIdx(photos.length - 1)
+        const dir = e.key === 'ArrowRight' ? 1 : -1
+        goIdx(i < 0 ? stepIdx(-1, 1) : stepIdx(i, dir, e.shiftKey ? 10 : 1))
+      } else if (e.key === 'Home') goIdx(stepIdx(-1, 1))
+      else if (e.key === 'End') goIdx(stepIdx(photos.length, -1))
       else if (e.key === 'PageDown' || e.key === 'PageUp') {
         if (!sequences.length) return
         const i = current?.idx ?? -1
@@ -716,7 +766,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       } else if (e.key === 'X' && e.shiftKey) {
         if (current?.excluded) api.excludePhotos(projectId, { photo_ids: [current.id] }, false).then(applyState, (er) => setError(er.message))
       } else if (e.key === 'x' || e.key === 'Delete') {
-        if (range) {
+        if (range && seqStart == null) {
+          // a range drawn on the timeline: exclude it all
           api.excludePhotos(projectId, { start_idx: range[0], end_idx: range[1] }).then((s) => {
             applyState(s)
             setRange(null)
@@ -724,7 +775,13 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         } else if (current) {
           // exclude and move on: pressing the key repeatedly removes a series of photos
           if (!current.excluded) api.excludePhotos(projectId, { photo_ids: [current.id] }).then(applyState, (er) => setError(er.message))
-          goIdx(current.idx + 1)
+          // the photo marked "Début" is excluded: the start moves to the next photo that is not
+          if (seqStart === current.idx) {
+            const next = nextKept(current.idx)
+            setSeqStart(next ? next.idx : null)
+            if (!next) setRange(null)
+          }
+          goIdx(showExcluded ? current.idx + 1 : stepIdx(current.idx, 1))
         }
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)
@@ -741,7 +798,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded])
 
   const chooseBasemap = (id: string) => {
     if (id === '__add') {
@@ -840,7 +897,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       <main className="main" style={{ gridTemplateColumns: `1fr 6px ${panelWidth}px` }}>
         <div className="center">
           <PhotoMap
-            photos={photos}
+            photos={mapPhotos}
             sequences={sequences}
             basemap={basemap}
             selectedId={selected}
@@ -866,6 +923,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             </button>
             <label title="Garder la photo courante au centre de la carte pendant la navigation (← →) ; décocher pour une carte fixe">
               <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Suivre
+            </label>
+            <label title="Photos exclues (X) : masquées sur la carte et sautées par ← → ; cocher pour les revoir et les réintégrer (Maj+X)">
+              <input type="checkbox" checked={showExcluded} onChange={(e) => { setShowExcluded(e.target.checked); e.target.blur() }} /> Exclues
             </label>
           </div>
           {overlay.enabled && (
