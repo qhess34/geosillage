@@ -234,3 +234,36 @@ def test_gopro_maker_notes_warnings_are_not_errors(samples, tmp_path):
         reports = client.get(f"/api/projects/{pid}/exports").json()
         assert reports and all(r["report"]["problems"] == {} for r in reports)
         assert reports[0]["report"]["corrected_positions"] > 20
+
+
+def test_reexport_modified_sequence(project, tmp_path):
+    client, pid = project
+    props = client.get(f"/api/projects/{pid}/sequences/proposals").json()
+    seqs = client.post(f"/api/projects/{pid}/sequences/bulk", json={"segments": [[p["start_idx"], p["end_idx"]] for p in props]}).json()["sequences"]
+    assert all(s["needs_export"] and s["last_export"] is None for s in seqs)
+    assert client.post(f"/api/projects/{pid}/sequences/{seqs[0]['id']}/reexport").status_code == 400  # never exported
+
+    out = tmp_path / "out"
+    client.post(f"/api/projects/{pid}/export", json={"out_dir": str(out), "panoramax_compat": False})
+    assert wait_jobs(client, pid)[0]["state"] == "done"
+    seqs = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+    assert not any(s["needs_export"] for s in seqs)
+    assert seqs[0]["last_export"]["out_dir"] == str(out) and seqs[0]["last_export"]["panoramax_compat"] is False
+
+    # Change the orientation of sequence 1: only it needs a new export
+    client.post(f"/api/projects/{pid}/headings/yaw", json={"sequence_id": seqs[0]["id"], "add": 180})
+    seqs = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+    assert [s["needs_export"] for s in seqs] == [True, False]
+
+    r = client.post(f"/api/projects/{pid}/sequences/{seqs[0]['id']}/reexport")
+    assert r.status_code == 202 and r.json()["mode"] == "copy"
+    assert wait_jobs(client, pid)[0]["state"] == "done"
+    f = next((out / "Export_1").glob("0001_*"))
+    assert reader.dump_all(str(f))["XMP-GPano:PoseHeadingDegrees"] == 180
+    seqs = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+    assert not any(s["needs_export"] for s in seqs)
+
+    # Undo also marks the sequence as to be exported again
+    client.post(f"/api/projects/{pid}/undo")
+    seqs = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+    assert [s["needs_export"] for s in seqs] == [True, False]

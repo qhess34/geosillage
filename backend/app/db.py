@@ -129,6 +129,10 @@ MIGRATIONS = [
     UPDATE photo SET yaw_offset = CASE WHEN -yaw_offset >= 180 THEN -yaw_offset - 360 ELSE -yaw_offset END
         WHERE yaw_offset IS NOT NULL AND abs(yaw_offset) < 180;
     """,
+    """
+    -- Last change of a sequence's content (photos, positions, headings, orientation, name…): re-export needed?
+    ALTER TABLE sequence ADD COLUMN modified_at REAL;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

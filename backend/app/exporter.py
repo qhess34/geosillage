@@ -284,6 +284,8 @@ def run(
             "foreign_files": foreign,
             "problems": problems,
             "panoramax_compat": panoramax_compat,
+            "exclude_gps_jumps": exclude_jumps,
+            "out_dir": str(out) if out is not None else None,
             "mode": mode,
         }
         if d is not None:
@@ -450,6 +452,25 @@ def restore_sources(ctx: jobs.JobContext) -> None:
     if problems:
         first = next(iter(problems.items()))
         raise ExportError(f"{len(problems)} photo(s) non restaurée(s), par ex. {first[0]} : {first[1]}")
+
+
+def last_exports(conn) -> dict[int, dict]:
+    """Latest export of each sequence: {sequence_id: {ts, path, mode, out_dir, panoramax_compat, exclude_gps_jumps}}."""
+    out = {}
+    for r in conn.execute(
+        "SELECT * FROM export e WHERE id = (SELECT MAX(id) FROM export WHERE sequence_id = e.sequence_id)"
+    ):
+        rep_ = json.loads(r["report"])
+        out[r["sequence_id"]] = {
+            "ts": r["ts"],
+            "path": r["path"],
+            "mode": r["mode"],
+            "out_dir": rep_.get("out_dir") or (str(Path(r["path"]).parent) if r["mode"] != "in_place" else None),
+            "panoramax_compat": rep_.get("panoramax_compat", True),
+            "exclude_gps_jumps": rep_.get("exclude_gps_jumps", True),
+            "problems": len(rep_.get("problems", {})),
+        }
+    return out
 
 
 def list_exports(conn, limit=50) -> list[dict]:

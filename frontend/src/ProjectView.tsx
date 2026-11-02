@@ -511,6 +511,16 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   }, [refresh])
 
   const running = project?.jobs.some((j) => j.state === 'running')
+  // When a job ends (export…), the sequences' export state may have changed
+  const wasRunning = useRef(false)
+  useEffect(() => {
+    if (wasRunning.current && !running)
+      api.sequences(projectId).then((s) => {
+        setSequences(s.sequences)
+        setUndoState(s.undo)
+      }, () => undefined)
+    wasRunning.current = !!running
+  }, [running, projectId])
   useEffect(() => {
     if (!running) return
     const t = setInterval(refresh, 1000)
@@ -843,6 +853,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onRefresh={() => {
                   setNotice('Photos tournées de 180°')
                   afterHeadingChange()
+                }}
+                onExported={() => {
+                  setNotice('Réexport lancé')
+                  refresh()
                 }}
                 onError={fail}
               />

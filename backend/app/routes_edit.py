@@ -493,6 +493,25 @@ def export_start(pid: str, body: ExportIn):
     return {"job_id": jobs.start(pid, "export", task, unique=False), "out_dir": str(out) if out else None}
 
 
+@router.post("/sequences/{sid}/reexport", status_code=202)
+def sequence_reexport(pid: str, sid: int):
+    """Export this sequence again with the settings of its last export (folder, mode, options)."""
+    with db.open_project(pid) as conn:
+        last = exporter.last_exports(conn).get(sid)
+        if not conn.execute("SELECT 1 FROM sequence WHERE id=?", (sid,)).fetchone():
+            raise HTTPException(404, "Séquence introuvable")
+    if not last:
+        raise HTTPException(400, "Cette séquence n'a jamais été exportée : utilisez l'onglet Export")
+    body = ExportIn(
+        out_dir=last["out_dir"],
+        sequence_ids=[sid],
+        panoramax_compat=last["panoramax_compat"],
+        exclude_gps_jumps=last["exclude_gps_jumps"],
+        mode=last["mode"],
+    )
+    return {**export_start(pid, body), "mode": last["mode"]}
+
+
 @router.get("/exports")
 def export_list(pid: str):
     with db.open_project(pid) as conn:

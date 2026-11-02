@@ -353,7 +353,9 @@ def test_yaw_sign_migration(project):
     ph = [x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"]]
     with db.open_project(pid) as conn:
         conn.executemany("UPDATE photo SET yaw_offset=? WHERE id=?", [(30, ph[0]["id"]), (-180, ph[1]["id"]), (-170, ph[2]["id"])])
-        conn.execute(f"PRAGMA user_version={len(db.MIGRATIONS) - 1}")
+        flip = next(i for i, m in enumerate(db.MIGRATIONS) if "yaw_offset = CASE" in m)
+        conn.execute(f"PRAGMA user_version={flip}")
+        conn.executescript("ALTER TABLE sequence DROP COLUMN modified_at")  # later migrations are replayed too
         db.migrate(conn)
         got = [conn.execute("SELECT yaw_offset FROM photo WHERE id=?", (ph[i]["id"],)).fetchone()[0] for i in range(3)]
     assert got == [-30, -180, 170]

@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config, db, exporter, importer, jobs, routes_edit
+from . import config, db, exporter, importer, jobs, routes_edit, undo
 from .core import analysis, headings
 from .exif import reader
 
@@ -95,6 +95,7 @@ def project_update(pid: str, body: dict):
             db.set_meta(conn, "settings", {**(db.get_meta(conn, "settings", {}) or {}), **s})
             analysis.run(conn)
             headings.recompute(conn)
+            undo.touch_all(conn)  # headings may have changed everywhere
     return project_get(pid)
 
 

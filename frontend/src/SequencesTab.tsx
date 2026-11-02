@@ -10,6 +10,7 @@ interface Props {
   onState: (s: SeqState) => void
   onGo: (idx: number) => void
   onRefresh: () => void // reload photos and sequences after an edit that does not return them
+  onExported: () => void // an export job was started
   onError: (msg: string) => void
 }
 
@@ -18,6 +19,16 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(s.name)
   const [offset, setOffset] = useState(String(s.heading_offset))
+  const [confirmReexport, setConfirmReexport] = useState(false)
+  const last = s.last_export
+  const reexport = () => {
+    if (last && last.mode !== 'copy' && !confirmReexport) {
+      setConfirmReexport(true) // second click: the photo sources will be modified again
+      return
+    }
+    setConfirmReexport(false)
+    api.reexport(projectId, s.id).then(() => props.onExported(), (e) => onError(e.message))
+  }
   const run = (p: Promise<SeqState>) => p.then(onState, (e) => onError(e.message))
   const i = sequences.findIndex((x) => x.id === s.id)
   const next = sequences[i + 1]
@@ -47,6 +58,21 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
           </button>
         )}
         <span className="muted small-text">{s.count} ph.</span>
+      </div>
+      <div className="small-text">
+        {last ? (
+          s.needs_export ? (
+            <span className="badge warn-text" title={`Modifiée depuis l'export du ${new Date(last.ts * 1000).toLocaleString('fr-FR')}`}>
+              à réexporter
+            </span>
+          ) : (
+            <span className="badge" title={last.path}>
+              exportée le {new Date(last.ts * 1000).toLocaleString('fr-FR')}
+            </span>
+          )
+        ) : (
+          <span className="muted">jamais exportée</span>
+        )}
       </div>
       <div className="muted small-text">
         {fmtTime(s.start)} → {fmtTime(s.end, false)} · {fmtDuration(s.duration_s)} · {fmtDistance(s.distance_m)}
@@ -96,6 +122,15 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         {next && (
           <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))}>
             Fusionner avec la suivante
+          </button>
+        )}
+        {last && (
+          <button
+            className={confirmReexport ? 'small danger' : s.needs_export ? 'small primary' : 'small'}
+            onClick={reexport}
+            title={`Même dossier et mêmes réglages que le dernier export (${last.mode === 'copy' ? 'copie' : last.mode === 'move' ? 'photos sources déplacées' : 'photos sources modifiées sur place'}) : ${last.path}`}
+          >
+            {confirmReexport ? 'Confirmer : modifie les photos sources' : '⟳ Réexporter'}
           </button>
         )}
         <button className="small danger" onClick={() => run(api.deleteSequence(projectId, s.id))} title="Les photos retournent dans « non classées » (annulable)">

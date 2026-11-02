@@ -208,6 +208,16 @@ sur ces deux photos, et n'était pas passée à l'heure d'hiver. L'application o
 caméra (seuls les écarts comptent). Panoramax, lui, retient l'heure GPS quand l'heure caméra n'a pas de
 sous-secondes (`TimeBySource.getBest`) : c'est l'heure GPS qui sera affichée.
 
+## Réexport
+
+`sequence.modified_at` : posé par `undo.undoable` (et par annuler / rétablir) sur les séquences dont le contenu
+change (`undo.affected_sequences` : photos qui entrent, sortent ou sont modifiées, ou ligne de la séquence), et
+sur toutes par un changement des réglages de cap (`undo.touch_all`). `exporter.last_exports` donne le dernier export
+de chaque séquence (dossier racine, mode et options, enregistrés dans le rapport) ; `needs_export` = jamais
+exportée, modifiée depuis, ou dernier export avec des problèmes. `POST …/sequences/{id}/reexport` relance
+`export_start` avec ces réglages pour cette seule séquence. `modified_at` fait partie de `undo.SEQ_COLS` pour
+survivre à la réécriture de la table par annuler / rétablir (anciennes entrées du journal : complétées par NULL).
+
 ## Export
 
 Modes (`exporter.MODES`) : `copy` (copies), `move` (les sources sont déplacées dans les dossiers de séquence et
@@ -260,7 +270,7 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 
 ## Tests
 
-`backend/tests` (pytest, 55 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
+`backend/tests` (pytest, 56 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
 persistance après redémarrage, originaux inchangés par comparaison de hash), fichiers introuvables, suppression de
 projet ; calcul du cap (lignes droites, passage 359°/0°, arrêts, interruptions, précision sur sortie simulée) ;
 séquences et annuler/rétablir ; export (dossiers, EXIF relus, données image identiques, métadonnées GoPro/GPano

@@ -308,7 +308,10 @@ def create_many(conn, segments: list[tuple[int, int]]) -> list[dict]:
 
 
 def list_with_stats(conn) -> list[dict]:
+    from ..exporter import last_exports  # (exporter imports core modules)
+
     seqs = conn.execute("SELECT * FROM sequence").fetchall()
+    exports = last_exports(conn)
     out = []
     for s in seqs:
         pts = conn.execute(
@@ -340,6 +343,12 @@ def list_with_stats(conn) -> list[dict]:
                 "backwards": sum(1 for p in pts if p["yaw_offset"] is not None and abs(abs(p["yaw_offset"]) - 180) < 0.01),
                 "rotated": sum(1 for p in pts if p["yaw_offset"] is not None),
                 "headings": headings.stats(conn, s["id"]),
+                "modified_at": s["modified_at"],
+                "last_export": exports.get(s["id"]),
+                # never exported, or changed since the last export (or exported with problems)
+                "needs_export": s["id"] not in exports
+                or (s["modified_at"] or 0) > exports[s["id"]]["ts"]
+                or exports[s["id"]]["problems"] > 0,
             }
         )
     return sorted(out, key=lambda x: x["start_idx"])

@@ -104,6 +104,11 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
         </>
       )}
       <h3>Séquences à exporter</h3>
+      {sequences.some((s) => s.needs_export) && sequences.some((s) => !s.needs_export) && (
+        <button className="small" onClick={() => setExcluded(new Set(sequences.filter((s) => !s.needs_export).map((s) => s.id)))}>
+          Cocher seulement les séquences à réexporter ({sequences.filter((s) => s.needs_export).length})
+        </button>
+      )}
       {sequences.length === 0 ? (
         <p className="muted small-text">Aucune séquence.</p>
       ) : (
@@ -121,8 +126,9 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
                     setExcluded(n)
                   }}
                 />{' '}
-                <span className="chip" style={{ background: seqColor(sequences, s.id) }} /> {String(i + 1).padStart(2, '0')} · {s.name}{' '}
-                <span className="muted">({s.count} photos)</span>
+                <span className="chip" style={{ background: seqColor(sequences, s.id) }} /> {i + 1} · {s.name}{' '}
+                <span className="muted">({s.count} photos)</span>{' '}
+                {s.last_export ? (s.needs_export ? <span className="badge warn-text">à réexporter</span> : <span className="badge">exportée</span>) : null}
               </label>
             </li>
           ))}

@@ -136,6 +136,9 @@ export interface Sequence {
   gps_jumps: number
   corrected: number
   backwards: number // photos rotated by 180° (camera mounted backwards)
+  modified_at: number | null
+  last_export: { ts: number; path: string; mode: ExportMode; out_dir: string | null; problems: number } | null
+  needs_export: boolean // never exported, or changed since the last export
   rotated: number // photos with an orientation angle (yaw)
   headings: HeadingStats
 }
@@ -286,6 +289,7 @@ export const api = {
   seqFromUnclassified: (id: string) => req<SeqState>('POST', `/api/projects/${id}/sequences/from-unclassified`),
   cutAt: (id: string, photo: number) => req<SeqState & { done: string }>('POST', `/api/projects/${id}/sequences/cut?photo_id=${photo}`),
   trashExcluded: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/sources/trash-excluded`),
+  reexport: (id: string, sid: number) => req<{ job_id: string; mode: ExportMode }>('POST', `/api/projects/${id}/sequences/${sid}/reexport`),
   restoreSources: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/sources/restore`),
   setPosition: (id: string, photo: number, lat: number | null, lon: number | null) =>
     req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/position`, lat == null ? {} : { lat, lon }),

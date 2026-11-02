@@ -86,6 +86,10 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    Panoramax l'applique (sinon ils ne sont pas modifiés : Panoramax redresse l'horizon). Chaque dossier contient `photos.csv` (source, position, cap et son origine) et
    `.pss-export.json`. Les photos en saut GPS non corrigé sont exclues par défaut (leur position est fausse).
    Ré-exporter remplace l'export précédent du même projet ; un dossier étranger non vide est refusé.
+   **Réexporter une séquence modifiée** : toute modification d'une séquence (photos, positions, caps, orientation,
+   nom…) la marque *à réexporter* (onglet *Séquences* et *Export*) ; *⟳ Réexporter* relance l'export de cette seule
+   séquence avec le dossier, le mode et les options de son dernier export (confirmation si le mode modifie les
+   photos sources). Onglet *Export* : *Cocher seulement les séquences à réexporter*.
    Pour envoyer plus tard un dossier comme **une seule** séquence avec la CLI Panoramax, utiliser la commande
    `upload` avec `--no-split` et `--duplicates-checks disabled` (sinon le serveur peut redécouper ou dédoublonner,
    voir `doc/ETUDE_PHASE1.md` §2.2).

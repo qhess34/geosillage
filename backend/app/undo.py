@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from . import db
 
 PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset"]
-SEQ_COLS = ["id", "name", "heading_offset", "created_at"]
+SEQ_COLS = ["id", "name", "heading_offset", "created_at", "modified_at"]
 MAX_OPS = 200
 
 
@@ -45,11 +45,32 @@ def undoable(conn, label: str):
             "seq_before": before_s,
             "seq_after": after_s,
         }
+        touch(conn, affected_sequences(data))
         conn.execute("DELETE FROM op_log WHERE undone = 1")  # a new edit clears the redo stack
         conn.execute("INSERT INTO op_log(ts, label, data) VALUES(?, ?, ?)", (time.time(), label, json.dumps(data)))
         conn.execute(
             "DELETE FROM op_log WHERE id NOT IN (SELECT id FROM op_log ORDER BY id DESC LIMIT ?)", (MAX_OPS,)
         )
+
+
+def affected_sequences(data: dict) -> set[int]:
+    """Sequences whose content an operation changed (photos leaving / joining / edited, or the sequence row)."""
+    k = PHOTO_COLS.index("sequence_id")
+    ids = {v for _, b, a in data["photos"] for v in (b[k], a[k]) if v is not None}
+    before = {s[0]: s[:4] for s in data["seq_before"]}
+    ids |= {s[0] for s in data["seq_after"] if before.get(s[0]) != s[:4]}
+    return ids
+
+
+def touch(conn, sequence_ids) -> None:
+    """Mark sequences as modified now (they need to be exported again)."""
+    ids = list(sequence_ids)
+    if ids:
+        conn.execute(f"UPDATE sequence SET modified_at=? WHERE id IN ({','.join('?' * len(ids))})", (time.time(), *ids))
+
+
+def touch_all(conn) -> None:
+    conn.execute("UPDATE sequence SET modified_at=?", (time.time(),))
 
 
 def _apply(conn, data: dict, side: str) -> None:
@@ -58,7 +79,8 @@ def _apply(conn, data: dict, side: str) -> None:
     conn.executemany(f"UPDATE photo SET {sets} WHERE id=?", [(*row[k], row[0]) for row in data["photos"]])
     seqs = data["seq_before" if side == "before" else "seq_after"]
     conn.execute("DELETE FROM sequence")
-    conn.executemany(f"INSERT INTO sequence({', '.join(SEQ_COLS)}) VALUES(?, ?, ?, ?)", seqs)
+    conn.executemany(f"INSERT INTO sequence({', '.join(SEQ_COLS)}) VALUES({', '.join('?' * len(SEQ_COLS))})", [(*s, None)[: len(SEQ_COLS)] for s in seqs])
+    touch(conn, affected_sequences(data))  # undone / redone content differs from what may have been exported
 
 
 def undo(conn) -> str:
