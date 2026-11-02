@@ -25,7 +25,14 @@ const MODES: { id: ExportMode; label: string; help: string }[] = [
 ]
 
 export default function ExportTab({ projectId, sequences, jobs, sources, excludedPhotos, onStarted, onError }: Props) {
+  // Destination: the folder of this project's last export, else the last folder typed in this browser
+  const lastProjectDir = () =>
+    sequences
+      .filter((s) => s.last_export?.out_dir && s.last_export.mode !== 'in_place')
+      .sort((a, b) => (b.last_export?.ts ?? 0) - (a.last_export?.ts ?? 0))[0]?.last_export?.out_dir ?? ''
   const [dir, setDir] = useState(() => {
+    const d = lastProjectDir()
+    if (d) return d
     try {
       return localStorage.getItem(KEY) || ''
     } catch {
@@ -33,7 +40,15 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
     }
   })
   const [picking, setPicking] = useState(false)
-  const [excluded, setExcluded] = useState<Set<number>>(new Set())
+  // Unticked sequences. By default: those already exported and unchanged since (export or re-export); recomputed
+  // whenever a sequence's export state changes (e.g. at the end of an export)
+  const upToDate = () => new Set(sequences.filter((s) => !s.needs_export).map((s) => s.id))
+  const [excluded, setExcluded] = useState<Set<number>>(upToDate)
+  const stateKey = sequences.map((s) => `${s.id}:${s.needs_export ? 1 : 0}`).join(',')
+  useEffect(() => {
+    setExcluded(upToDate())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stateKey])
   const [compat, setCompat] = useState(true)
   const [excludeJumps, setExcludeJumps] = useState(true)
   const [mode, setMode] = useState<ExportMode>('copy')
@@ -104,10 +119,18 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
         </>
       )}
       <h3>Séquences à exporter</h3>
-      {sequences.some((s) => s.needs_export) && sequences.some((s) => !s.needs_export) && (
-        <button className="small" onClick={() => setExcluded(new Set(sequences.filter((s) => !s.needs_export).map((s) => s.id)))}>
-          Cocher seulement les séquences à réexporter ({sequences.filter((s) => s.needs_export).length})
-        </button>
+      {sequences.length > 0 && (
+        <div className="row wrap small-text">
+          {sequences.some((s) => !s.needs_export) && (
+            <span className="muted">Les séquences déjà exportées et inchangées sont décochées.</span>
+          )}
+          <button className="small" onClick={() => setExcluded(new Set())}>
+            Tout cocher
+          </button>
+          <button className="small" onClick={() => setExcluded(upToDate())}>
+            Seulement les séquences à exporter ({sequences.filter((s) => s.needs_export).length})
+          </button>
+        </div>
       )}
       {sequences.length === 0 ? (
         <p className="muted small-text">Aucune séquence.</p>
@@ -154,7 +177,11 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           disabled={(mode !== 'in_place' && !dir.trim()) || !chosen.length || running}
           onClick={() => (mode === 'copy' ? start() : setConfirm('export'))}
         >
-          {running ? 'Tâche en cours…' : `Exporter ${chosen.length} séquence(s)`}
+          {running
+            ? 'Tâche en cours…'
+            : chosen.length === 0 && sequences.length > 0 && sequences.every((s) => !s.needs_export)
+              ? 'Toutes les séquences sont à jour'
+              : `Exporter ${chosen.length} séquence(s)`}
         </button>
       </div>
 

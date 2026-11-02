@@ -94,7 +94,9 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    **Réexporter une séquence modifiée** : toute modification d'une séquence (photos, positions, caps, orientation,
    nom…) la marque *à réexporter* (onglet *Séquences* et *Export*) ; *⟳ Réexporter* relance l'export de cette seule
    séquence avec le dossier, le mode et les options de son dernier export (confirmation si le mode modifie les
-   photos sources). Onglet *Export* : *Cocher seulement les séquences à réexporter*.
+   photos sources). Onglet *Export* : seules les séquences jamais exportées ou modifiées depuis leur dernier export
+   (export ou réexport) sont cochées ; *Tout cocher* pour tout réexporter. Le dossier de destination est prérempli
+   avec celui du dernier export du projet.
    Pour envoyer plus tard un dossier comme **une seule** séquence avec la CLI Panoramax, utiliser la commande
    `upload` avec `--no-split` et `--duplicates-checks disabled` (sinon le serveur peut redécouper ou dédoublonner,
    voir `doc/ETUDE_PHASE1.md` §2.2).
