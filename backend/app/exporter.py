@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import config, db, jobs
-from .core import headings
+from .core import geo, headings
 from .exif import reader, writer
 
 MARKER = ".pss-export.json"
@@ -84,7 +84,7 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
     out = []
     for s in seqs:
         photos = conn.execute(
-            f"""SELECT p.id, p.rank, p.path, p.filename, p.flags, p.lat, p.lon, p.lat_orig, p.lon_orig, p.pos_method,
+            f"""SELECT p.id, p.rank, p.ts, p.path, p.filename, p.flags, p.lat, p.lon, p.lat_orig, p.lon_orig, p.pos_method,
                        p.heading_auto, p.heading_auto_state, p.heading_manual, p.orig_tags, p.moved_from,
                        {headings.FINAL_SQL} AS heading
                 FROM photo p JOIN sequence s ON s.id = p.sequence_id
@@ -92,6 +92,28 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
             (s["id"],),
         ).fetchall()
         out.append({"id": s["id"], "name": s["name"], "dir": f"{numbered[s['id']]:02d}_{slug(s['name'])}", "photos": [dict(p) for p in photos]})
+    return out
+
+
+def speeds_kmh(items: list[dict], max_dt: float = 10.0, max_kmh: float = 150.0) -> list[float | None]:
+    """Speed of each photo along the exported trajectory: distance between its neighbours / time between them.
+    Neighbours further than max_dt seconds (interruption) are ignored; implausible speeds are not written."""
+    pos = [
+        (it["ts"], it["lat"] if it["lat"] is not None else it["lat_orig"], it["lon"] if it["lon"] is not None else it["lon_orig"])
+        for it in items
+    ]
+    out: list[float | None] = []
+    for i, (t, la, lo) in enumerate(pos):
+        a = pos[i - 1] if i > 0 else None
+        b = pos[i + 1] if i + 1 < len(pos) else None
+        a = a if a and t is not None and a[0] is not None and 0 < t - a[0] <= max_dt and a[1] is not None else None
+        b = b if b and t is not None and b[0] is not None and 0 < b[0] - t <= max_dt and b[1] is not None else None
+        p, q = (a or (t, la, lo)), (b or (t, la, lo))
+        if p[0] is None or q[0] is None or q[0] - p[0] <= 0 or la is None:
+            out.append(None)
+            continue
+        v = geo.distance(p[1], p[2], q[1], q[2]) / (q[0] - p[0]) * 3.6
+        out.append(round(v, 2) if v <= max_kmh else None)
     return out
 
 
@@ -185,6 +207,8 @@ def run(
                 }
             )
 
+        for it, v in zip(items, speeds_kmh(items)):
+            it["speed"] = v
         if on_source:
             ctx.progress(done, total, f"Sauvegarde des métadonnées d'origine (« {s['name']} »)", force=True)
             _save_orig_tags(pid, items)
@@ -200,7 +224,10 @@ def run(
                     shutil.copyfile(it["path"], tmp)
                     shutil.copystat(it["path"], tmp)
                     os.replace(tmp, it["dest"])
-            edits = [writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"]) for it in batch]
+            edits = [
+                writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"], it["speed"], _orig_pose_heading(it))
+                for it in batch
+            ]
             errors = writer.write_batch(edits, panoramax_compat, on_source=on_source)
             check = {m.path: m for m in reader.read_batch([it["dest"] for it in batch])}
             problems = dict(errors)
@@ -266,6 +293,13 @@ def run(
     ctx.progress(total, total, f"{len(results)} séquence(s) exportée(s){where}" + (f" — {bad} problème(s)" if bad else ""), force=True)
     if bad:
         raise ExportError(f"{bad} fichier(s) en échec de vérification (voir l'historique des exports)")
+
+
+def _orig_pose_heading(it: dict) -> float | None:
+    """Original PoseHeadingDegrees of a photo that a previous version may have overwritten (else None: untouched)."""
+    if not it.get("orig_tags"):
+        return None
+    return json.loads(it["orig_tags"]).get("PoseHeadingDegrees")
 
 
 def _write_csv(path: Path, items: list[dict], panoramax_compat: bool) -> None:

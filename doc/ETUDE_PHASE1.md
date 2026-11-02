@@ -106,7 +106,9 @@ Conséquences pour l'application :
 3. Le serveur arrondit à l'entier et **un cap arrondi à 0 est considéré comme absent** et
    recalculé. Règle : si le cap final arrondi vaut 0, écrire 359.6° (→ 360 ≡ 0°) — à valider sur
    une instance de test ; à défaut, 1° (écart de 1° documenté et signalé dans le contrôle qualité).
-4. Écrire aussi `XMP-GPano:PoseHeadingDegrees` avec la même valeur, comme le fait le writer
+4. ~~Écrire aussi `XMP-GPano:PoseHeadingDegrees` avec la même valeur~~ — **corrigé (2026-11)** : le lecteur
+   Panoramax interprète `PoseHeadingDegrees` comme le lacet (décalage du centre de l'image par rapport à
+   `GPSImgDirection`) ; une photo GoPro MAX correctement étiquetée le garde à 0,0. Ne pas suivre le writer
    officiel (`geopic_tag_reader/writer.py`), pour éviter deux caps contradictoires.
 
 ### 2.5 Positions

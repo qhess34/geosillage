@@ -12,14 +12,20 @@ from dataclasses import dataclass
 
 from .. import config
 
-# Tags this application may write; their original values are saved before touching a source photo
+# Tags this application may write; their original values are saved before touching a source photo.
+# XMP-GPano:PoseHeadingDegrees is only written back to its original value: versions before 2026-11 wrote the
+# heading there, but Panoramax reads it as the yaw (rotation of the sphere relative to GPSImgDirection), and a
+# correctly tagged GoPro MAX photo keeps the camera's 0.0.
 WRITTEN_TAGS = [
+    "EXIF:GPSVersionID",
     "EXIF:GPSLatitude",
     "EXIF:GPSLatitudeRef",
     "EXIF:GPSLongitude",
     "EXIF:GPSLongitudeRef",
     "EXIF:GPSImgDirection",
     "EXIF:GPSImgDirectionRef",
+    "EXIF:GPSSpeed",
+    "EXIF:GPSSpeedRef",
     "XMP-GPano:PoseHeadingDegrees",
 ]
 
@@ -30,6 +36,8 @@ class Edit:
     heading: float | None = None  # final heading, degrees from true north
     lat: float | None = None  # corrected position (None = keep the current tags)
     lon: float | None = None
+    speed_kmh: float | None = None  # speed along the (corrected) trajectory
+    pose_heading: float | None = None  # original PoseHeadingDegrees to put back (photo modified by an older version)
 
 
 def heading_value(h: float, panoramax_compat: bool) -> float:
@@ -47,7 +55,11 @@ def tag_args(e: Edit, panoramax_compat: bool) -> list[str]:
     args = []
     if e.heading is not None:
         v = heading_value(e.heading, panoramax_compat)
-        args += [f"-GPSImgDirection={v}", "-GPSImgDirectionRef=T", f"-XMP-GPano:PoseHeadingDegrees={v}"]
+        args += [f"-GPSImgDirection={v}", "-GPSImgDirectionRef=T"]
+    if e.speed_kmh is not None:
+        args += [f"-GPSSpeed={e.speed_kmh:.2f}", "-GPSSpeedRef=K"]
+    if e.pose_heading is not None:
+        args += [f"-XMP-GPano:PoseHeadingDegrees={e.pose_heading}"]
     if e.lat is not None and e.lon is not None:
         args += [
             f"-GPSLatitude={abs(e.lat):.8f}",
@@ -55,6 +67,8 @@ def tag_args(e: Edit, panoramax_compat: bool) -> list[str]:
             f"-GPSLongitude={abs(e.lon):.8f}",
             f"-GPSLongitudeRef={'E' if e.lon >= 0 else 'W'}",
         ]
+    if args:
+        args.append("-GPSVersionID=2 3 0 0")  # (numeric form, -n) absent from GoPro MAX photos, expected in a GPS IFD
     return args
 
 

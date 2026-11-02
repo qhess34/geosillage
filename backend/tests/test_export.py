@@ -153,7 +153,13 @@ def test_export_folders_and_exif(project, samples, tmp_path):
     assert m0.make == "GoPro" and m0.model == "GoPro Max" and m0.projection == "equirectangular" and m0.is_360
     tags = reader.dump_all(str(files[0]))
     assert tags["GPS:GPSImgDirectionRef"] == "True North"
-    assert tags["XMP-GPano:PoseHeadingDegrees"] == pytest.approx(0.6)
+    # PoseHeadingDegrees is the yaw for Panoramax: the camera's 0.0 is kept (heading only in GPSImgDirection)
+    assert tags["XMP-GPano:PoseHeadingDegrees"] == pytest.approx(0.0)
+    assert tags["GPS:GPSVersionID"] == "2.3.0.0"
+    assert "GPS:GPSSpeed" not in tags  # the manual position makes an implausible speed: not written
+    t5 = reader.dump_all(str(files[5]))
+    assert t5["GPS:GPSSpeedRef"] == "km/h" and 3 < t5["GPS:GPSSpeed"] < 40  # simulated ride: 2-8 m/s
+    assert "XMP-GPano:PosePitchDegrees" in t5 and t5["XMP-GPano:PosePitchDegrees"] == 0  # pitch/roll untouched
     src = next(p for p in samples.rglob(files[0].name.split("_", 1)[1]))
     assert scan_hash(files[0]) == scan_hash(src), "image data must not be re-encoded"
     assert tags["ExifIFD:DateTimeOriginal"] == reader.dump_all(str(src))["ExifIFD:DateTimeOriginal"]
@@ -186,3 +192,18 @@ def test_export_folders_and_exif(project, samples, tmp_path):
     assert j["state"] == "error" and "existe déjà" in j["message"]
 
     assert tree_hash(samples) == before, "source photos must never be modified"
+
+
+def test_speeds_along_trajectory():
+    from app.exporter import speeds_kmh
+
+    from app.core import geo
+
+    lat, lon, items = 43.6, 3.87, []
+    for i in range(4):
+        items.append({"ts": 1000 + 2 * i, "lat": None, "lon": None, "lat_orig": lat, "lon_orig": lon})
+        lon, lat, _ = geo.GEOD.fwd(lon, lat, 90, 10)  # 10 m every 2 s = 18 km/h
+    items.append({"ts": 2000, "lat": None, "lon": None, "lat_orig": lat, "lon_orig": lon})  # after an interruption
+    v = speeds_kmh(items)
+    assert v[:4] == [pytest.approx(18, abs=0.01)] * 4
+    assert v[4] is None

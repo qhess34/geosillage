@@ -139,6 +139,27 @@ un point de calage glissé sur la vraie position donne +1,6 s (retard réel 1,46
 5,8 m → 2,2 m, 90e centile 9,8 → 6,0 m. Une photo prise dans un épisode de décalage latéral donne un décalage faux
 (−0,8 s) : d'où le conseil de caler là où la trace suit la route, et de comparer plusieurs points.
 
+## Photos GoPro MAX réelles : balises
+
+Comparaison d'une photo brute et d'une photo acceptée par Panoramax (fournies par l'utilisateur, firmware
+H19.03.02.06.00, 5760×2880) :
+
+- brute : `DateTimeOriginal` sans sous-secondes, GPS (position, altitude, `GPSTimeStamp`/`GPSDateStamp`) **sans**
+  `GPSVersionID` ni `GPSImgDirection`, XMP-GPano complet avec `Pose{Heading,Pitch,Roll}Degrees = 0.0`, bloc GoPro
+  (GPMF : `GoPro_GRAV`, `GoPro_CORI`…), MPF avec image d'aperçu ;
+- corrigée : en plus `GPSVersionID 2 3 0 0`, `GPSSpeed`/`GPSSpeedRef K`, `GPSImgDirection`/`GPSImgDirectionRef T` ;
+  `PoseHeadingDegrees` reste 0.0.
+
+L'export écrit donc `GPSImgDirection`/`Ref`, `GPSSpeed`/`Ref` (`exporter.speeds_kmh` : voisins à ≤ 10 s, valeurs
+> 150 km/h ignorées), `GPSVersionID`, et la position corrigée ; il ne touche ni à `PoseHeadingDegrees` ni au
+tangage/roulis (Panoramax redresse l'horizon lui-même). Une photo source modifiée par une version antérieure (qui
+écrivait le cap dans `PoseHeadingDegrees`) récupère la valeur d'origine sauvegardée dans `orig_tags`.
+
+Heures : l'horloge de la caméra (`DateTimeOriginal`, heure locale) avait ~12 à 15 min d'avance sur l'heure GPS (UTC)
+sur ces deux photos, et n'était pas passée à l'heure d'hiver. L'application ordonne et synchronise avec l'horloge
+caméra (seuls les écarts comptent). Panoramax, lui, retient l'heure GPS quand l'heure caméra n'a pas de
+sous-secondes (`TimeBySource.getBest`) : c'est l'heure GPS qui sera affichée.
+
 ## Export
 
 Modes (`exporter.MODES`) : `copy` (copies), `move` (les sources sont déplacées dans les dossiers de séquence et

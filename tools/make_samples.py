@@ -1,5 +1,8 @@
 """Generate a synthetic GoPro MAX-like bike ride (equirectangular JPEGs with EXIF/XMP).
 
+Tags mimic a real GoPro MAX photo (firmware H19.03.02.06.00): Make/Model, DateTimeOriginal without sub-seconds,
+GPS position/altitude/time without GPSVersionID nor GPSImgDirection, XMP-GPano with Pose*Degrees = 0.0.
+
 The GPS written in each photo reproduces the defects described for the GoPro MAX:
  - delay: the recorded position is the true position `delay` seconds earlier (0.5-3 s, drifting),
  - noise and lateral offsets, a few GPS jumps,
@@ -30,7 +33,8 @@ START = (43.6085, 3.8790)  # Montpellier
 XMP = (
     '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
     '<rdf:Description rdf:about="" xmlns:GPano="http://ns.google.com/photos/1.0/panorama/" '
-    'GPano:ProjectionType="equirectangular" GPano:UsePanoramaViewer="True" '
+    'GPano:ProjectionType="equirectangular" GPano:UsePanoramaViewer="True" GPano:CaptureSoftware="GoPro Max" '
+    'GPano:PoseHeadingDegrees="0.0" GPano:PosePitchDegrees="0.0" GPano:PoseRollDegrees="0.0" '
     'GPano:FullPanoWidthPixels="{w}" GPano:FullPanoHeightPixels="{h}" '
     'GPano:CroppedAreaImageWidthPixels="{w}" GPano:CroppedAreaImageHeightPixels="{h}" '
     'GPano:CroppedAreaLeftPixels="0" GPano:CroppedAreaTopPixels="0"/></rdf:RDF></x:xmpmeta>'
@@ -128,14 +132,13 @@ def main():
 
         img = base.copy()
         ImageDraw.Draw(img).text((w // 2 - 40, h // 2), f"#{i + 1}", fill=(255, 255, 0))
-        zeroth = {piexif.ImageIFD.Make: b"GoPro", piexif.ImageIFD.Model: b"GoPro Max", piexif.ImageIFD.Software: b"H19.03.02.00.00"}
+        zeroth = {piexif.ImageIFD.Make: b"GoPro", piexif.ImageIFD.Model: b"GoPro Max", piexif.ImageIFD.Software: b"H19.03.02.06.00"}
         exif = {}
         if i != a.count - 5:  # one picture without date
             exif[piexif.ExifIFD.DateTimeOriginal] = when.strftime("%Y:%m:%d %H:%M:%S").encode()
         gps = {}
         if not no_fix:
             gps = {
-                piexif.GPSIFD.GPSVersionID: (2, 2, 0, 0),
                 piexif.GPSIFD.GPSLatitudeRef: b"N" if rec_lat >= 0 else b"S",
                 piexif.GPSIFD.GPSLatitude: dms(rec_lat),
                 piexif.GPSIFD.GPSLongitudeRef: b"E" if rec_lon >= 0 else b"W",

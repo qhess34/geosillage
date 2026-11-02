@@ -69,8 +69,8 @@ export default function ExportTab({ projectId, sequences, jobs, sources, onStart
   return (
     <div>
       <p className="small-text muted">
-        EXIF écrits : cap (GPSImgDirection, référence nord vrai, et XMP PoseHeadingDegrees) et position quand elle a été
-        corrigée. Les images ne sont jamais recompressées. Un dossier par séquence (<span className="mono">NN_nom/</span>)
+        EXIF écrits : cap (GPSImgDirection, référence nord vrai), vitesse (GPSSpeed), GPSVersionID, et position quand elle
+        a été corrigée. Les images ne sont jamais recompressées. Un dossier par séquence (<span className="mono">NN_nom/</span>)
         sauf en mode « sur place ».
       </p>
       <fieldset className="modes">

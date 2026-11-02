@@ -179,3 +179,20 @@ def test_move_export_rename_and_restore(project, tmp_path):
         assert scan_hash(src / p) == h, p  # image data never re-encoded
     metas = reader.read_batch([str(src / p) for p in before_scan])
     assert all(m.heading is None for m in metas)  # tags restored (the originals had no heading)
+
+
+def test_pose_heading_written_by_older_version_is_restored(project):
+    """Versions before 2026-11 wrote the heading in PoseHeadingDegrees: a new export puts the camera's value back."""
+    import subprocess
+
+    client, pid, src, seqs = project
+    first = next(x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"])
+    path = client.get(f"/api/projects/{pid}/photos/{first['id']}").json()["path"]
+    orig = writer.read_tags([path])[path]
+    assert orig["PoseHeadingDegrees"] == 0
+    with db.open_project(pid) as conn:  # state left by an older version
+        conn.execute("UPDATE photo SET orig_tags=?, source_written_at=1 WHERE id=?", (json.dumps(orig), first["id"]))
+    subprocess.run(["exiftool", "-q", "-overwrite_original", "-XMP-GPano:PoseHeadingDegrees=254", path], check=True)
+    client.post(f"/api/projects/{pid}/export", json={"mode": "in_place"})
+    assert wait_jobs(client, pid)[0]["state"] == "done"
+    assert writer.read_tags([path])[path]["PoseHeadingDegrees"] == 0
