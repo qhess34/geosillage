@@ -125,8 +125,9 @@ Report de la correction (`carryPos`, case « Reporter la correction (→) », vi
 `localStorage['pss-carry-position']`, cochée par défaut) : `→` (sans Maj) depuis une photo corrigée `manual` ou
 `offset` applique le même décalage est / nord (écart à sa position d'origine) à la photo suivante non exclue, via
 `POST …/positions/batch` mode `offset` (`pos_method = 'offset'`), si elle n'a pas déjà de correction ; on enchaîne
-donc les `→` après une correction à la main. `lastCarry` garde le dernier report jusqu'au rechargement des photos
-(touches rapides). `←`, `Maj+→` et les clics ne reportent rien ; chaque report s'annule avec `Ctrl+Z`.
+donc les `→` après une correction à la main. `lastCarry` garde la dernière correction (posée à la main dès le
+`dragend`, ou reportée) jusqu'à ce que les photos rechargées la contiennent : `→` juste après avoir lâché le point
+reporte bien la nouvelle correction. `←`, `Maj+→` et les clics ne reportent rien ; chaque report s'annule avec `Ctrl+Z`.
 
 ## Exclusion, découpe en un geste
 

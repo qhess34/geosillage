@@ -769,18 +769,22 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   }, [seqStart, current])
 
   const lastCarry = useRef<{ id: number; east: number; north: number } | null>(null)
-  // Only needed until the photos are reloaded with the carried correction
+  // Only needed until the photos are reloaded with that correction
   useEffect(() => {
     const c = lastCarry.current
-    if (c && photos.find((p) => p.id === c.id)?.pos_method != null) lastCarry.current = null
+    const p = c && photos.find((x) => x.id === c.id)
+    if (!c || !p || p.pos_method == null || p.lat == null || p.lon == null || p.lat_orig == null || p.lon_orig == null) return
+    const north = (p.lat - p.lat_orig) * 111320
+    const east = (p.lon - p.lon_orig) * 111320 * Math.cos((p.lat_orig * Math.PI) / 180)
+    if (Math.hypot(east - c.east, north - c.north) < 0.5) lastCarry.current = null // the row now holds it
   }, [photos])
   // Same correction as `from` (moved by hand, or itself carried) applied to `to`, if `to` has no correction yet
   const carryCorrection = useCallback(
     (from: PhotoRow, to: PhotoRow | undefined) => {
       if (!to || to.pos_method != null || to.lat_orig == null || to.lon_orig == null) return
       let east: number, north: number
-      if (from.pos_method == null && lastCarry.current?.id === from.id) {
-        // just carried to `from` (photos not reloaded yet when → is pressed quickly)
+      if (lastCarry.current?.id === from.id) {
+        // `from` was just moved by hand or carried to: its row is not reloaded yet when → is pressed right away
         ;({ east, north } = lastCarry.current)
       } else {
         if (from.pos_method !== 'manual' && from.pos_method !== 'offset') return
@@ -991,7 +995,12 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               if (p) goIdx(p.idx, extend)
             }}
             onMove={(id, lat, lon) => {
-              lastCarry.current = null // the photo's own (new) correction is used from now on
+              // remembered at once: → pressed right after the drop must carry this new correction
+              const p = photos.find((x) => x.id === id)
+              lastCarry.current =
+                p && p.lat_orig != null && p.lon_orig != null
+                  ? { id, north: (lat - p.lat_orig) * 111320, east: (lon - p.lon_orig) * 111320 * Math.cos((p.lat_orig * Math.PI) / 180) }
+                  : null
               api.setPosition(projectId, id, lat, lon).then((r) => afterHeadingChange(r.undo), (er) => setError(er.message))
             }}
           />
