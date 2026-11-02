@@ -208,6 +208,21 @@ sur ces deux photos, et n'était pas passée à l'heure d'hiver. L'application o
 caméra (seuls les écarts comptent). Panoramax, lui, retient l'heure GPS quand l'heure caméra n'a pas de
 sous-secondes (`TimeBySource.getBest`) : c'est l'heure GPS qui sera affichée.
 
+## Surcouche Panoramax
+
+`frontend/src/panoramaxLayer.ts` : source vectorielle `{instance}/api/map/{z}/{x}/{y}.mvt` (tuiles publiques de
+l'API Panoramax, lues directement par le navigateur ; documentées dans `geovisio/web/map.py`) : couche `sequences`
+(zoom ≥ 7 : `date` AAAA-MM-JJ, `type`, `model`) et `pictures` (zoom ≥ 15 : `ts`, `heading`, `type`, `model`).
+Seules les photos `equirectangular` sont affichées ; couleur selon l'âge par comparaison de chaînes ISO
+(`>=` sur la date d'il y a 1 et 3 ans). Couches ajoutées sous celles du projet, infobulle au survol (texte inséré
+avec `textContent`). Réglages (affichage, instance) dans le stockage local du navigateur. Testé avec un faux
+serveur de tuiles (`mapbox-vector-tile`), l'accès aux instances n'étant pas possible depuis l'environnement de
+développement.
+
+Carte : `follow` (« Suivre », défaut) centre la carte sur la photo sélectionnée à chaque changement de sélection
+(`stop()` puis `easeTo` 180 ms, pour enchaîner les touches) ; jamais lors d'une modification de point.
+`centerTick` : recentrage ponctuel (« ◎ Centrer »).
+
 ## Réexport
 
 `sequence.modified_at` : posé par `undo.undoable` (et par annuler / rétablir) sur les séquences dont le contenu

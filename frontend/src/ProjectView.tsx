@@ -9,6 +9,7 @@ import PhotoMap from './PhotoMap'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
+import { AGE_CLASSES, loadOverlay, OverlaySettings, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
 
@@ -104,6 +105,29 @@ function Summary({ p }: { p: Project }) {
         {s.cameras.length > 0 && row('Caméras', s.cameras.map((c) => `${c.make ?? '?'} ${c.model ?? ''} (${c.count})`).join(', '))}
       </tbody>
     </table>
+  )
+}
+
+function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o: OverlaySettings) => void }) {
+  const [url, setUrl] = useState(overlay.url)
+  return (
+    <div className="small-text">
+      <h3>Surcouche Panoramax</h3>
+      <p className="muted">Instance dont les photos 360° déjà publiées sont affichées (bouton « Panoramax » de la barre d'outils).</p>
+      <form
+        className="row"
+        onSubmit={(e) => {
+          e.preventDefault()
+          const u = url.trim().replace(/\/+$/, '')
+          if (/^https?:\/\//.test(u)) onSave({ ...overlay, url: u })
+        }}
+      >
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.openstreetmap.fr" aria-label="Instance Panoramax" />
+        <button className="small" type="submit">
+          Enregistrer
+        </button>
+      </form>
+    </div>
   )
 }
 
@@ -460,6 +484,28 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   // Manual sequence: index of the photo marked "Début"; the range follows the navigation until "Fin"
   const [seqStart, setSeqStart] = useState<number | null>(null)
   const [viewYaw, setViewYaw] = useState(0) // 360° viewer direction relative to the front
+  const [overlay, setOverlayState] = useState<OverlaySettings>(loadOverlay)
+  // "Suivre" (default): the map keeps the current photo in its centre while browsing
+  const [follow, setFollowState] = useState(() => {
+    try {
+      return localStorage.getItem('pss-follow') !== '0' // on by default
+    } catch {
+      return true
+    }
+  })
+  const setFollow = (v: boolean) => {
+    setFollowState(v)
+    try {
+      localStorage.setItem('pss-follow', v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }
+  const [centerTick, setCenterTick] = useState(0)
+  const setOverlay = (o: OverlaySettings) => {
+    setOverlayState(o)
+    saveOverlay(o)
+  }
   const anchor = useRef<number | null>(null)
   const [tab, setTab] = useState<Tab>('photo')
   const [showImport, setShowImport] = useState(false)
@@ -769,6 +815,14 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)">
           ?
         </button>
+        <button
+          className={overlay.enabled ? 'primary' : ''}
+          aria-pressed={overlay.enabled}
+          onClick={() => setOverlay({ ...overlay, enabled: !overlay.enabled })}
+          title={`Afficher les photos 360° déjà publiées sur Panoramax (${overlay.url}) et leur date ; visible à partir du zoom 7, photos à partir du zoom 15`}
+        >
+          Panoramax
+        </button>
         <select value={basemap.id} onChange={(e) => chooseBasemap(e.target.value)} aria-label="Fond de carte">
           {basemaps.map((b) => (
             <option key={b.id} value={b.id}>
@@ -793,6 +847,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             range={range}
             editMode={editMode}
             sync={sync}
+            overlay={overlay}
+            follow={follow}
+            centerTick={centerTick}
             viewAzimuth={tab === 'photo' && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
             onSyncOffset={onSyncOffset}
             onSelect={(id, extend) => {
@@ -803,6 +860,25 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               api.setPosition(projectId, id, lat, lon).then((r) => afterHeadingChange(r.undo), (er) => setError(er.message))
             }
           />
+          <div className="map-follow small-text">
+            <button className="small" disabled={!current} onClick={() => setCenterTick((t) => t + 1)} title="Centrer la carte sur la photo courante">
+              ◎ Centrer
+            </button>
+            <label title="Garder la photo courante au centre de la carte pendant la navigation (← →) ; décocher pour une carte fixe">
+              <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Suivre
+            </label>
+          </div>
+          {overlay.enabled && (
+            <div className="pnx-legend small-text" title={overlay.url}>
+              <strong>Panoramax 360°</strong>
+              {AGE_CLASSES.map((c) => (
+                <span key={c.label}>
+                  <span className="chip" style={{ background: c.color }} /> {c.label}
+                </span>
+              ))}
+              <span className="muted">survol : date</span>
+            </div>
+          )}
           <Timeline photos={photos} sequences={sequences} selectedIdx={current?.idx ?? null} range={range} onPick={goIdx} />
         </div>
         <div className="resizer" onMouseDown={startResize} title="Redimensionner" />
@@ -894,6 +970,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <>
                 <Summary p={project} />
+                <OverlayUrl overlay={overlay} onSave={setOverlay} />
                 <div className="row wrap">
                   <button className="small" onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
                     Vérifier les fichiers

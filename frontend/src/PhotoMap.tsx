@@ -3,6 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
 import { FLAGS, PhotoRow, seqColor, Sequence } from './api'
 import { Basemap } from './basemaps'
+import { addOverlay, bindOverlayTooltip, OverlaySettings, updateOverlay } from './panoramaxLayer'
 import { positionAt, snap, Track } from './timesync'
 
 interface Props {
@@ -14,6 +15,9 @@ interface Props {
   editMode: boolean // positions: drag the selected photo, or click the map to place it
   sync: { track: Track; offset: number | null } | null // time synchronisation mode
   viewAzimuth?: number | null // direction looked at in the 360° viewer: the selected arrow follows it
+  overlay: OverlaySettings // photos already published on Panoramax
+  follow: boolean // move the map to keep the selected photo visible while navigating
+  centerTick: number // incremented to center the map on the selected photo once
   onSelect: (id: number, extend: boolean) => void
   onMove: (id: number, lat: number, lon: number) => void
   onSyncOffset: (offset: number, final: boolean) => void
@@ -117,7 +121,7 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, onSelect, onMove, onSyncOffset }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, overlay, follow, centerTick, onSelect, onMove, onSyncOffset }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
@@ -125,8 +129,8 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
   const dragging = useRef(false)
   const ready = useRef(false)
   const fitted = useRef(false)
-  const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, onSelect, onMove, onSyncOffset })
-  latest.current = { photos, sequences, selectedId, range, editMode, sync, onSelect, onMove, onSyncOffset }
+  const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset })
+  latest.current = { photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset }
 
   const rangeFilter = (r: [number, number] | null): maplibregl.FilterSpecification =>
     r ? ['all', ['>=', ['get', 'idx'], r[0]], ['<=', ['get', 'idx'], r[1]]] : ['==', ['get', 'idx'], -1]
@@ -142,6 +146,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     const s = latest.current.sync
     m.addSource('sync-track', { type: 'geojson', data: syncTrackGeoJSON(s?.track) })
     m.addSource('ghosts', { type: 'geojson', data: ghostsGeoJSON(photos, s?.track, s?.offset ?? null) })
+    addOverlay(m, latest.current.overlay) // first: below the project's own layers
     m.addLayer({ id: 'track', type: 'line', source: 'track', paint: { 'line-color': '#6b7280', 'line-width': 1.5, 'line-opacity': 0.6 } })
     m.addLayer({
       id: 'moves-line',
@@ -267,6 +272,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       const sel = photos.find((p) => p.id === selectedId)
       if (editMode && sel && (sel.lat == null || sel.lon == null)) onMove(sel.id, e.lngLat.lat, e.lngLat.lng)
     })
+    bindOverlayTooltip(m)
     m.on('mouseenter', 'photos', () => (m.getCanvas().style.cursor = 'pointer'))
     m.on('mouseleave', 'photos', () => (m.getCanvas().style.cursor = ''))
     map.current = m
@@ -385,6 +391,13 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     m.setFilter('range', rangeFilter(range))
   }, [range])
 
+  // Panoramax overlay: shown / hidden, instance changed
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current) return
+    updateOverlay(m, overlay)
+  }, [overlay])
+
   // While moving points (positions or sync mode), a double click must not zoom the map: selecting a photo then
   // grabbing its marker quickly is a double click
   useEffect(() => {
@@ -415,15 +428,21 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     lastCentered.current = selectedId
     m.setFilter('selected-arrow', ['all', ['==', ['get', 'id'], selectedId ?? -1], ['>=', ['get', 'heading'], 0]])
     const p = photos.find((x) => x.id === selectedId)
-    if (p && p.lat != null && p.lon != null) {
-      const pt = m.project([p.lon, p.lat])
-      const c = m.getContainer()
-      const margin = 60
-      if (pt.x < margin || pt.y < margin || pt.x > c.clientWidth - margin || pt.y > c.clientHeight - margin) {
-        m.easeTo({ center: [p.lon, p.lat], duration: 300 })
-      }
+    if (follow && p && p.lat != null && p.lon != null) {
+      // Follow: the selected photo stays in the centre; a short animation, interrupted by the next key press
+      m.stop()
+      m.easeTo({ center: [p.lon, p.lat], duration: 180, easing: (t) => t })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, photos])
+
+  // "Center" button: once, on request
+  useEffect(() => {
+    const m = map.current
+    if (!m || !centerTick) return
+    const p = latest.current.photos.find((x) => x.id === latest.current.selectedId)
+    if (p && p.lat != null && p.lon != null) m.easeTo({ center: [p.lon, p.lat], duration: 300 })
+  }, [centerTick])
 
   return <div ref={el} className="map" />
 }

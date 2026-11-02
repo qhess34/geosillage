@@ -42,6 +42,11 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    - `Ctrl+Z` / `Ctrl+Y` annulent / rétablissent ; `?` affiche tous les raccourcis.
    - Visionneuse : *⟲ Recentrer* remet la vue face à l'avant ; la flèche jaune de la photo sur la carte tourne avec
      la direction regardée.
+   - Carte : *Suivre* (coché par défaut) garde la photo courante au centre pendant la navigation ; décoché, la carte
+     reste fixe et *◎ Centrer* recentre à la demande.
+   - Bouton *Panoramax* : surcouche facultative des photos 360° **déjà publiées** sur Panoramax, colorées selon leur
+     âge (moins d'un an / 1 à 3 ans / plus de 3 ans), date et appareil au survol ; séquences à partir du zoom 7,
+     photos à partir du zoom 15. Instance réglable dans l'onglet *Bilan* (par défaut panoramax.openstreetmap.fr).
 3. **Corriger le retard GPS** (onglet *Synchro*, fond *Satellite*) : la GoPro enregistre la position avec 0,5 à 3 s
    de retard. Choisir une photo où l'on voit un repère visible sur la vue satellite (passage piéton, angle de
    bâtiment…), l'agrandir (molette dans la visionneuse), puis faire glisser le marqueur orange : il ne peut aller
