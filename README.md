@@ -48,7 +48,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    - Carte : *Suivre* (coché par défaut) garde la photo courante au centre pendant la navigation ; décoché, la carte
      reste fixe et *◎ Centrer* recentre à la demande.
    - Bouton *Panoramax* : surcouche facultative des photos 360° **déjà publiées** sur Panoramax, colorées selon leur
-     âge (moins d'un an / 1 à 3 ans / plus de 3 ans), date et appareil au survol ; séquences à partir du zoom 7,
+     âge (moins d'un an / 1 à 3 ans / plus de 3 ans), date, appareil et auteur au survol ; séquences à partir du zoom 7,
      photos à partir du zoom 15. Source réglable dans l'onglet *Bilan* : par défaut **toutes les instances** (méta-catalogue
      `api.panoramax.xyz`, celui de panoramax.fr), ou une seule instance (OSM France, IGN, autre adresse).
 3. **Corriger le retard GPS** (onglet *Synchro*, fond satellite : en France, *Satellite IGN Ortho* — orthophotos

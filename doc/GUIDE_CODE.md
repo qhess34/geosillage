@@ -224,7 +224,11 @@ panoramax.fr ; mêmes tuiles qu'une instance), ou une instance au choix (`PANORA
 l'ancien défaut enregistré (panoramax.openstreetmap.fr, sans marqueur `v`) bascule sur le méta-catalogue.
 Seules les photos `equirectangular` sont affichées (un objet sans `type` est gardé) ; couleur selon l'âge par comparaison de chaînes ISO
 (`>=` sur la date d'il y a 1 et 3 ans). Couches ajoutées sous celles du projet, infobulle au survol (texte inséré
-avec `textContent`). Réglages (affichage, instance) dans le stockage local du navigateur. Testé avec un faux
+avec `textContent`) : date, appareil et auteur. Les tuiles ne donnent que des identifiants (`id`, `account_id`,
+`first_sequence` / `sequences`) : `authorOf` cherche le nom au survol, dans l'ordre, dans le fournisseur
+« producer » de la séquence (`GET /api/collections/{id}`, `providers`), dans la photo
+(`GET /api/search?ids=…`, `geovisio:producer`), puis le compte (`GET /api/users/{account_id}`, `name`) ; résultat
+mis en cache par session (« inconnu » si rien ne répond). Réglages (affichage, instance) dans le stockage local du navigateur. Testé avec un faux
 serveur de tuiles (`mapbox-vector-tile`), l'accès aux instances n'étant pas possible depuis l'environnement de
 développement.
 

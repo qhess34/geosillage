@@ -272,7 +272,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       const sel = photos.find((p) => p.id === selectedId)
       if (editMode && sel && (sel.lat == null || sel.lon == null)) onMove(sel.id, e.lngLat.lat, e.lngLat.lng)
     })
-    bindOverlayTooltip(m)
+    bindOverlayTooltip(m, () => latest.current.overlay.url)
     m.on('mouseenter', 'photos', () => (m.getCanvas().style.cursor = 'pointer'))
     m.on('mouseleave', 'photos', () => (m.getCanvas().style.cursor = ''))
     map.current = m

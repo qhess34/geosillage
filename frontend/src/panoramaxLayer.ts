@@ -2,6 +2,8 @@
 // Uses the instance's public vector tiles (GET /api/map/{z}/{x}/{y}.mvt, see the Panoramax API):
 //   layer "sequences" (zoom >= 7): date (YYYY-MM-DD), type (flat | equirectangular), model
 //   layer "pictures"  (zoom >= 15): ts (date/time), heading, type, model
+// Both also carry ids (id, account_id; pictures: first_sequence / sequences), but not the author's name: it is
+// fetched on hover from the API (see authorOf).
 import maplibregl, { Map as MlMap } from 'maplibre-gl'
 
 // Federated meta-catalogue: harvests the metadata of all the referenced instances (the one panoramax.fr uses) and
@@ -124,6 +126,71 @@ export function updateOverlay(m: MlMap, s: OverlaySettings): void {
   for (const id of OVERLAY_LAYERS) if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', s.enabled ? 'visible' : 'none')
 }
 
+// ---- Author, fetched on hover and cached (the tiles only give ids) ----
+
+const authors = new Map<string, Promise<string | null>>()
+
+async function getJson(url: string): Promise<any> {
+  const r = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!r.ok) throw new Error(String(r.status))
+  return r.json()
+}
+
+// Name of the producer in a STAC collection or item (providers with the "producer" role, or geovisio:producer)
+function producerOf(o: any): string | null {
+  const props = o?.properties ?? {}
+  const direct = props['geovisio:producer'] ?? o?.['geovisio:producer']
+  if (typeof direct === 'string' && direct) return direct
+  const providers: any[] = o?.providers ?? props.providers ?? []
+  const p = providers.find((x) => Array.isArray(x?.roles) && x.roles.includes('producer')) ?? providers[0]
+  return typeof p?.name === 'string' && p.name ? p.name : null
+}
+
+function firstSequence(p: Record<string, unknown>): string | null {
+  if (typeof p.first_sequence === 'string' && p.first_sequence) return p.first_sequence
+  try {
+    const seqs = typeof p.sequences === 'string' ? JSON.parse(p.sequences) : p.sequences
+    if (Array.isArray(seqs) && typeof seqs[0] === 'string') return seqs[0]
+  } catch {
+    /* not JSON */
+  }
+  return null
+}
+
+// Tries, in order: the sequence (collection), the picture (search by id), the account (users route)
+export function authorOf(base: string, layer: string, p: Record<string, unknown>): Promise<string | null> {
+  const api = `${base.replace(/\/+$/, '')}/api`
+  const id = typeof p.id === 'string' ? p.id : null
+  const seq = layer === 'pnx-sequences' ? id : firstSequence(p)
+  const account = typeof p.account_id === 'string' ? p.account_id : null
+  const key = `${api}|${seq ?? ''}|${layer === 'pnx-pictures' ? id ?? '' : ''}|${account ?? ''}`
+  let r = authors.get(key)
+  if (!r) {
+    r = (async () => {
+      const tries: (() => Promise<string | null>)[] = []
+      if (seq) tries.push(async () => producerOf(await getJson(`${api}/collections/${encodeURIComponent(seq)}`)))
+      if (layer === 'pnx-pictures' && id)
+        tries.push(async () => producerOf((await getJson(`${api}/search?ids=${encodeURIComponent(id)}`))?.features?.[0]))
+      if (account)
+        tries.push(async () => {
+          const u = await getJson(`${api}/users/${encodeURIComponent(account)}`)
+          return typeof u?.name === 'string' && u.name ? u.name : null
+        })
+      for (const t of tries) {
+        try {
+          const name = await t()
+          if (name) return name
+        } catch {
+          /* next one */
+        }
+      }
+      return null
+    })()
+    authors.set(key, r)
+  }
+  return r
+}
+
 function fmtDate(v: unknown): string {
   const s = String(v ?? '')
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/)
@@ -131,22 +198,37 @@ function fmtDate(v: unknown): string {
   return `${m[3]}/${m[2]}/${m[1]}${m[4] ? ` ${m[4]}:${m[5]}` : ''}`
 }
 
-// Tooltip on hover: date (and camera) of the Panoramax photo / sequence
-export function bindOverlayTooltip(m: MlMap): void {
+// Tooltip on hover: date, author and camera of the Panoramax photo / sequence
+export function bindOverlayTooltip(m: MlMap, getUrl: () => string): void {
   const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'pnx-popup', offset: 8 })
+  let shown = '' // feature currently in the tooltip
   const show = (e: maplibregl.MapLayerMouseEvent) => {
     const f = e.features?.[0]
     if (!f) return
     const p = f.properties || {}
+    const key = `${f.layer.id}|${String(p.id ?? '')}|${String(p.ts ?? p.date ?? '')}`
+    if (key === shown && popup.isOpen()) {
+      popup.setLngLat(e.lngLat) // same feature: only follow the mouse
+      return
+    }
+    shown = key
     const what = f.layer.id === 'pnx-pictures' ? 'Photo 360° Panoramax' : 'Séquence 360° Panoramax'
     const date = fmtDate(p.ts ?? p.date)
     const model = p.model ? ` · ${String(p.model)}` : ''
     const el = document.createElement('div')
     el.textContent = `${what} · ${date}${model}`
+    const who = document.createElement('div')
+    who.className = 'muted'
+    who.textContent = 'Auteur : …'
+    el.appendChild(who)
     popup.setLngLat(e.lngLat).setDOMContent(el).addTo(m)
     m.getCanvas().style.cursor = 'help'
+    authorOf(getUrl(), f.layer.id, p).then((name) => {
+      if (shown === key) who.textContent = `Auteur : ${name ?? 'inconnu'}`
+    })
   }
   const hide = () => {
+    shown = ''
     popup.remove()
     m.getCanvas().style.cursor = ''
   }
