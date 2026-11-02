@@ -14,6 +14,8 @@ interface Props {
   onFixYaw?: (yaw: number) => void // "the bike goes where I am looking now"
   onResetYaw?: () => void
   fixLabel?: string
+  // view direction relative to the front (degrees, right > 0): lets the map arrow turn with the view
+  onView?: (yawDeg: number) => void
 }
 
 const norm180 = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180
@@ -31,7 +33,9 @@ function savedMode(): '360' | 'flat' {
 // 360° viewer (equirectangular). The thumbnail is shown first, then the full-resolution photo. The view
 // direction is kept from one photo to the next, so stepping through a ride keeps looking the same way.
 // Keyboard handling stays with the application (arrows = previous / next photo).
-function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabel }: Props) {
+function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabel, onView }: Props) {
+  const onViewRef = useRef(onView)
+  onViewRef.current = onView
   const el = useRef<HTMLDivElement>(null)
   const viewer = useRef<Viewer | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +55,14 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
     })
     viewer.current = v
     ;(window as unknown as { __pssViewer?: Viewer }).__pssViewer = v // inspection in end-to-end tests
+    let frame = 0
+    v.addEventListener('position-updated', ({ position }) => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => onViewRef.current?.(norm180((position.yaw * 180) / Math.PI)))
+    })
     return () => {
+      cancelAnimationFrame(frame)
+      onViewRef.current?.(0)
       v.destroy()
       viewer.current = null
     }
@@ -92,9 +103,11 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
     // a new yaw for the same photo reloads it (cached) with the new correction
   }, [thumbUrl, imageUrl, pose])
 
-  const fix = () => {
+  const fix = async () => {
     const v = viewer.current
     if (!v || !onFixYaw) return
+    // stop the inertia of a mouse drag first, so the direction read is the one on screen
+    await v.stopAnimation()
     // The view is in the corrected frame (front = bike for the current yaw): the bike is where we look now
     const look = norm180((v.getPosition().yaw * 180) / Math.PI)
     onFixYaw(Math.round(norm180(pose - look) * 10) / 10)
@@ -105,6 +118,13 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
     <div className="viewer360" style={{ height }}>
       <div ref={el} className="viewer360-canvas" />
       {error && <div className="viewer360-error">{error}</div>}
+      <button
+        className="small viewer360-reset"
+        onClick={() => viewer.current?.animate({ yaw: 0, pitch: 0, zoom: 0, speed: '3rpm' })}
+        title="Recentrer la vue : face à l'avant (le vélo si sa direction est fixée), à l'horizon, sans zoom"
+      >
+        ⟲ Recentrer
+      </button>
       {onFixYaw && (
         <div className="viewer360-fix">
           <button className="small primary" onClick={fix} title="Tournez la vue vers la route devant le vélo, puis cliquez (caméra sur casque)">

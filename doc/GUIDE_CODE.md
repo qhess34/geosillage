@@ -131,6 +131,16 @@ une photo non classée, crée la séquence sur le bloc non classé qui l'entoure
 `create_from_unclassified` : une séquence par bloc non classé. Les séquences au nom par défaut « Séquence N » sont
 renumérotées dans l'ordre de la sortie après chaque opération (`renumber_default_names`).
 
+## Création manuelle, visionneuse et carte
+
+`ProjectView` : `seqStart` = photo marquée « Début » ; tant qu'il est posé, la plage suit la photo courante ;
+« Fin » crée la séquence `[début, photo courante]` (ou la plage tracée sur la timeline). La visionneuse signale sa
+direction (`onView`, événement `position-updated` de Photo Sphere Viewer) : la flèche de la photo sélectionnée sur
+la carte prend l'orientation cap + direction de vue (`viewAzimuth`). Après un glisser, Photo Sphere Viewer continue
+par inertie : « Fixer la direction du vélo » appelle `stopAnimation()` avant de lire la direction. En mode
+Positions ou Synchro, le zoom au double-clic de la carte est désactivé (sélectionner une photo puis saisir son
+marqueur faisait un double-clic) ; la carte ne se recentre que lorsque la photo sélectionnée change.
+
 ## Caméra sur casque : lacet
 
 `photo.yaw_offset` = angle du centre de l'image par rapport à la direction du vélo (degrés, droite > 0, annulable).

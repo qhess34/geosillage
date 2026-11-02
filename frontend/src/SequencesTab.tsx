@@ -131,7 +131,7 @@ export default function SequencesTab(props: Props) {
             disabled={!range}
             onClick={() => range && api.createSequence(projectId, range[0], range[1]).then(onState, (e) => onError(e.message))}
           >
-            Créer une séquence avec la plage (S)
+            Créer une séquence avec la plage (F)
           </button>
           <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
             Tout en séquences
@@ -140,7 +140,7 @@ export default function SequencesTab(props: Props) {
         <span className="muted small-text">
           {range
             ? `Plage : photos ${range[0] + 1} → ${range[1] + 1} (${range[1] - range[0] + 1}).`
-            : 'Pas de plage : D = début, F = fin sur la photo courante, ou glisser sur la timeline.'}{' '}
+            : 'Créer à la main : « ⏵ Début » (D) sur la première photo, naviguer, puis « ⏹ Fin » (F) sur la dernière.'}{' '}
           Découper en naviguant : C (ou ✂ Couper ici) sur la première photo de chaque nouvelle séquence. X : exclure la photo et passer à la suivante.
         </span>
       </div>

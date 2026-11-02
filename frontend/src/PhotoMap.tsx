@@ -13,6 +13,7 @@ interface Props {
   range: [number, number] | null
   editMode: boolean // positions: drag the selected photo, or click the map to place it
   sync: { track: Track; offset: number | null } | null // time synchronisation mode
+  viewAzimuth?: number | null // direction looked at in the 360° viewer: the selected arrow follows it
   onSelect: (id: number, extend: boolean) => void
   onMove: (id: number, lat: number, lon: number) => void
   onSyncOffset: (offset: number, final: boolean) => void
@@ -116,7 +117,7 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, onSelect, onMove, onSyncOffset }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, onSelect, onMove, onSyncOffset }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
@@ -384,11 +385,34 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     m.setFilter('range', rangeFilter(range))
   }, [range])
 
-  // Keep the active photo visible on the map while navigating
+  // While moving points (positions or sync mode), a double click must not zoom the map: selecting a photo then
+  // grabbing its marker quickly is a double click
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    if (editMode || sync) m.doubleClickZoom.disable()
+    else m.doubleClickZoom.enable()
+  }, [editMode, sync])
+
+  // The selected photo's arrow turns with the 360° viewer
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current || !m.getLayer('selected-arrow')) return
+    m.setLayoutProperty('selected-arrow', 'icon-rotate', viewAzimuth != null ? viewAzimuth : ['get', 'heading'])
+  }, [viewAzimuth])
+
+  // Keep the active photo visible on the map while navigating (only when the selection changes: moving a point
+  // must not move the map)
+  const lastCentered = useRef<number | null>(null)
   useEffect(() => {
     const m = map.current
     if (!m || !ready.current || !m.getLayer('selected')) return
     m.setFilter('selected', ['==', ['get', 'id'], selectedId ?? -1])
+    if (lastCentered.current === selectedId) {
+      m.setFilter('selected-arrow', ['all', ['==', ['get', 'id'], selectedId ?? -1], ['>=', ['get', 'heading'], 0]])
+      return
+    }
+    lastCentered.current = selectedId
     m.setFilter('selected-arrow', ['all', ['==', ['get', 'id'], selectedId ?? -1], ['>=', ['get', 'heading'], 0]])
     const p = photos.find((x) => x.id === selectedId)
     if (p && p.lat != null && p.lon != null) {

@@ -712,3 +712,24 @@ input.coord {
   flex-wrap: wrap;
   z-index: 100;
 }
+.viewer360-reset {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 101;
+}
+.seq-buttons {
+  display: flex;
+  gap: 6px;
+}
+.seq-buttons.big {
+  margin: 6px 0;
+}
+.seq-buttons.big button {
+  flex: 1;
+  padding: 7px 10px;
+}
+.seq-buttons button.active {
+  border-color: #facc15;
+  box-shadow: 0 0 0 2px #facc15;
+}

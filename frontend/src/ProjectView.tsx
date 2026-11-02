@@ -32,8 +32,8 @@ const SHORTCUTS: [string, string][] = [
   ['← / →', 'Photo précédente / suivante (Maj : par 10)'],
   ['Début / Fin', 'Première / dernière photo'],
   ['Page ↑ / Page ↓', 'Séquence précédente / suivante'],
-  ['D / F', 'Début / fin de la plage sur la photo courante'],
-  ['S', 'Créer une séquence avec la plage'],
+  ['D', 'Début de séquence sur la photo courante (la plage suit ensuite la navigation)'],
+  ['F', 'Fin de séquence : crée la séquence du début jusqu\'à la photo courante'],
   ['C', 'Découper ici : coupe la séquence avant la photo courante (photo non classée : crée la séquence autour, puis coupe)'],
   ['X ou Suppr', 'Exclure la photo courante et passer à la suivante (avec une plage : exclure la plage)'],
   ['Maj+X', 'Réintégrer la photo courante'],
@@ -107,17 +107,52 @@ function Summary({ p }: { p: Project }) {
   )
 }
 
+function SeqButtons({
+  current,
+  seqStart,
+  range,
+  onStart,
+  onFinish,
+  big,
+}: {
+  current: PhotoRow | null
+  seqStart: number | null
+  range: [number, number] | null
+  onStart: () => void
+  onFinish: () => void
+  big?: boolean
+}) {
+  const n = seqStart != null && current ? Math.abs(current.idx - seqStart) + 1 : range ? range[1] - range[0] + 1 : 0
+  return (
+    <div className={big ? 'seq-buttons big' : 'seq-buttons'}>
+      <button disabled={!current} onClick={onStart} title="Début de séquence sur la photo courante (D)" className={seqStart != null ? 'active' : ''}>
+        ⏵ Début{seqStart != null ? ` (photo ${seqStart + 1})` : ''}
+      </button>
+      <button
+        className="primary"
+        disabled={!current || (seqStart == null && !range)}
+        onClick={onFinish}
+        title={seqStart != null || range ? 'Créer la séquence jusqu\'à la photo courante (F)' : 'Marquez d\'abord le début (D)'}
+      >
+        ⏹ Fin{n ? ` — créer (${n} photos)` : ''}
+      </button>
+    </div>
+  )
+}
+
 interface PhotoTabProps {
   projectId: string
   photo: PhotoDetail
   count: number
   sequences: Sequence[]
   range: [number, number] | null
+  seqButtons: React.ReactNode
+  onView: (yawDeg: number) => void
   onChanged: (u?: UndoState) => void
   onError: (m: string) => void
 }
 
-function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onError }: PhotoTabProps) {
+function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onView, onChanged, onError }: PhotoTabProps) {
   const [draft, setDraft] = useState<number | null>(null)
   const [typed, setTyped] = useState('')
   const [rangeValue, setRangeValue] = useState('15')
@@ -170,6 +205,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onErro
           alt={photo.filename}
           height={280}
           yaw={photo.yaw_offset}
+          onView={onView}
           fixLabel={range ? `Direction du vélo (plage ${range[0] + 1}→${range[1] + 1})` : 'Fixer la direction du vélo'}
           onFixYaw={(y) =>
             api
@@ -185,6 +221,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, onChanged, onErro
           {photo.idx + 1} / {count}
         </span>
       </div>
+      {seqButtons}
       {photo.excluded ? (
         <div className="excluded-box small-text">
           Photo exclue (hors séquences, jamais exportée).{' '}
@@ -413,6 +450,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [selected, setSelected] = useState<number | null>(null)
   const [detail, setDetail] = useState<PhotoDetail | null>(null)
   const [range, setRange] = useState<[number, number] | null>(null)
+  // Manual sequence: index of the photo marked "Début"; the range follows the navigation until "Fin"
+  const [seqStart, setSeqStart] = useState<number | null>(null)
+  const [viewYaw, setViewYaw] = useState(0) // 360° viewer direction relative to the front
   const anchor = useRef<number | null>(null)
   const [tab, setTab] = useState<Tab>('photo')
   const [showImport, setShowImport] = useState(false)
@@ -536,8 +576,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       if (!byIdx.length) return
       const i = Math.max(0, Math.min(byIdx.length - 1, idx))
       setSelected(byIdx[i].id)
-      if (extend && anchor.current != null) setRange([Math.min(anchor.current, i), Math.max(anchor.current, i)])
-      else anchor.current = i
+      if (extend && anchor.current != null) {
+        setSeqStart(null)
+        setRange([Math.min(anchor.current, i), Math.max(anchor.current, i)])
+      } else anchor.current = i
     },
     [byIdx],
   )
@@ -546,6 +588,33 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     (which: 'undo' | 'redo') => (which === 'undo' ? api.undo(projectId) : api.redo(projectId)).then(applyState, (e) => setError(e.message)),
     [projectId, applyState],
   )
+
+  const markStart = useCallback(() => {
+    if (!current) return
+    setSeqStart(current.idx)
+    setRange([current.idx, current.idx])
+    anchor.current = current.idx
+    setNotice(`Début : photo ${current.idx + 1} — naviguez puis « Fin »`)
+  }, [current])
+  const finishSequence = useCallback(() => {
+    // from the marked start (or a range drawn on the timeline) to the current photo
+    const r: [number, number] | null =
+      seqStart != null && current ? [Math.min(seqStart, current.idx), Math.max(seqStart, current.idx)] : range
+    if (!r) {
+      setError('Marquez d\'abord le début de la séquence (bouton « Début » ou touche D)')
+      return
+    }
+    api.createSequence(projectId, r[0], r[1]).then((s) => {
+      applyState({ ...s, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` })
+      setRange(null)
+      setSeqStart(null)
+    }, (er) => setError(er.message))
+  }, [seqStart, current, range, projectId, applyState])
+  // While a start is marked, the range follows the current photo
+  useEffect(() => {
+    if (seqStart == null || !current) return
+    setRange([Math.min(seqStart, current.idx), Math.max(seqStart, current.idx)])
+  }, [seqStart, current])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -576,16 +645,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           e.key === 'PageDown' ? sequences.find((s) => s.start_idx > i) : [...sequences].reverse().find((s) => s.start_idx < i && !(current?.sequence_id === s.id && s.start_idx === i))
         if (target) goIdx(target.start_idx)
       } else if (e.key === 'd' || e.key === 'D') {
-        if (!current) return
-        const end = range ? Math.max(range[1], current.idx) : current.idx
-        setRange([current.idx, end])
-        anchor.current = current.idx
-      } else if (e.key === 'f' || e.key === 'F') {
-        if (!current) return
-        const start = range ? Math.min(range[0], current.idx) : anchor.current ?? current.idx
-        setRange([Math.min(start, current.idx), Math.max(start, current.idx)])
-      } else if (e.key === 's' || e.key === 'S') {
-        if (range) api.createSequence(projectId, range[0], range[1]).then((s) => { applyState(s); setRange(null) }, (er) => setError(er.message))
+        markStart()
+      } else if (e.key === 'f' || e.key === 'F' || e.key === 's' || e.key === 'S') {
+        finishSequence()
       } else if (e.key === 'c' || e.key === 'C') {
         if (current) api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))
       } else if (e.key === 'X' && e.shiftKey) {
@@ -604,6 +666,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)
       } else if (e.key === 'Escape') {
+        setSeqStart(null)
         setRange(null)
       } else if (e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') {
         if (detail?.heading_final == null) return
@@ -615,7 +678,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence])
 
   const chooseBasemap = (id: string) => {
     if (id === '__add') {
@@ -675,13 +738,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         >
           ✂ Couper ici
         </button>
-        <button
-          disabled={!range}
-          onClick={() => range && api.createSequence(projectId, range[0], range[1]).then((s) => { applyState(s); setRange(null) }, (er) => setError(er.message))}
-          title={range ? 'Créer une séquence avec la plage (S)' : 'Sélectionnez d\'abord une plage : D puis F, ou glisser sur la timeline'}
-        >
-          ＋ Séquence
-        </button>
+        <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} />
         <button
           className={editMode ? 'primary' : ''}
           aria-pressed={editMode}
@@ -723,6 +780,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             range={range}
             editMode={editMode}
             sync={sync}
+            viewAzimuth={tab === 'photo' && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
             onSyncOffset={onSyncOffset}
             onSelect={(id, extend) => {
               const p = photos.find((x) => x.id === id)
@@ -754,7 +812,17 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           <div className="tab-body">
             {tab === 'photo' &&
               (detail ? (
-                <PhotoTab projectId={projectId} photo={detail} count={photos.length} sequences={sequences} range={range} onChanged={afterHeadingChange} onError={fail} />
+                <PhotoTab
+                  projectId={projectId}
+                  photo={detail}
+                  count={photos.length}
+                  sequences={sequences}
+                  range={range}
+                  seqButtons={<SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} big />}
+                  onView={setViewYaw}
+                  onChanged={afterHeadingChange}
+                  onError={fail}
+                />
               ) : (
                 <p className="muted">{photos.length ? 'Cliquez sur une photo de la carte ou de la timeline, ou utilisez ← →.' : 'Importez un dossier de photos pour commencer.'}</p>
               ))}

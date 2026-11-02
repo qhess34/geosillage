@@ -28,16 +28,20 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 
 1. **Importer** les dossiers de la sortie (bouton *Importer*). Le bilan s'affiche dans l'onglet *Bilan*.
 2. **Découper** en parcourant la sortie dans la visionneuse 360° (← → ; Maj : par 10) :
+   - à la main : *⏵ Début* (`D`) sur la première photo, naviguer (la plage suit, en jaune), puis *⏹ Fin* (`F`) sur
+     la dernière : la séquence est créée (boutons dans la barre d'outils et sous la visionneuse) ;
    - `C` (ou *✂ Couper ici*) sur la première photo de chaque nouvelle séquence : sur une photo non classée, la
      séquence est créée autour d'elle puis coupée ; il suffit donc d'appuyer sur `C` à chaque coupure ;
    - *Tout en séquences* (onglet *Séquences*) : une séquence par bloc de photos non classées ;
-   - plage : `D` / `F` (ou glisser sur la timeline) puis `S` (ou *＋ Séquence*) ;
+   - une plage tracée sur la timeline (glisser, ou Maj+clic) se transforme aussi en séquence avec *⏹ Fin* ;
    - *Découpage proposé* : coupe aux interruptions de prise de vue et aux sauts de position, à valider ;
    - `X` (ou `Suppr`) **exclut** la photo et passe à la suivante (appuyer plusieurs fois supprime une série ;
      avec une plage : toute la plage) ; `Maj+X` la réintègre. Une photo exclue n'est dans aucune séquence et n'est
      jamais exportée ; onglet *Export* : ses fichiers peuvent être déplacés dans un dossier `_exclues` (rien
      n'est supprimé, *Restaurer les photos sources* les remet).
    - `Ctrl+Z` / `Ctrl+Y` annulent / rétablissent ; `?` affiche tous les raccourcis.
+   - Visionneuse : *⟲ Recentrer* remet la vue face à l'avant ; la flèche jaune de la photo sur la carte tourne avec
+     la direction regardée.
 3. **Corriger le retard GPS** (onglet *Synchro*, fond *Satellite*) : la GoPro enregistre la position avec 0,5 à 3 s
    de retard. Choisir une photo où l'on voit un repère visible sur la vue satellite (passage piéton, angle de
    bâtiment…), l'agrandir (molette dans la visionneuse), puis faire glisser le marqueur orange : il ne peut aller
