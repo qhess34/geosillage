@@ -69,9 +69,9 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    ramène les fichiers à leur emplacement et leur nom d'origine (positions restaurées à mieux que 0,1 mm : elles
    sont réencodées ; les données image ne sont jamais touchées). Un dossier par séquence (`01_Nom/0001_GSAC….JPG`…), avec
    `GPSImgDirection` / `GPSImgDirectionRef=T`, `GPSSpeed` (km/h, calculée sur la trajectoire), `GPSVersionID` 2.3,
-   et la position si elle a été corrigée, sans recompression. `XMP-GPano:PoseHeadingDegrees` (0,0 sur la GoPro),
-   le tangage et le roulis ne sont pas modifiés : Panoramax lit `PoseHeadingDegrees` comme une rotation de la
-   sphère (lacet) et corrige lui-même l'horizon. Chaque dossier contient `photos.csv` (source, position, cap et son origine) et
+   et la position si elle a été corrigée, sans recompression. `XMP-GPano:PoseHeadingDegrees` reçoit l'angle de
+   tête fixé (sinon il garde le 0,0 de la GoPro) ; le tangage et le roulis ne sont pas modifiés (Panoramax redresse
+   l'horizon). Chaque dossier contient `photos.csv` (source, position, cap et son origine) et
    `.pss-export.json`. Les photos en saut GPS non corrigé sont exclues par défaut (leur position est fausse).
    Ré-exporter remplace l'export précédent du même projet ; un dossier étranger non vide est refusé.
    Pour envoyer plus tard un dossier comme **une seule** séquence avec la CLI Panoramax, utiliser la commande

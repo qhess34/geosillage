@@ -29,6 +29,8 @@ frontend/src/
   PhotoMap.tsx     MapLibre : une source GeoJSON (points colorés par séquence + trace), flèches de cap (SDF), plage, sélection
   Timeline.tsx     bande chronologique (canvas) : couleur par séquence, anomalies, interruptions, sélection de plage
   HeadingDial.tsx  cadran de cap (glisser, Maj = pas de 5°)
+  Viewer360.tsx    visionneuse 360° (Photo Sphere Viewer 5) : miniature puis original, direction de vue conservée
+                   d'une photo à l'autre, bascule « à plat », bouton « Fixer la direction du vélo »
   SequencesTab.tsx plage, découpage proposé, liste des séquences et actions
   ExportTab.tsx    export par séquence, historique
   FolderPicker.tsx choix d'un dossier local
@@ -119,6 +121,27 @@ caps manuels voisins (±3 photos) marqués `heading_stale` (« à revoir »), ja
 Interface : mode `M` → marqueur MapLibre déplaçable sur la photo courante (`dragend` → `PUT …/position`) ; clic sur la
 carte pour placer une photo sans position ; couches `moves-*` : position d'origine et lien vers la corrigée.
 
+## Exclusion, découpe en un geste
+
+`photo.excluded` (annulable) : la photo sort de sa séquence et ne peut plus y entrer (`sequences._eligible`) ; elle
+reste un point de la trace GPS (cap, synchronisation). Réintégrée entre deux photos d'une même séquence, elle y
+revient. `exporter.trash_excluded` déplace les fichiers exclus dans `<dossier>/_exclues/` en renseignant
+`moved_from` : `restore_sources` les remet. `sequences.cut_at` (touche C) : coupe la séquence de la photo, ou, pour
+une photo non classée, crée la séquence sur le bloc non classé qui l'entoure puis la coupe.
+`create_from_unclassified` : une séquence par bloc non classé. Les séquences au nom par défaut « Séquence N » sont
+renumérotées dans l'ordre de la sortie après chaque opération (`renumber_default_names`).
+
+## Caméra sur casque : lacet
+
+`photo.yaw_offset` = angle du centre de l'image par rapport à la direction du vélo (degrés, droite > 0, annulable).
+C'est la valeur écrite dans `XMP-GPano:PoseHeadingDegrees`, que Panoramax lit comme le lacet (« front = 0°,
+right = 90° ») et que Photo Sphere Viewer applique comme correction de sphère (`pan = PoseHeadingDegrees`) : avec
+30°, l'avant de la vue montre ce qui est à 30° à gauche du centre de l'image (vérifié dans le navigateur).
+`GPSImgDirection` reste la direction du vélo. Fixer : la vue est dans le repère corrigé, donc si l'on regarde la
+route à l'angle `y`, le nouveau lacet vaut `lacet_actuel − y`. La visionneuse impose ce lacet (fournisseur
+`panoData`) au lieu de lire le XMP du fichier. Sans lacet fixé, l'export ne touche pas la balise, sauf pour remettre
+la valeur d'origine d'une source déjà modifiée.
+
 ## Retard GPS (synchronisation temporelle)
 
 `core/timesync.py`. La *trace* = positions GPS d'origine des photos fiables (ni saut, ni doublon, ni sans date),
@@ -154,8 +177,8 @@ H19.03.02.06.00, 5760×2880) :
   `PoseHeadingDegrees` reste 0.0.
 
 L'export écrit donc `GPSImgDirection`/`Ref`, `GPSSpeed`/`Ref` (`exporter.speeds_kmh` : voisins à ≤ 10 s, valeurs
-> 150 km/h ignorées), `GPSVersionID`, et la position corrigée ; il ne touche ni à `PoseHeadingDegrees` ni au
-tangage/roulis (Panoramax redresse l'horizon lui-même). Une photo source modifiée par une version antérieure (qui
+> 150 km/h ignorées), `GPSVersionID`, et la position corrigée ; `PoseHeadingDegrees` seulement si un angle de tête a
+été fixé (voir « Caméra sur casque ») ; jamais le tangage/roulis (Panoramax redresse l'horizon lui-même). Une photo source modifiée par une version antérieure (qui
 écrivait le cap dans `PoseHeadingDegrees`) récupère la valeur d'origine sauvegardée dans `orig_tags`.
 
 Heures : l'horloge de la caméra (`DateTimeOriginal`, heure locale) avait ~12 à 15 min d'avance sur l'heure GPS (UTC)
@@ -208,7 +231,7 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 
 ## Tests
 
-`backend/tests` (pytest, 44 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
+`backend/tests` (pytest, 51 tests) : géodésie, analyse, lecture EXIF, import complet via l'API (bilan attendu,
 persistance après redémarrage, originaux inchangés par comparaison de hash), fichiers introuvables, suppression de
 projet ; calcul du cap (lignes droites, passage 359°/0°, arrêts, interruptions, précision sur sortie simulée) ;
 séquences et annuler/rétablir ; export (dossiers, EXIF relus, données image identiques, métadonnées GoPro/GPano
