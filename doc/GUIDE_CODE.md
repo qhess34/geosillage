@@ -179,8 +179,9 @@ la vue est dans le repère corrigé ; si l'on regarde la route à l'angle `y`, l
 `orientation + y`. `GPSImgDirection` reste la direction du vélo (le viewer Panoramax ouvre la photo en comparant
 ce cap à la direction vers la photo précédente). `POST …/headings/yaw` : `yaw` (valeur fixée) ou `add` (ajoutée à
 chaque photo : caméra à l'envers = 180°), sur des photos, une plage, une séquence (`sequence_id`) ou tout le projet
-(`all`). Interface : `YawRotate.tsx` (angle libre, `localStorage['pss-yaw-angle']`, boutons « ↻ Tourner » = `add` et
-« = Fixer » = `yaw`) pour une séquence, tout le projet et la plage de l'onglet Photo.
+(`all`). Interface : `YawRotate.tsx` (correction du montage de la caméra sur le casque : angle libre,
+`localStorage['pss-yaw-angle']`, « ↻ Corriger le montage » = `add`, jamais `yaw` qui effacerait les angles de tête)
+pour une séquence, tout le projet et la plage de l'onglet Photo.
 
 ## Retard GPS (synchronisation temporelle)
 

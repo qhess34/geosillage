@@ -12,7 +12,8 @@ function loadAngle(): string {
   }
 }
 
-// Orientation of the camera (XMP PoseHeadingDegrees, the JPEG is never rotated): rotate by a custom angle, or set it
+// Camera mounting correction (badly aligned on the helmet, or backwards: 180): a constant angle added to each photo's
+// orientation (XMP PoseHeadingDegrees, on top of the head angles already fixed; the JPEG is never rotated)
 export default function YawRotate({
   projectId,
   target,
@@ -57,20 +58,9 @@ export default function YawRotate({
           remember()
           api.rotateYaw(projectId, target, value).then((r) => onDone(r.undo), (e) => onError(e.message))
         }}
-        title={`Tourne ${what} de cet angle, ajouté à l'orientation actuelle de chaque photo (caméra à l'envers : 180). XMP PoseHeadingDegrees, le JPEG n'est pas modifié. Ctrl+Z annule.`}
+        title={`Caméra mal orientée sur le casque : tourne ${what} de cet angle, ajouté à l'orientation de chaque photo (les angles de tête déjà fixés sont gardés ; caméra à l'envers : 180 ; l'angle opposé revient en arrière). XMP PoseHeadingDegrees, le JPEG n'est pas modifié. Ctrl+Z annule.`}
       >
-        ↻ Tourner
-      </button>
-      <button
-        className="small"
-        disabled={!valid}
-        onClick={() => {
-          remember()
-          api.setYaw(projectId, target, value).then((r) => onDone(r.undo), (e) => onError(e.message))
-        }}
-        title={`Même orientation pour ${what} : cet angle remplace celle de chaque photo (0 = celle de la caméra). Ctrl+Z annule.`}
-      >
-        = Fixer
+        ↻ Corriger le montage
       </button>
     </span>
   )
