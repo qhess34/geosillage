@@ -78,10 +78,12 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    la route devant le vélo puis *🚲 Fixer la direction du vélo* (sur la photo, ou sur toute la plage sélectionnée) :
    l'angle de la tête est écrit dans `XMP-GPano:PoseHeadingDegrees` (lacet, lu par Panoramax pour orienter la
    sphère), `GPSImgDirection` reste la direction du vélo, et la visionneuse s'ouvre alors face à la route.
-   **Caméra montée à l'envers** : *↻ 180° toutes les photos* (onglet *Séquences*, tout le projet, photos non classées
-   comprises), *↻ 180°* sur une séquence (onglet *Séquences*) ou sur une plage (onglet *Photo*)
-   ajoute 180° à l'orientation de toutes ses photos (en plus des angles de tête déjà fixés) ; le JPEG n'est pas
-   modifié, seule `PoseHeadingDegrees` change. Recliquer revient à l'état précédent.
+   **Caméra montée à l'envers ou de travers** : champ d'angle (180 par défaut, −360 à 360, mémorisé) avec
+   *↻ Tourner* et *= Fixer*, pour toutes les photos du projet (onglet *Séquences*, photos non classées comprises),
+   une séquence (onglet *Séquences*) ou une plage (onglet *Photo*). *↻ Tourner* ajoute l'angle à l'orientation de
+   chaque photo (en plus des angles de tête déjà fixés ; tourner de l'angle opposé revient en arrière) ; *= Fixer*
+   donne à toutes la même orientation (0 = celle de la caméra). Le JPEG n'est pas modifié, seule
+   `PoseHeadingDegrees` change ; `Ctrl+Z` annule.
    Le viewer Panoramax n'applique cette orientation que si le tangage et le roulis sont non nuls : l'export remplace
    alors le 0,0 de la GoPro par 0,01° (invisible), comme [pan360-fixexif](https://github.com/qhess34/pan360-fixexif).
    Photos déjà publiées sans ce correctif : les corriger dans pan360-fixexif, ou les republier depuis un nouvel export.

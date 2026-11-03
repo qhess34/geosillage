@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
+import YawRotate from './YawRotate'
 
 interface Props {
   projectId: string
@@ -84,6 +85,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         {h.stale > 0 && <span className="warn-text"> · {h.stale} à revoir</span>}
         {s.anomalies > 0 && <span className="warn-text"> · {s.anomalies} anomalies GPS</span>}
         {s.backwards > 0 && <span> · ↻ {s.backwards === s.count ? 'tournée de 180°' : `${s.backwards} photos tournées de 180°`}</span>}
+        {s.rotated > s.backwards && <span> · ↻ {s.rotated - s.backwards} photos réorientées</span>}
       </div>
       <div className="seq-actions">
         <label className="small-text" title="Décalage angulaire appliqué à tous les caps calculés de la séquence">
@@ -102,13 +104,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         <button className="small" onClick={() => setEditing(true)}>
           Renommer
         </button>
-        <button
-          className="small"
-          onClick={() => api.rotateYaw(projectId, { sequence_id: s.id }, 180).then(() => props.onRefresh(), (e) => onError(e.message))}
-          title="Caméra montée à l'envers : tourne toutes les photos de 180° (XMP PoseHeadingDegrees, le JPEG n'est pas modifié). Recliquer annule."
-        >
-          ↻ 180°
-        </button>
+        <YawRotate projectId={projectId} target={{ sequence_id: s.id }} what="les photos de la séquence" onDone={() => props.onRefresh()} onError={onError} />
         {inThis && current && current.idx !== s.start_idx && (
           <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title="Couper avant la photo courante (C)">
             Couper ici
@@ -180,13 +176,10 @@ export default function SequencesTab(props: Props) {
           <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
             Tout en séquences
           </button>
-          <button
-            className="small"
-            onClick={() => api.rotateYaw(projectId, { all: true }, 180).then(() => props.onRefresh(), (e) => onError(e.message))}
-            title="Caméra montée à l'envers sur toute la sortie : tourne toutes les photos du projet de 180° (XMP PoseHeadingDegrees, le JPEG n'est pas modifié). Recliquer annule."
-          >
-            ↻ 180° toutes les photos
-          </button>
+          <span className="small-text">
+            Orientation de toutes les photos :{' '}
+            <YawRotate projectId={projectId} target={{ all: true }} what="toutes les photos du projet" onDone={() => props.onRefresh()} onError={onError} />
+          </span>
         </div>
         <span className="muted small-text">
           {range

@@ -12,6 +12,7 @@ import { positionAt, Track } from './timesync'
 import { AGE_CLASSES, loadOverlay, OverlaySettings, PANORAMAX_PRESETS, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
+import YawRotate from './YawRotate'
 
 const JOB_LABELS: Record<string, string> = {
   import: 'Import',
@@ -351,13 +352,9 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
           <button className="small" onClick={() => rangeOp('clear')}>
             Caps calculés
           </button>
-          <button
-            className="small"
-            onClick={() => api.rotateYaw(projectId, { start_idx: range[0], end_idx: range[1] }, 180).then((r) => onChanged(r.undo), (e) => onError(e.message))}
-            title="Caméra montée à l'envers : tourne les photos de la plage de 180° (XMP, le JPEG n'est pas modifié)"
-          >
-            ↻ 180°
-          </button>
+          <br />
+          Orientation de la plage :{' '}
+          <YawRotate projectId={projectId} target={{ start_idx: range[0], end_idx: range[1] }} what="les photos de la plage" onDone={(u) => onChanged(u)} onError={onError} />
         </div>
       )}
 
