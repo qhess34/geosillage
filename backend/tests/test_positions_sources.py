@@ -359,3 +359,65 @@ def test_yaw_sign_migration(project):
         db.migrate(conn)
         got = [conn.execute("SELECT yaw_offset FROM photo WHERE id=?", (ph[i]["id"],)).fetchone()[0] for i in range(3)]
     assert got == [-30, -180, 170]
+
+
+def _make_gap(pid, seq, start, n=3):
+    """Photos start..start+n-1 of the sequence lose their GPS (as when the receiver drops) and leave the sequence."""
+    from app.core import sequences as core_seq
+
+    with db.open_project(pid) as conn:
+        ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE sequence_id=? ORDER BY idx LIMIT ? OFFSET ?", (seq["id"], n, start))]
+        conn.executemany(
+            f"UPDATE photo SET lat_orig=NULL, lon_orig=NULL, flags=flags|{db.NO_GPS}, sequence_id=NULL, rank=NULL WHERE id=?",
+            [(i,) for i in ids],
+        )
+        core_seq._renumber(conn, seq["id"])
+    return ids
+
+
+def test_missing_positions_interpolated_and_attached(project):
+    client, pid, _, seqs = project
+    gap = _make_gap(pid, seqs[0], 40)
+    runs = client.get(f"/api/projects/{pid}/positions/missing").json()
+    run = next(r for r in runs if r["ids"] == gap)
+    assert run["count"] == 3 and run["sequence_id"] == seqs[0]["id"]
+    assert run["prev"]["idx"] == run["start_idx"] - 1 and run["next"]["idx"] == run["end_idx"] + 1
+    count_before = next(s for s in client.get(f"/api/projects/{pid}/sequences").json()["sequences"] if s["id"] == seqs[0]["id"])["count"]
+
+    r = client.post(f"/api/projects/{pid}/positions/batch", json={"photo_ids": gap, "mode": "interpolate"}).json()
+    assert (r["changed"], r["skipped"], r["attached"]) == (3, 0, 3)
+    a, b = run["prev"], run["next"]
+    total = geo.distance(a["lat"], a["lon"], b["lat"], b["lon"])
+    for pid_ in gap:
+        d = client.get(f"/api/projects/{pid}/photos/{pid_}").json()
+        assert d["pos_method"] == "interp" and d["sequence_id"] == seqs[0]["id"]
+        f = (d["ts"] - a["ts"]) / (b["ts"] - a["ts"])
+        assert geo.distance(a["lat"], a["lon"], d["lat"], d["lon"]) == pytest.approx(total * f, abs=0.05)
+    seq = next(s for s in client.get(f"/api/projects/{pid}/sequences").json()["sequences"] if s["id"] == seqs[0]["id"])
+    assert seq["count"] == count_before + 3
+    assert not any(r["ids"] == gap for r in client.get(f"/api/projects/{pid}/positions/missing").json())
+    # a later time sync keeps interpolated positions (treated as manual corrections)
+    sync = client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "all", "keep_manual": True}).json()
+    assert sync["kept_manual"] >= 3
+    # one undo removes the positions and the attachment
+    client.post(f"/api/projects/{pid}/undo")
+    client.post(f"/api/projects/{pid}/undo")
+    d = client.get(f"/api/projects/{pid}/photos/{gap[0]}").json()
+    assert (d["lat"], d["pos_method"], d["sequence_id"]) == (None, None, None)
+
+
+def test_placing_one_photo_by_hand_attaches_it(project):
+    client, pid, _, seqs = project
+    gap = _make_gap(pid, seqs[0], 20, n=1)
+    client.put(f"/api/projects/{pid}/photos/{gap[0]}/position", json={"lat": 43.61, "lon": 3.88})
+    d = client.get(f"/api/projects/{pid}/photos/{gap[0]}").json()
+    assert d["sequence_id"] == seqs[0]["id"] and d["pos_method"] == "manual"
+
+
+def test_gap_at_the_start_cannot_be_interpolated(project):
+    client, pid, _, _ = project
+    runs = client.get(f"/api/projects/{pid}/positions/missing").json()
+    first = runs[0]
+    assert first["prev"] is None  # the simulated ride starts without a GPS fix
+    r = client.post(f"/api/projects/{pid}/positions/batch", json={"photo_ids": first["ids"], "mode": "interpolate"}).json()
+    assert r["changed"] == 0 and r["skipped"] == len(first["ids"])

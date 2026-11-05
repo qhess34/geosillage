@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, FLAG_LABELS, Job, PhotoDetail, PhotoRow, Project, SeqState, Sequence, UndoState } from './api'
+import { api, FLAG_LABELS, Job, MissingRun, PhotoDetail, PhotoRow, Project, SeqState, Sequence, UndoState } from './api'
 import { Basemap, BUILTIN_BASEMAPS, loadCustomBasemaps, saveCustomBasemaps } from './basemaps'
 import ExportTab from './ExportTab'
 import { fmtCoord, fmtDistance, fmtDuration, fmtSize, fmtTime } from './format'
@@ -21,7 +21,14 @@ const JOB_LABELS: Record<string, string> = {
   export: 'Export',
 }
 
-const POS_LABELS: Record<string, string> = { manual: 'manuelle', offset: 'décalage', along: 'le long du trajet', time: 'synchro temporelle' }
+const POS_LABELS: Record<string, string> = {
+  manual: 'manuelle',
+  offset: 'décalage',
+  along: 'le long du trajet',
+  time: 'synchro temporelle',
+  interp: 'interpolée',
+  osm: 'recalée sur OSM',
+}
 
 // Great-circle distance (display only)
 function distanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -116,6 +123,91 @@ function metersBetween(lat0: number, lon0: number, lat1: number, lon1: number): 
 }
 function shifted(lat: number, lon: number, east: number, north: number): { lat: number; lon: number } {
   return { lat: lat + north / M_PER_DEG, lon: lon + east / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)) }
+}
+
+// Photos without a position, by block, with the positioned photos before / after them (Bilan tab)
+function MissingPositions({
+  projectId,
+  photos,
+  sequences,
+  onGo,
+  onChanged,
+  onError,
+}: {
+  projectId: string
+  photos: PhotoRow[]
+  sequences: Sequence[]
+  onGo: (idx: number) => void
+  onChanged: (u?: UndoState) => void
+  onError: (msg: string) => void
+}) {
+  const [runs, setRuns] = useState<MissingRun[] | null>(null)
+  useEffect(() => {
+    api.missingPositions(projectId).then(setRuns, (e) => onError(e.message))
+  }, [projectId, photos, onError])
+  if (!runs) return null
+  const total = runs.reduce((n, r) => n + r.count, 0)
+  const fillable = runs.filter((r) => r.prev && r.next)
+  const interpolate = (ids: number[]) =>
+    api.positionsBatch(projectId, { photo_ids: ids, mode: 'interpolate' }).then((r) => onChanged(r.undo), (e) => onError(e.message))
+  const time = (side: MissingRun['prev']) => (side?.ts != null ? ` (${fmtTime(side.ts, false)})` : '')
+  return (
+    <div className="small-text missing-positions">
+      <h3>Photos sans position ({total})</h3>
+      {total === 0 ? (
+        <p className="muted">Toutes les photos utilisables ont une position.</p>
+      ) : (
+        <>
+          <p className="muted">
+            Photos sans GPS (ou en coordonnées invalides) pas encore placées. « Voir » ouvre la photo en mode Positions :
+            cliquez sur la carte pour la placer, entre les deux photos entourées en rouge. « Interpoler » les répartit entre
+            la photo d'avant et celle d'après selon l'heure de prise de vue. Une photo placée rejoint la séquence de ses
+            voisines. Annulable (Ctrl+Z).
+          </p>
+          {fillable.length > 1 && (
+            <button className="small" onClick={() => interpolate(fillable.flatMap((r) => r.ids))}>
+              Interpoler tout ({fillable.reduce((n, r) => n + r.count, 0)} photos)
+            </button>
+          )}
+          <ul className="missing-list">
+            {runs.map((r) => {
+              const seq = sequences.find((x) => x.id === r.sequence_id)
+              return (
+                <li key={r.ids[0]}>
+                  <span>
+                    {r.count > 1 ? `Photos ${r.start_idx + 1} → ${r.end_idx + 1} (${r.count})` : `Photo ${r.start_idx + 1}`}
+                    <span className="muted">
+                      {r.prev && r.next
+                        ? ` · entre la photo ${r.prev.idx + 1}${time(r.prev)} et la ${r.next.idx + 1}${time(r.next)}`
+                        : r.prev
+                          ? ` · après la photo ${r.prev.idx + 1}, en fin de sortie`
+                          : r.next
+                            ? ` · avant la photo ${r.next.idx + 1}, en début de sortie`
+                            : ''}
+                      {seq ? ` · ${seq.name}` : ''}
+                    </span>
+                  </span>
+                  <span className="row">
+                    <button className="small" onClick={() => onGo(r.start_idx)}>
+                      Voir
+                    </button>
+                    <button
+                      className="small"
+                      disabled={!r.prev || !r.next}
+                      title={r.prev && r.next ? '' : 'Pas de photo positionnée des deux côtés : placez-les à la main'}
+                      onClick={() => interpolate(r.ids)}
+                    >
+                      Interpoler
+                    </button>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+    </div>
+  )
 }
 
 function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o: OverlaySettings) => void }) {
@@ -360,6 +452,28 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
 
       <h3>Position</h3>
       <div className="small-text position-box">
+        {photo.lat == null && (
+          <div className="warn-text">
+            Photo sans position : elle a été prise entre les deux photos entourées en rouge sur la carte. Touche M puis
+            cliquez sur la carte pour la placer, ou{' '}
+            <button
+              className="link"
+              onClick={() =>
+                api.missingPositions(projectId).then((runs) => {
+                  const run = runs.find((r) => r.ids.includes(photo.id))
+                  if (!run) return
+                  return api.positionsBatch(projectId, { photo_ids: run.ids, mode: 'interpolate' }).then((r) => {
+                    if (!r.changed) onError('Impossible d\'interpoler : pas de photo positionnée avant et après')
+                    onChanged(r.undo)
+                  })
+                }).catch((e) => onError(e.message))
+              }
+            >
+              interpoler ce trou
+            </button>{' '}
+            entre la photo d'avant et celle d'après.
+          </div>
+        )}
         <div>
           Originale : <span className="mono">{fmtCoord(photo.lat_orig, photo.lon_orig)}</span>
         </div>
@@ -1121,6 +1235,18 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <>
                 <Summary p={project} />
+                <MissingPositions
+                  projectId={projectId}
+                  photos={photos}
+                  sequences={sequences}
+                  onGo={(idx) => {
+                    goIdx(idx)
+                    setEditMode(true)
+                    setTab('photo')
+                  }}
+                  onChanged={(u) => afterHeadingChange(u)}
+                  onError={fail}
+                />
                 <OverlayUrl overlay={overlay} onSave={setOverlay} />
                 <div className="row wrap">
                   <button className="small" onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">

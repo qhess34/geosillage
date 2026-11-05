@@ -249,6 +249,23 @@ photos décalées du même écart : on corrige la première, puis on avance. Le 
 synchronisées, mais jamais à une photo corrigée à la main. `←`, `Maj+→` et les clics ne reportent rien. Chaque
 report affiche un message et s'annule avec `Ctrl+Z`. Décocher la case pour corriger les photos une à une.
 
+### Photos sans position
+
+Photos sans GPS (début de sortie, tunnel, perte du signal) : onglet *Bilan*, section **Photos sans position**, un
+bloc par trou, avec les photos positionnées prises juste avant et juste après (« entre la photo 50 (09:31:40) et la
+54 (09:31:48) · Séquence 1 »).
+- *Voir* ouvre la première photo du trou en mode Positions : la carte montre, entourées en rouge et reliées en
+  pointillés, la photo d'avant et celle d'après ; cliquer sur la carte place la photo.
+- *Interpoler* répartit les photos du trou entre la photo d'avant et celle d'après, selon l'heure de prise de vue
+  (*Interpoler tout* pour tous les trous). Impossible en début ou en fin de sortie (il manque un voisin) : les placer
+  à la main.
+- Une photo placée **rejoint la séquence de ses voisines** quand la photo d'avant et celle d'après sont dans la
+  même séquence. Tout est annulable (`Ctrl+Z`).
+
+La synchronisation (§ 5) place aussi les photos sans GPS qui tombent sur la trace ; les positions interpolées ou
+placées à la main ne sont ensuite plus modifiées par une nouvelle synchronisation (option *Garder les positions
+corrigées à la main*).
+
 Onglet *Photo* : saisie des coordonnées, *Revenir à la position d'origine* ; sur une plage sélectionnée : décalage (m vers
 l'est / le nord) ou déplacement le long du trajet.
 

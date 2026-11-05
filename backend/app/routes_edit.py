@@ -317,7 +317,7 @@ class PositionsBatchIn(BaseModel):
     photo_ids: list[int] | None = None
     start_idx: int | None = None  # or an index range
     end_idx: int | None = None
-    mode: str = Field(pattern="^(offset|along|revert)$")
+    mode: str = Field(pattern="^(offset|along|revert|interpolate)$")
     east_m: float = Field(default=0.0, ge=-1000, le=1000)
     north_m: float = Field(default=0.0, ge=-1000, le=1000)
     meters: float = Field(default=0.0, ge=-1000, le=1000)
@@ -341,6 +341,7 @@ def position_set(pid: str, photo_id: int, body: PositionIn):
                 positions.revert(conn, [photo_id])
             else:
                 _pos_errors(lambda: positions.set_position(conn, photo_id, body.lat, body.lon))
+                positions.attach_to_sequences(conn, [photo_id])
         headings.recompute(conn, mark_stale_ids={photo_id})
         return {"undo": undo.state(conn)}
 
@@ -358,6 +359,7 @@ def positions_batch(pid: str, body: PositionsBatchIn):
             "offset": f"Décalage de {len(ids)} positions ({body.east_m:+g} m E, {body.north_m:+g} m N)",
             "along": f"Déplacement de {len(ids)} positions de {body.meters:+g} m le long du trajet",
             "revert": f"Positions d'origine pour {len(ids)} photos",
+            "interpolate": f"Interpolation de {len(ids)} positions",
         }
         skipped = 0
         with undo.undoable(conn, labels[body.mode]):
@@ -365,10 +367,20 @@ def positions_batch(pid: str, body: PositionsBatchIn):
                 changed = _pos_errors(lambda: positions.offset(conn, ids, body.east_m, body.north_m))
             elif body.mode == "along":
                 changed, skipped = _pos_errors(lambda: positions.along(conn, ids, body.meters))
+            elif body.mode == "interpolate":
+                changed, skipped = positions.interpolate(conn, ids)
             else:
                 changed = positions.revert(conn, ids)
+            attached = positions.attach_to_sequences(conn, ids)
         headings.recompute(conn, mark_stale_ids=set(ids))
-        return {"changed": changed, "skipped": skipped, "undo": undo.state(conn)}
+        return {"changed": changed, "skipped": skipped, "attached": attached, "undo": undo.state(conn)}
+
+
+@router.get("/positions/missing")
+def positions_missing(pid: str):
+    """Blocks of photos without a position, with the positioned photos before / after them."""
+    with db.open_project(pid) as conn:
+        return positions.missing_runs(conn)
 
 
 # ---- Time synchronisation (GPS delay) ----
@@ -439,6 +451,7 @@ def sync_apply(pid: str, body: SyncApplyIn):
             raise HTTPException(400, "Aucune photo")
         with undo.undoable(conn, f"Synchronisation {body.offset_s:+.1f} s " + (where if body.scope == "from" else f"sur {where}")):
             res = _sync_errors(lambda: timesync.apply(conn, body.offset_s, ids, body.keep_manual))
+            positions.attach_to_sequences(conn, ids)
         headings.recompute(conn, mark_stale_ids=set(ids))
         db.set_meta(conn, "last_time_offset", body.offset_s)
         return {**res, "undo": undo.state(conn)}

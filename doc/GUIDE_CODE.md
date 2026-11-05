@@ -123,6 +123,14 @@ pour le cap, les séquences et l'export : `db.EFF_FLAGS_SQL` / `db.eff_flags` ef
 renseignée (le bilan d'import garde les anomalies d'origine). Après une correction, les caps sont recalculés et les
 caps manuels voisins (±3 photos) marqués `heading_stale` (« à revoir »), jamais écrasés.
 
+Photos sans position : `positions.missing_runs` (blocs de photos utilisables sans position effective, avec les
+photos positionnées avant/après ; `GET …/positions/missing`), `positions.interpolate` (`POST …/positions/batch`
+mode `interpolate` : position sur le segment avant→après au prorata de `ts`, ou du rang sans heure ;
+`pos_method = 'interp'`), `positions.attach_to_sequences` (après toute pose de position — saisie, interpolation,
+synchro — une photo non classée rejoint la séquence commune de ses voisines utilisables, en sautant les photos du
+même lot). `positions.MANUAL_METHODS` (`manual`, `offset`, `along`, `interp`, `osm`) : positions gardées par la
+synchro. Carte : `gapNeighbours` (photo courante sans position → voisines entourées, couche `gap-*`, cadrage).
+
 Interface : mode `M` → marqueur MapLibre déplaçable sur la photo courante (`dragend` → `PUT …/position`) ; clic sur la
 carte pour placer une photo sans position ; couches `moves-*` : position d'origine et lien vers la corrigée.
 

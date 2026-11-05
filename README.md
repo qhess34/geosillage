@@ -17,12 +17,15 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 2c | Séquences (plage, découpage proposé, couper, fusionner, limites), timeline, annuler/rétablir, raccourcis | ✅ |
 | 2d (partiel) | Cap : calcul automatique, manuel, par plage, décalage par séquence ; **export d'un dossier par séquence avec EXIF corrigés** | ✅ |
 | 2b | Visionneuse 360° (Photo Sphere Viewer), direction du vélo pour caméra sur casque | ✅ |
-| 2b (reste) | Liste virtualisée | à faire |
+| 2b (reste) | Liste des photos (virtualisée, filtres d'anomalies) | backlog |
 | 2d | Correction GPS : glisser sur la carte, saisie, placer une photo sans GPS, décalage et déplacement le long du trajet sur une plage ; export en copie, en déplaçant les sources, ou sur place ; restauration des sources | ✅ |
-| 2d (reste) | Exports GeoJSON/CSV des positions | à faire |
+| 2d (reste) | Exports GeoJSON/CSV des positions | backlog |
+| 2e | Photos sans position : liste par trou, voisines sur la carte, interpolation, rattachement à la séquence | ✅ |
+| 3 (complément) | Synchro par tronçons (« à partir de cette photo ») ; vérifications automatiques GitHub | ✅ |
 | 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
-| 3 (reste) | Import GPX, magnétisme OSM | à faire |
-| 4 | Publication Panoramax | en attente (pas de publication pour l'instant) |
+| 3 (reste) | Recalage sur les voies OSM d'une sélection (choix de la voie si ambiguïté) | en cours |
+| 3 (reste) | Import GPX | à faire |
+| 4 | Publication Panoramax par séquence, puis modification des séquences déjà publiées | à faire |
 
 ## Documentation
 

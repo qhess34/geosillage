@@ -72,6 +72,31 @@ function toGeoJSON(photos: PhotoRow[], sequences: Sequence[]): GeoJSON.FeatureCo
   }
 }
 
+// Selected photo without a position: the positioned photos taken just before and after it, joined by a dashed line
+// (the photo is somewhere between them; in Positions mode, a click on the map places it)
+export function gapNeighbours(photos: PhotoRow[], selectedId: number | null): [PhotoRow, PhotoRow | null] | null {
+  const i = photos.findIndex((p) => p.id === selectedId)
+  if (i < 0 || photos[i].lat != null) return null
+  const ok = (p: PhotoRow) => p.lat != null && p.lon != null && !p.excluded
+  let a: PhotoRow | null = null
+  for (let k = i - 1; k >= 0 && !a; k--) if (ok(photos[k])) a = photos[k]
+  let b: PhotoRow | null = null
+  for (let k = i + 1; k < photos.length && !b; k++) if (ok(photos[k])) b = photos[k]
+  if (!a && !b) return null
+  return a ? [a, b] : [b as PhotoRow, null]
+}
+
+function gapGeoJSON(photos: PhotoRow[], selectedId: number | null): GeoJSON.FeatureCollection {
+  const n = gapNeighbours(photos, selectedId)
+  const features: GeoJSON.Feature[] = []
+  if (n) {
+    const pts = n.filter((p): p is PhotoRow => p != null).map((p) => [p.lon as number, p.lat as number])
+    for (const c of pts) features.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: c } })
+    if (pts.length === 2) features.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: pts } })
+  }
+  return { type: 'FeatureCollection', features }
+}
+
 function lineGeoJSON(photos: PhotoRow[]): GeoJSON.Feature {
   const coords = photos
     .filter((p) => p.lat != null && p.lon != null && !(p.flags & (ANOMALY | FLAGS.DUPLICATE)))
@@ -143,6 +168,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     m.addSource('track', { type: 'geojson', data: lineGeoJSON(photos) })
     m.addSource('photos', { type: 'geojson', data: toGeoJSON(photos, sequences) })
     m.addSource('moves', { type: 'geojson', data: movesGeoJSON(photos) })
+    m.addSource('gap', { type: 'geojson', data: gapGeoJSON(photos, selectedId) })
     const s = latest.current.sync
     m.addSource('sync-track', { type: 'geojson', data: syncTrackGeoJSON(s?.track) })
     m.addSource('ghosts', { type: 'geojson', data: ghostsGeoJSON(photos, s?.track, s?.offset ?? null) })
@@ -161,6 +187,20 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       source: 'moves',
       filter: ['==', ['geometry-type'], 'Point'],
       paint: { 'circle-radius': 3, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#7c3aed', 'circle-stroke-width': 1.5 },
+    })
+    m.addLayer({
+      id: 'gap-line',
+      type: 'line',
+      source: 'gap',
+      filter: ['==', ['geometry-type'], 'LineString'],
+      paint: { 'line-color': '#dc2626', 'line-width': 2.5, 'line-dasharray': [1.5, 1.5] },
+    })
+    m.addLayer({
+      id: 'gap-ends',
+      type: 'circle',
+      source: 'gap',
+      filter: ['==', ['geometry-type'], 'Point'],
+      paint: { 'circle-radius': 11, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#dc2626', 'circle-stroke-width': 2.5 },
     })
     m.addLayer({
       id: 'sync-track',
@@ -301,6 +341,12 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     fit(m)
   }, [photos, sequences])
 
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current) return
+    ;(m.getSource('gap') as GeoJSONSource | undefined)?.setData(gapGeoJSON(photos, selectedId))
+  }, [photos, selectedId])
+
   // Sync mode: track and preview of all photos shifted by the offset (one update per animation frame)
   const syncTrack = sync?.track
   const syncOffset = sync?.offset ?? null
@@ -432,6 +478,15 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       // Follow: the selected photo stays in the centre; a short animation, interrupted by the next key press
       m.stop()
       m.easeTo({ center: [p.lon, p.lat], duration: 180, easing: (t) => t })
+    } else if (p && p.lat == null) {
+      // Photo without a position (invisible on the map): frame the photos taken just before and after it
+      const n = gapNeighbours(photos, selectedId)
+      if (n) {
+        const pts = n.filter((x): x is PhotoRow => x != null).map((x) => [x.lon as number, x.lat as number] as [number, number])
+        m.stop()
+        if (pts.length === 2) m.fitBounds(new maplibregl.LngLatBounds(pts[0], pts[0]).extend(pts[1]), { padding: 120, maxZoom: 18.5, duration: 180 })
+        else m.easeTo({ center: pts[0], zoom: Math.max(m.getZoom(), 17), duration: 180 })
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, photos])

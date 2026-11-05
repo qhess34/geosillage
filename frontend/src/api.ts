@@ -84,6 +84,24 @@ export interface PhotoRow {
   excluded: number // 1 = excluded by the user (out of sequences, never exported)
 }
 
+export interface RunSide {
+  id: number
+  idx: number
+  ts: number | null
+  lat: number
+  lon: number
+}
+
+export interface MissingRun {
+  ids: number[]
+  start_idx: number
+  end_idx: number
+  count: number
+  prev: RunSide | null
+  next: RunSide | null
+  sequence_id: number | null
+}
+
 export interface PhotoDetail extends PhotoRow {
   path: string
   filename: string
@@ -295,8 +313,18 @@ export const api = {
     req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/position`, lat == null ? {} : { lat, lon }),
   positionsBatch: (
     id: string,
-    body: { start_idx: number; end_idx: number; mode: 'offset' | 'along' | 'revert'; east_m?: number; north_m?: number; meters?: number },
-  ) => req<{ changed: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/positions/batch`, body),
+    body: {
+      start_idx?: number
+      end_idx?: number
+      photo_ids?: number[]
+      mode: 'offset' | 'along' | 'revert' | 'interpolate'
+      east_m?: number
+      north_m?: number
+      meters?: number
+    },
+  ) => req<{ changed: number; skipped: number; attached: number; undo: UndoState }>('POST', `/api/projects/${id}/positions/batch`, body),
+  // blocks of photos without a position, with the positioned photos before / after them
+  missingPositions: (id: string) => req<MissingRun[]>('GET', `/api/projects/${id}/positions/missing`),
   exports: (id: string) => req<ExportRecord[]>('GET', `/api/projects/${id}/exports`),
   thumbUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/thumb`,
   imageUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/image`,

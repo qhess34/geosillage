@@ -17,7 +17,7 @@ import bisect
 import math
 
 from .. import db
-from . import geo
+from . import geo, positions
 
 MAX_EXTRAPOLATION_S = 5.0
 UNUSABLE = db.NO_GPS | db.INVALID_COORD | db.GPS_JUMP | db.DUPLICATE | db.NO_DATE | db.UNREADABLE
@@ -112,7 +112,7 @@ def apply(conn, offset_s: float, ids: list[int], keep_manual: bool = True) -> di
         if r["ts"] is None:
             uncovered += 1
             continue
-        if keep_manual and r["pos_method"] in ("manual", "offset", "along"):
+        if keep_manual and r["pos_method"] in positions.MANUAL_METHODS:
             kept += 1
             continue
         pos = position_at(track, r["ts"] + offset_s)
