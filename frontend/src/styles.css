@@ -210,10 +210,10 @@ select {
   min-width: 0;
 }
 /* the map background menu shrinks (more buttons when a range is selected) instead of overflowing */
-.toolbar select {
-  flex: 0 1 200px;
-  min-width: 90px;
-  width: 200px;
+.map-follow select.small {
+  font-size: 12px;
+  padding: 2px 4px;
+  max-width: 200px;
 }
 .toolbar .project-title {
   flex: 0 1 auto;
@@ -774,7 +774,7 @@ input.coord {
 .pnx-legend {
   position: absolute;
   left: 50px;
-  top: 10px;
+  top: 76px; /* under the map controls (Panoramax, background map, Centrer…), even on two lines */
   z-index: 5;
   display: flex;
   gap: 10px;
@@ -803,6 +803,9 @@ input.coord {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 3px 6px;
+  flex-wrap: wrap; /* narrow map (Positions mode adds an option): wraps instead of covering the zoom buttons */
+  justify-content: flex-end;
+  max-width: calc(100% - 64px);
 }
 
 /* checkbox + long text: one option per line, text aligned after the box */

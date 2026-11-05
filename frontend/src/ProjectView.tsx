@@ -1397,23 +1397,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </button>
         <span className="spacer" />
         {notice && <div className="toast small-text">✓ {notice}</div>}
-        <button
-          className={overlay.enabled ? 'primary' : ''}
-          aria-pressed={overlay.enabled}
-          onClick={() => setOverlay({ ...overlay, enabled: !overlay.enabled })}
-          title={`Afficher les photos 360° déjà publiées sur Panoramax (${overlay.url}) et leur date ; visible à partir du zoom 7, photos à partir du zoom 15`}
-        >
-          Panoramax
-        </button>
-        <select value={basemap.id} onChange={(e) => chooseBasemap(e.target.value)} aria-label="Fond de carte" title="Fond de carte">
-          {basemaps.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-          <option value="__add">+ Ajouter un fond XYZ…</option>
-        </select>
-        <span className="tool-sep" />
         <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">
           ?
         </button>
@@ -1506,6 +1489,23 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           )}
           </div>
           <div className="map-follow small-text">
+            <button
+              className={overlay.enabled ? 'small primary' : 'small'}
+              aria-pressed={overlay.enabled}
+              onClick={() => setOverlay({ ...overlay, enabled: !overlay.enabled })}
+              title={`Afficher les photos 360° déjà publiées sur Panoramax (${overlay.url}) et leur date ; visible à partir du zoom 7, photos à partir du zoom 15`}
+            >
+              Panoramax
+            </button>
+            <select className="small" value={basemap.id} onChange={(e) => chooseBasemap(e.target.value)} aria-label="Fond de carte" title="Fond de carte">
+              {basemaps.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+              <option value="__add">+ Ajouter un fond XYZ…</option>
+            </select>
+            <span className="tool-sep" />
             <button className="small" disabled={!current} onClick={() => setCenterTick((t) => t + 1)} title="Centrer la carte sur la photo courante">
               ◎ Centrer
             </button>

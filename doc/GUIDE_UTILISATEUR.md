@@ -99,11 +99,11 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 ## 3. L'écran
 
 ```
-┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Couper · Début · Fin │ Positions … Panoramax · fond de carte │ ?
+┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Couper · Début · Fin │ Positions … ?
 ├ étapes : Import · Synchro · Doublons et arrêts · Correction GPS · Séquences · Export · Envoi
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
-│   (Centrer · Suivre · Exclues · Reporter…)   │ Photo · Séquences · Synchro  │
+│ (Panoramax · fond · Centrer · Suivre · …)    │ Photo · Séquences · Synchro  │
 │                                              │ Export · Envoi · Bilan       │
 ├──────────────────────────────────────────────┤                              │
 │ timeline (toute la sortie)                   │                              │
@@ -136,7 +136,9 @@ séquences ont été corrigées depuis leur import ou leur dernier envoi).
   regardée dans la visionneuse. Clic sur une pastille : aller à la photo ; Maj+clic : sélectionner une plage.
   - *Suivre* (coché par défaut) : la carte suit la photo courante ; décoché, elle reste fixe, *◎ Centrer* recentre.
   - *Exclues* : afficher les photos exclues (masquées par défaut).
-- **Fond de carte** (liste en haut à droite) : OpenStreetMap, Esri (satellite), **Satellite IGN Ortho** (France,
+- Les **réglages d'affichage de la carte** sont dans ses contrôles, en haut à droite : *Panoramax* (couverture
+  déjà publiée, ci-dessous), fond de carte, *Centrer*, *Suivre*, *Exclues*.
+- **Fond de carte** (liste des contrôles de la carte) : OpenStreetMap, Esri (satellite), **Satellite IGN Ortho** (France,
   ~20 cm, souvent le plus net), *IGN Ortho zoom max* (jusqu'au zoom 21 là où l'IGN a de la très haute résolution,
   vide ailleurs aux plus forts zooms), OpenTopoMap, ou un fond XYZ ajouté par vous (*+ Ajouter un fond XYZ…*).
 - **Timeline** : toute la sortie, une case par photo, colorée par séquence ; trous = photos exclues, marques rouges
@@ -155,7 +157,7 @@ séquences ont été corrigées depuis leur import ou leur dernier envoi).
 
 ### Surcouche Panoramax
 
-Bouton **Panoramax** : affiche les photos 360° **déjà publiées**, pour voir ce qui manque ou ce qui est ancien.
+Bouton **Panoramax** (contrôles de la carte, en haut à droite) : affiche les photos 360° **déjà publiées**, pour voir ce qui manque ou ce qui est ancien.
 Couleur selon l'âge : vert moins d'un an, orange 1 à 3 ans, rouge plus de 3 ans. Séquences visibles à partir du
 zoom 7, photos à partir du zoom 15. Au survol : date, appareil, **auteur**.
 

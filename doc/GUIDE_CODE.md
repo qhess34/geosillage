@@ -432,7 +432,8 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 - `JobBar` : temps restant d'après la vitesse observée depuis l'ouverture ; notification (`Notification`) à la fin
   d'une tâche de plus de 10 s si la fenêtre est cachée et l'autorisation donnée.
 - Carte : seules les corrections à la main sont entourées en violet (`pos_method` ≠ `time`).
-- Disposition : groupes de boutons joints (`.btn-group`) séparés par `.tool-sep` dans la barre d'outils ; lignes
+- Disposition : groupes de boutons joints (`.btn-group`) séparés par `.tool-sep` dans la barre d'outils (actions
+  sur la sortie) ; réglages d'affichage de la carte (Panoramax, fond, Centrer, Suivre, Exclues) dans `.map-follow` ; lignes
   alignées `.form-row` (libellé | champs) dans les cartes de plage (`.range-card`) et de séquence ; actions d'une
   séquence en pied de carte, *Supprimer* à droite.
 
