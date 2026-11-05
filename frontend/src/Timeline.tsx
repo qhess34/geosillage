@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { FLAGS, PhotoRow, QualityIssue, seqColor, Sequence } from './api'
+import { fmtTime } from './format'
 
 interface Props {
   photos: PhotoRow[]
@@ -9,6 +10,7 @@ interface Props {
   onPick: (idx: number, extend: boolean) => void
   onContextMenu?: (idx: number, x: number, y: number) => void // right click
   warnings?: QualityIssue[] // points to check (stops, spacing…): amber marks above the strip
+  thumbUrl?: (photoId: number) => string // hover bubble: thumbnail of the photo under the pointer
 }
 
 // Chronological strip: one column per photo (x = index), coloured by sequence.
@@ -17,7 +19,8 @@ interface Props {
 const DRAG_PX = 8 // minimal horizontal movement for a drag to select a range
 const MIN_SPAN = 20 // photos visible at the maximal zoom
 
-export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu, warnings }: Props) {
+export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu, warnings, thumbUrl }: Props) {
+  const [hover, setHover] = useState<{ idx: number; x: number } | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const dragging = useRef(false)
   const downX = useRef(0)
@@ -153,7 +156,6 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
     <canvas
       ref={canvas}
       className="timeline"
-      title="Clic : aller à la photo · Maj+clic ou glisser : sélectionner une plage"
       onContextMenu={(e) => {
         if (!onContextMenu || !photos.length) return
         e.preventDefault()
@@ -166,12 +168,17 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
         downX.current = e.clientX
         onPick(idxAt(e), e.shiftKey)
       }}
+      onPointerLeave={() => setHover(null)}
       onPointerMove={(e) => {
+        const b = (e.target as HTMLElement).getBoundingClientRect()
+        if (photos.length && !(e.buttons & 1)) setHover({ idx: idxAt(e), x: Math.max(106, Math.min(b.width - 106, e.clientX - b.left)) })
+        else setHover(null)
         // a range only after a real drag: a click with a slight mouse movement must not select hundreds of photos
         if (dragging.current && e.buttons & 1 && Math.abs(e.clientX - downX.current) >= DRAG_PX) onPick(idxAt(e), true)
       }}
       onPointerUp={() => (dragging.current = false)}
     />
+      {hover && photos[hover.idx] && <HoverBubble p={photos[hover.idx]} x={hover.x} sequences={sequences} warnings={warnings} thumbUrl={thumbUrl} />}
       <div className="timeline-zoom small-text">
         <div className="zoom-buttons">
         <button className="small" onClick={() => zoomAt(1.6, center)} disabled={!zoomed} title="Dézoomer (molette sur la timeline)" aria-label="Dézoomer la timeline">
@@ -213,6 +220,30 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
           <div className="timeline-thumb" style={{ left: `${(start / fullSpan) * 100}%`, width: `${Math.max(2, (span / fullSpan) * 100)}%` }} />
         </div>
       )}
+    </div>
+  )
+}
+
+// Bubble above the strip: photo under the pointer (thumbnail, number, time, sequence, what to check there)
+function HoverBubble({ p, x, sequences, warnings, thumbUrl }: { p: PhotoRow; x: number; sequences: Sequence[]; warnings?: QualityIssue[]; thumbUrl?: (id: number) => string }) {
+  const seq = sequences.find((s) => s.id === p.sequence_id)
+  const notes = [
+    p.excluded ? 'exclue' : null,
+    p.flags & FLAGS.GPS_JUMP ? 'saut GPS' : null,
+    p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD) && p.lat == null ? 'sans position' : null,
+    p.flags & FLAGS.GAP_BEFORE ? 'interruption avant' : null,
+    ...(warnings ?? []).filter((w) => p.idx >= w.start_idx && p.idx <= w.end_idx).map((w) => w.detail),
+  ].filter(Boolean)
+  return (
+    <div className="timeline-bubble small-text" style={{ left: x }}>
+      {thumbUrl && p.thumb === 1 && <img src={thumbUrl(p.id)} alt="" />}
+      <div>
+        <strong>Photo {p.idx + 1}</strong> · {fmtTime(p.ts, false)}
+      </div>
+      <div className="muted">
+        <span className="chip" style={{ background: seqColor(sequences, p.sequence_id) }} /> {seq ? seq.name : 'non classée'}
+      </div>
+      {notes.length > 0 && <div className="warn-text">{notes.join(' · ')}</div>}
     </div>
   )
 }

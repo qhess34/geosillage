@@ -10,6 +10,7 @@ import SendTab from './SendTab'
 import PublishPanel from './PublishPanel'
 import StepBar from './StepBar'
 import StopCompare from './StopCompare'
+import MapLegend from './MapLegend'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
@@ -1301,6 +1302,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       )}
       <main className="main" style={{ gridTemplateColumns: `1fr 6px ${panelWidth}px` }}>
         <div className="center">
+          <div className="map-area">
           <PhotoMap
             onContextMenu={(id, x, y) => photosContext(id == null ? null : photos.find((p) => p.id === id)?.idx ?? null, x, y)}
             photos={mapPhotos}
@@ -1334,6 +1336,38 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               api.setPosition(projectId, id, lat, lon).then((r) => afterHeadingChange(r.undo), (er) => setError(er.message))
             }}
           />
+          <MapLegend />
+          {(seqStart != null || (range && range[1] > range[0])) && !snapOpen && (
+            <div className="selection-chip small-text" role="status">
+              {seqStart != null ? (
+                <>
+                  <strong>Début : photo {seqStart + 1}</strong>
+                  {current && current.idx !== seqStart ? ` → ${current.idx + 1} (${Math.abs(current.idx - seqStart) + 1} photos)` : ''} · F pour créer
+                  la séquence
+                </>
+              ) : (
+                range && (
+                  <>
+                    <strong>
+                      Photos {range[0] + 1} → {range[1] + 1}
+                    </strong>{' '}
+                    ({range[1] - range[0] + 1}) · clic droit : actions
+                  </>
+                )
+              )}
+              <button
+                className="small"
+                onClick={() => {
+                  setSeqStart(null)
+                  setRange(null)
+                }}
+                title="Désélectionner (Échap)"
+              >
+                ✕ Échap
+              </button>
+            </div>
+          )}
+          </div>
           <div className="map-follow small-text">
             <button className="small" disabled={!current} onClick={() => setCenterTick((t) => t + 1)} title="Centrer la carte sur la photo courante">
               ◎ Centrer
@@ -1391,6 +1425,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             onPick={goIdx}
             onContextMenu={photosContext}
             warnings={quality}
+            thumbUrl={(id) => api.thumbUrl(projectId, id)}
           />
           {ctx && <ContextMenu x={ctx.x} y={ctx.y} {...ctxItems()} onClose={() => setCtx(null)} />}
         </div>

@@ -67,7 +67,8 @@ function toGeoJSON(photos: PhotoRow[], sequences: Sequence[]): GeoJSON.FeatureCo
           color: p.sequence_id != null ? colors.get(p.sequence_id) ?? '#9ca3af' : '#9ca3af',
           excluded: p.excluded ? 1 : 0,
           anomaly: p.flags & ANOMALY && !p.pos_method ? 1 : 0,
-          corrected: p.pos_method ? 1 : 0,
+          // corrected by hand (dragged, carried, interpolated, snapped): the time synchronisation moves every photo, not outlined
+          corrected: p.pos_method && p.pos_method !== 'time' ? 1 : 0,
           heading: p.heading ?? -1, // -1 = no heading (null is not usable in filters)
           manual: p.heading_manual != null ? 1 : 0,
         },
