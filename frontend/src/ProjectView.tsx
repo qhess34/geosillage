@@ -338,10 +338,10 @@ function SeqButtons({
   big?: boolean
 }) {
   const n = seqStart != null && current ? Math.abs(current.idx - seqStart) + 1 : range ? range[1] - range[0] + 1 : 0
-  return (
-    <div className={big ? 'seq-buttons big' : 'seq-buttons'}>
+  const buttons = (
+    <>
       <button disabled={!current} onClick={onStart} title="Début de séquence sur la photo courante (D)" className={seqStart != null ? 'active' : ''}>
-        ⏵ Début{seqStart != null ? ` (photo ${seqStart + 1})` : ''}
+        ⏵ Début{seqStart != null && big ? ` (photo ${seqStart + 1})` : ''}
       </button>
       <button
         className="primary"
@@ -349,10 +349,11 @@ function SeqButtons({
         onClick={onFinish}
         title={seqStart != null || range ? 'Créer la séquence jusqu\'à la photo courante (F)' : 'Marquez d\'abord le début (D)'}
       >
-        ⏹ Fin{n ? ` — créer (${n} photos)` : ''}
+        ⏹ Fin{n ? (big ? ` — ${n} photos` : ` (${n})`) : ''}
       </button>
-    </div>
+    </>
   )
+  return big ? <div className="seq-buttons big">{buttons}</div> : buttons
 }
 
 interface PhotoTabProps {
@@ -494,7 +495,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
               OK
             </button>
           </form>
-          <div className="row">
+          <div className="btn-group">
             {[-5, -1, 1, 5].map((d) => (
               <button key={d} className="small" disabled={shown == null} onClick={() => shown != null && set(shown + d)}>
                 {d > 0 ? `+${d}` : d}°
@@ -509,22 +510,32 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
         </div>
       </div>
       {range && (
-        <div className="range-heading small-text">
-          Plage {range[0] + 1} → {range[1] + 1} :{' '}
-          <input className="num" type="number" step="0.5" value={rangeValue} onChange={(e) => setRangeValue(e.target.value)} />°{' '}
-          <button className="small" onClick={() => rangeOp('offset')} title="Ajoute la valeur au cap final de chaque photo">
-            Décaler
-          </button>
-          <button className="small" onClick={() => rangeOp('set')} title="Même cap pour toutes les photos">
-            Fixer
-          </button>
-          <button className="small" onClick={() => rangeOp('clear')}>
-            Caps calculés
-          </button>
-          <br />
-          Orientation de la plage :{' '}
-          <YawRotate projectId={projectId} target={{ start_idx: range[0], end_idx: range[1] }} what="les photos de la plage" onDone={(u) => onChanged(u)} onError={onError} />
-        </div>
+        <section className="range-card small-text">
+          <header>
+            Plage {range[0] + 1} → {range[1] + 1} · {range[1] - range[0] + 1} photos
+          </header>
+          <div className="form-row">
+            <span>Caps</span>
+            <span>
+              <input className="num" type="number" step="0.5" value={rangeValue} onChange={(e) => setRangeValue(e.target.value)} aria-label="Angle (°)" />°
+              <span className="btn-group">
+                <button className="small" onClick={() => rangeOp('offset')} title="Ajoute la valeur au cap final de chaque photo">
+                  Décaler
+                </button>
+                <button className="small" onClick={() => rangeOp('set')} title="Même cap pour toutes les photos">
+                  Fixer
+                </button>
+              </span>
+              <button className="small" onClick={() => rangeOp('clear')} title="Caps calculés depuis la trace (les caps manuels de la plage sont oubliés)">
+                Caps calculés
+              </button>
+            </span>
+          </div>
+          <div className="form-row">
+            <span>Orientation</span>
+            <YawRotate projectId={projectId} target={{ start_idx: range[0], end_idx: range[1] }} what="les photos de la plage" onDone={(u) => onChanged(u)} onError={onError} />
+          </div>
+        </section>
       )}
 
       <h3>Position</h3>
@@ -588,33 +599,38 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
         </div>
       </div>
       {range && (
-        <div className="range-heading small-text">
-          <div>
-            Positions de la plage {range[0] + 1} → {range[1] + 1} :
+        <section className="range-card small-text">
+          <header>
+            Positions de la plage {range[0] + 1} → {range[1] + 1}
+          </header>
+          <div className="form-row">
+            <span>Décaler</span>
+            <span>
+              E <input className="num" type="number" step="0.5" value={east} onChange={(e) => setEast(e.target.value)} aria-label="Est (m)" /> m · N{' '}
+              <input className="num" type="number" step="0.5" value={north} onChange={(e) => setNorth(e.target.value)} aria-label="Nord (m)" /> m
+              <button className="small" onClick={() => batch('offset')} title="Déplace toutes les photos de la plage du même vecteur">
+                Décaler
+              </button>
+            </span>
           </div>
-          <div className="row wrap">
-            <label>
-              E <input className="num" type="number" step="0.5" value={east} onChange={(e) => setEast(e.target.value)} /> m
-            </label>
-            <label>
-              N <input className="num" type="number" step="0.5" value={north} onChange={(e) => setNorth(e.target.value)} /> m
-            </label>
-            <button className="small" onClick={() => batch('offset')} title="Déplace toutes les photos de la plage du même vecteur">
-              Décaler
-            </button>
+          <div className="form-row">
+            <span>Le long du trajet</span>
+            <span>
+              <input className="num" type="number" step="0.5" value={along} onChange={(e) => setAlong(e.target.value)} aria-label="Distance (m)" /> m
+              <button className="small" onClick={() => batch('along')} title="Avance (valeur positive) ou recule chaque photo dans son sens de déplacement">
+                Avancer / reculer
+              </button>
+            </span>
           </div>
-          <div className="row wrap">
-            <label>
-              <input className="num" type="number" step="0.5" value={along} onChange={(e) => setAlong(e.target.value)} /> m
-            </label>
-            <button className="small" onClick={() => batch('along')} title="Avance (valeur positive) ou recule chaque photo dans son sens de déplacement">
-              Le long du trajet
-            </button>
-            <button className="small" onClick={() => batch('revert')}>
-              Positions d'origine
-            </button>
+          <div className="form-row">
+            <span />
+            <span>
+              <button className="small" onClick={() => batch('revert')}>
+                Revenir aux positions d'origine
+              </button>
+            </span>
           </div>
-        </div>
+        </section>
       )}
 
       <h3>Informations</h3>
@@ -1294,7 +1310,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         <button onClick={onBack} title="Retour aux projets">
           ←
         </button>
-        <strong className="ellipsis">{project.name}</strong>
+        <strong className="ellipsis project-title" title={project.name}>
+          {project.name}
+        </strong>
         {isPnx ? (
           <span className="badge" title={`Séquences déjà publiées sur ${project.pnx_instance ?? 'Panoramax'} : corrigées ici, puis envoyées (onglet Envoi)`}>
             Panoramax
@@ -1304,24 +1322,31 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             Importer
           </button>
         )}
-        <button disabled={!undoState.undo} onClick={() => undoRedo('undo')} title={undoState.undo ? `Annuler : ${undoState.undo} (Ctrl+Z)` : 'Rien à annuler'}>
-          ↶ Annuler
-        </button>
-        <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? `Rétablir : ${undoState.redo} (Ctrl+Y)` : 'Rien à rétablir'}>
-          ↷ Rétablir
-        </button>
+        <span className="tool-sep" />
+        <div className="btn-group">
+          <button disabled={!undoState.undo} onClick={() => undoRedo('undo')} title={undoState.undo ? `Annuler : ${undoState.undo} (Ctrl+Z)` : 'Rien à annuler'}>
+            ↶ Annuler
+          </button>
+          <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? `Rétablir : ${undoState.redo} (Ctrl+Y)` : 'Rien à rétablir'}>
+            ↷ Rétablir
+          </button>
+        </div>
         {!isPnx && (
           <>
-            <button
-              disabled={!current}
-              onClick={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
-              title="Découper la sortie avant la photo courante (C)"
-            >
-              ✂ Couper ici
-            </button>
-            <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} />
+            <span className="tool-sep" />
+            <div className="btn-group" role="group" aria-label="Découpage en séquences">
+              <button
+                disabled={!current}
+                onClick={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
+                title="Découper la sortie avant la photo courante (C)"
+              >
+                ✂ Couper
+              </button>
+              <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} />
+            </div>
           </>
         )}
+        <span className="tool-sep" />
         <button
           className={editMode ? 'primary' : ''}
           aria-pressed={editMode}
@@ -1332,9 +1357,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </button>
         <span className="spacer" />
         {notice && <div className="toast small-text">✓ {notice}</div>}
-        <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)">
-          ?
-        </button>
         <button
           className={overlay.enabled ? 'primary' : ''}
           aria-pressed={overlay.enabled}
@@ -1343,7 +1365,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         >
           Panoramax
         </button>
-        <select value={basemap.id} onChange={(e) => chooseBasemap(e.target.value)} aria-label="Fond de carte">
+        <select value={basemap.id} onChange={(e) => chooseBasemap(e.target.value)} aria-label="Fond de carte" title="Fond de carte">
           {basemaps.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -1351,6 +1373,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           ))}
           <option value="__add">+ Ajouter un fond XYZ…</option>
         </select>
+        <span className="tool-sep" />
+        <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">
+          ?
+        </button>
       </header>
       <StepBar
         project={project}
@@ -1507,7 +1533,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {(
               [
                 ['photo', 'Photo'],
-                ['sequences', `Séquences (${sequences.length})`],
+                ['sequences', 'Séquences'],
                 ['sync', 'Synchro'],
                 ['export', 'Export'],
                 ['send', 'Envoi'],
@@ -1516,6 +1542,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             ).filter(([t]) => !(isPnx && t === 'export')).map(([t, label]) => (
               <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'tab active' : 'tab'} onClick={() => setTab(t)}>
                 {label}
+                {t === 'sequences' && <span className="count">{sequences.length}</span>}
               </button>
             ))}
           </nav>

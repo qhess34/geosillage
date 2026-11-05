@@ -168,8 +168,8 @@ export default function Viewer360(props: Props) {
         <button className="small" onClick={toggle} title="Basculer entre la vue 360° et l'image à plat (équirectangulaire)">
           {mode === '360' ? 'À plat' : 'Vue 360°'}
         </button>
-        <a className="small-text" href={`${props.imageUrl}?hd=1`} target="_blank" rel="noreferrer">
-          Original
+        <a className="button-link small" href={`${props.imageUrl}?hd=1`} target="_blank" rel="noreferrer" title="Image d'origine en pleine définition, dans un nouvel onglet">
+          Original ↗
         </a>
       </div>
     </div>

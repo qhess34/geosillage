@@ -99,7 +99,7 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 ## 3. L'écran
 
 ```
-┌ barre d'outils : ← projets · Importer · Annuler/Rétablir · Couper ici · Début · Fin · Positions · ? · Panoramax · fond de carte
+┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Couper · Début · Fin │ Positions … Panoramax · fond de carte │ ?
 ├ étapes : Import · Synchro · Doublons et arrêts · Correction GPS · Séquences · Export · Envoi
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
@@ -141,11 +141,14 @@ séquences ont été corrigées depuis leur import ou leur dernier envoi).
   vide ailleurs aux plus forts zooms), OpenTopoMap, ou un fond XYZ ajouté par vous (*+ Ajouter un fond XYZ…*).
 - **Timeline** : toute la sortie, une case par photo, colorée par séquence ; trous = photos exclues, marques rouges
   = anomalies. Clic : aller à la photo ; **glisser** (au moins quelques pixels) ou Maj+clic : sélectionner une
-  plage (en jaune). `Échap` efface la plage.
-  **Désélectionner** : `Échap`. **Zoom** : molette sur la timeline (autour du curseur) ou boutons `−` / `+` /
+  plage (en jaune). Une **pastille** en bas de la carte rappelle la sélection (« Photos a → b (n) · clic droit :
+  actions », ou le début de séquence en cours) ; **désélectionner** : `Échap` ou son bouton ✕. **Survol** : bulle
+  avec la miniature, le numéro, l'heure, la séquence et ce qui est à vérifier sur la photo. **Zoom** : molette sur la timeline (autour du curseur) ou boutons `−` / `+` /
   *Tout* à droite de la timeline ; la barre sous la
   timeline (ou Maj+molette, ou un glissement horizontal du pavé tactile) fait défiler ; la photo courante reste
   visible quand on navigue.
+- **Légende** (bas gauche de la carte, repliable) : signification des couleurs et marques de la carte et de la
+  timeline.
 - **Onglet Photo** : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,
   *⟲ Recentrer* pour revenir face à l'avant), boutons *⏵ Début* / *⏹ Fin*, cap, position, et outils de la plage
   sélectionnée.
@@ -161,6 +164,12 @@ France, IGN, ou l'adresse d'une autre instance.
 
 ![Surcouche Panoramax](images/10-panoramax.webp)
 *Surcouche Panoramax (données réelles) : rouge = photos de plus de 3 ans, orange = 1 à 3 ans ; au survol, date, appareil et auteur.*
+
+En rouvrant un projet, on retrouve la même photo, le même onglet et le même zoom de la timeline. La barre du bas
+affiche les tâches en cours avec leur temps restant ; *🔔 Me prévenir à la fin des tâches* active une notification
+du système quand un export, une publication ou un import se termine pendant que vous êtes dans une autre fenêtre.
+Les actions importantes (exclure une plage, publier, envoyer des corrections) demandent une confirmation dans la
+page : `Entrée` confirme, `Échap` annule.
 
 ---
 
@@ -180,7 +189,7 @@ Une séquence = un passage continu que l'on publiera d'un bloc. On parcourt la s
 ![Début et Fin en cours](images/03-debut-fin.webp)
 **Début* posé sur la photo 341 : la plage suit la navigation (en jaune sur la timeline), le bouton *Fin* indique le nombre de photos de la future séquence.*
 
-**Couper** : `C` (*✂ Couper ici*) sur la première photo de chaque nouvelle séquence. Sur une photo non classée, la
+**Couper** : `C` (*✂ Couper*) sur la première photo de chaque nouvelle séquence. Sur une photo non classée, la
 séquence est d'abord créée autour d'elle, puis coupée : il suffit d'appuyer sur `C` à chaque coupure.
 
 **Automatique** (onglet *Séquences*) :
@@ -363,7 +372,10 @@ Onglet *Bilan*, section **Points à vérifier**, et marques **orange en haut de 
 - **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?).
 
 *Voir* ouvre l'onglet *Photo* sur la première photo et sélectionne les photos concernées. **Rien n'est modifié
-automatiquement** ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
+automatiquement** ; `N` / `Maj+N` passent au point suivant / précédent (avec aussi les sauts GPS, les photos sans
+position et les photos non classées). Pour un arrêt, **Comparer** (ou un clic sur l'étape *Doublons et arrêts*)
+affiche ses photos côte à côte, avec un aperçu en grand au survol : cocher celles à garder, puis *Exclure n photos*
+(une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
 signalés à part (anomalies, *Photos sans position*).
 
 ---
@@ -516,6 +528,7 @@ fichiers.
 | `Maj+X` | Réintégrer la photo courante |
 | `Échap` | Effacer la plage / le début en cours |
 | `[` / `]` | Cap −1° / +1° (Maj : 5°) |
+| `N` / `Maj+N` | Point suivant / précédent à vérifier (photos concernées sélectionnées) |
 | `M` | Mode Positions |
 | `Ctrl+Z` / `Ctrl+Y` | Annuler / rétablir |
 | `?` | Aide |

@@ -29,6 +29,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 4 (suite) | Projet Panoramax : corriger des séquences déjà publiées (choisies dans son compte), envoi des seules différences, retour en arrière | ✅ |
 | Qualité | Points à vérifier avant publication (arrêts, grands écarts, précision GPS, caps) : Bilan et timeline | ✅ |
 | Interface | Barre d'étapes (import, synchro, doublons et arrêts, correction GPS, séquences, export, envoi) : état et accès direct | ✅ |
+| Interface | Comparer les photos d'un arrêt, N / Maj+N, pastille de sélection, légende, survol de la timeline, reprise de l'état, confirmations dans la page, notifications de fin de tâche, boutons regroupés | ✅ |
 | Qualité | Tests d'interface (Playwright) dans les vérifications automatiques GitHub | backlog |
 
 ## Documentation

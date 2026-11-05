@@ -69,7 +69,12 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
             {s.name}
           </button>
         )}
-        <span className="muted small-text">{s.count} ph.</span>
+        {!editing && (
+          <button className="small icon" onClick={() => setEditing(true)} title="Renommer" aria-label="Renommer">
+            ✎
+          </button>
+        )}
+        <span className="muted small-text">{s.count} photos</span>
       </div>
       <div className="small-text">
         {props.pnx ? null : last ? (
@@ -118,9 +123,9 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         {s.backwards > 0 && <span> · ↻ {s.backwards === s.count ? 'tournée de 180°' : `${s.backwards} photos tournées de 180°`}</span>}
         {s.rotated > s.backwards && <span> · ↻ {s.rotated - s.backwards} photos réorientées</span>}
       </div>
-      <div className="seq-actions">
-        <label className="small-text" title="Décalage angulaire appliqué à tous les caps calculés de la séquence">
-          Décalage cap{' '}
+      <div className="form-row small-text">
+        <span title="Décalage angulaire appliqué à tous les caps calculés de la séquence">Décalage cap</span>
+        <span>
           <input
             className="num"
             type="number"
@@ -129,41 +134,47 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
             onChange={(e) => setOffset(e.target.value)}
             onBlur={() => Number(offset) !== s.heading_offset && run(api.updateSequence(projectId, s.id, { heading_offset: Number(offset) || 0 }))}
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            aria-label="Décalage cap (°)"
           />
           °
-        </label>
-        <button className="small" onClick={() => setEditing(true)}>
-          Renommer
-        </button>
-        <YawRotate projectId={projectId} target={{ sequence_id: s.id }} what="les photos de la séquence" onDone={() => props.onRefresh()} onError={onError} />
-        {!props.pnx && inThis && current && current.idx !== s.start_idx && (
-          <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title="Couper avant la photo courante (C)">
-            Couper ici
-          </button>
-        )}
-        {!props.pnx && range && (
-          <button className="small" onClick={() => run(api.setBounds(projectId, s.id, range[0], range[1]))} title="La séquence devient la plage sélectionnée">
-            Limites = plage
-          </button>
-        )}
-        {!props.pnx && next && (
-          <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))}>
-            Fusionner avec la suivante
-          </button>
-        )}
-        {!props.pnx && last && (
-          <button
-            className={confirmReexport ? 'small danger' : s.needs_export ? 'small primary' : 'small'}
-            onClick={reexport}
-            title={`Même dossier et mêmes réglages que le dernier export (${last.mode === 'copy' ? 'copie' : last.mode === 'move' ? 'photos sources déplacées' : 'photos sources modifiées sur place'}) : ${last.path}`}
-          >
-            {confirmReexport ? 'Confirmer : modifie les photos sources' : '⟳ Réexporter'}
-          </button>
-        )}
-        {!props.pnx && <button className="small danger" onClick={() => run(api.deleteSequence(projectId, s.id))} title="Les photos retournent dans « non classées » (annulable)">
-          Supprimer
-        </button>}
+        </span>
       </div>
+      <div className="form-row small-text">
+        <span>Orientation</span>
+        <YawRotate projectId={projectId} target={{ sequence_id: s.id }} what="les photos de la séquence" onDone={() => props.onRefresh()} onError={onError} />
+      </div>
+      {!props.pnx && (
+        <div className="seq-actions">
+          {inThis && current && current.idx !== s.start_idx && (
+            <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title="Couper avant la photo courante (C)">
+              ✂ Couper ici
+            </button>
+          )}
+          {range && (
+            <button className="small" onClick={() => run(api.setBounds(projectId, s.id, range[0], range[1]))} title="La séquence devient la plage sélectionnée">
+              Limites = plage
+            </button>
+          )}
+          {next && (
+            <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))} title={`Fusionner avec « ${next.name} »`}>
+              Fusionner avec la suivante
+            </button>
+          )}
+          <span className="spacer" />
+          {last && (
+            <button
+              className={confirmReexport ? 'small danger' : s.needs_export ? 'small primary' : 'small'}
+              onClick={reexport}
+              title={`Même dossier et mêmes réglages que le dernier export (${last.mode === 'copy' ? 'copie' : last.mode === 'move' ? 'photos sources déplacées' : 'photos sources modifiées sur place'}) : ${last.path}`}
+            >
+              {confirmReexport ? 'Confirmer : modifie les photos sources' : '⟳ Réexporter'}
+            </button>
+          )}
+          <button className="small danger" onClick={() => run(api.deleteSequence(projectId, s.id))} title="Les photos retournent dans « non classées » (annulable)">
+            Supprimer
+          </button>
+        </div>
+      )}
     </li>
   )
 }
@@ -196,27 +207,29 @@ export default function SequencesTab(props: Props) {
   return (
     <div>
       <div className="range-box">
-        <div className="row wrap">
-          {!props.pnx && <button
-            className="primary small"
-            disabled={!range}
-            onClick={() => range && api.createSequence(projectId, range[0], range[1]).then(onState, (e) => onError(e.message))}
-          >
-            Créer une séquence avec la plage (F)
-          </button>}
-          {!props.pnx && <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
-            Tout en séquences
-          </button>}
-          <span className="small-text">
-            Orientation de toutes les photos :{' '}
-            <YawRotate projectId={projectId} target={{ all: true }} what="toutes les photos du projet" onDone={() => props.onRefresh()} onError={onError} />
-          </span>
+        {!props.pnx && (
+          <div className="row wrap">
+            <button
+              className="primary small"
+              disabled={!range}
+              onClick={() => range && api.createSequence(projectId, range[0], range[1]).then(onState, (e) => onError(e.message))}
+            >
+              Créer avec la plage (F)
+            </button>
+            <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
+              Tout en séquences
+            </button>
+          </div>
+        )}
+        <div className="form-row wide small-text">
+          <span>Orientation de toutes les photos</span>
+          <YawRotate projectId={projectId} target={{ all: true }} what="toutes les photos du projet" onDone={() => props.onRefresh()} onError={onError} />
         </div>
         {!props.pnx && <span className="muted small-text">
           {range
             ? `Plage : photos ${range[0] + 1} → ${range[1] + 1} (${range[1] - range[0] + 1}).`
             : 'Créer à la main : « ⏵ Début » (D) sur la première photo, naviguer, puis « ⏹ Fin » (F) sur la dernière.'}{' '}
-          Découper en naviguant : C (ou ✂ Couper ici) sur la première photo de chaque nouvelle séquence. X : exclure la photo et passer à la suivante.
+          Découper en naviguant : C (ou ✂ Couper) sur la première photo de chaque nouvelle séquence. X : exclure la photo et passer à la suivante.
         </span>}
         {props.pnx && (
           <span className="muted small-text">
@@ -262,11 +275,12 @@ export default function SequencesTab(props: Props) {
                 ))}
               </ul>
               <div className="row">
-                <button className="primary small" onClick={acceptProposals}>
-                  Créer {proposals.filter((p) => p.keep).length} séquence(s)
-                </button>
+                <span className="spacer" />
                 <button className="small" onClick={() => setProposals(null)}>
                   Ignorer
+                </button>
+                <button className="primary small" onClick={acceptProposals}>
+                  Créer {proposals.filter((p) => p.keep).length} séquence(s)
                 </button>
               </div>
             </>

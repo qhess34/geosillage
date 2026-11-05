@@ -211,9 +211,14 @@ select {
 }
 /* the map background menu shrinks (more buttons when a range is selected) instead of overflowing */
 .toolbar select {
-  flex: 0 1 220px;
+  flex: 0 1 200px;
   min-width: 90px;
-  width: 220px;
+  width: 200px;
+}
+.toolbar .project-title {
+  flex: 0 1 auto;
+  min-width: 6em;
+  max-width: 260px;
 }
 @media (max-width: 1180px) {
   .toolbar {
@@ -398,12 +403,25 @@ select {
   z-index: 2;
 }
 .tab {
+  flex: 1 1 auto;
   border: none;
   border-radius: 0;
   border-bottom: 2px solid transparent;
   background: none;
-  padding: 8px 10px;
+  padding: 9px 6px;
   color: var(--muted);
+  white-space: nowrap;
+}
+.tab .count {
+  display: inline-block;
+  margin-left: 5px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 17px;
 }
 .tab.active {
   color: var(--text);
@@ -462,9 +480,8 @@ kbd {
 }
 .range-box {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
   padding: 8px;
   border: 1px dashed var(--border);
   border-radius: 8px;
@@ -497,8 +514,11 @@ kbd {
 .seq {
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px;
+  padding: 8px 10px;
   margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .seq.active {
   border-color: var(--accent);
@@ -516,8 +536,16 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
   align-items: center;
+}
+button.icon {
+  border-color: transparent;
+  background: none;
+  padding: 0 4px;
+  color: var(--muted);
 }
 .export-list li,
 .export-history li {
@@ -1208,4 +1236,88 @@ input.coord {
   flex-direction: column;
   gap: 3px;
   margin-bottom: 10px;
+}
+
+/* Toolbar: groups of joined buttons, separated by thin rules */
+.btn-group {
+  display: inline-flex;
+}
+.btn-group > button {
+  border-radius: 0;
+  margin-left: -1px;
+}
+.btn-group > button:first-child {
+  border-radius: 6px 0 0 6px;
+  margin-left: 0;
+}
+.btn-group > button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+.btn-group > button:only-child {
+  border-radius: 6px;
+}
+.btn-group > button:hover:not(:disabled),
+.btn-group > button.primary,
+.btn-group > button.active {
+  position: relative;
+  z-index: 1;
+}
+.tool-sep {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+/* Range tools (Photo tab): a card with one aligned row per operation */
+.range-card {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #d97706;
+  border-radius: 8px;
+  padding: 6px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.range-card > header {
+  font-weight: 600;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.form-row > span:first-child {
+  color: var(--muted);
+}
+.form-row > span:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.row input.num {
+  flex: none;
+}
+
+/* A link that looks like a small button (open the original image…) */
+a.button-link {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--panel);
+}
+a.button-link:hover {
+  border-color: var(--accent);
+}
+
+.form-row.wide {
+  grid-template-columns: auto 1fr;
 }

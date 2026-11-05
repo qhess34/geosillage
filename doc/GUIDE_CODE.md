@@ -416,6 +416,23 @@ envoi (`last_publication`, `changed_since_publication`) ; projet Panoramax : san
 `ok` / `warn` / `todo` ; `onTab` ouvre un onglet, `onShow` sélectionne des photos (onglet Photo). `.workspace` est
 une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des tâches).
 
+## Confort de l'interface
+
+- `StopCompare.tsx` : photos d'un arrêt côte à côte, exclusion des non gardées en un appel `excludePhotos`.
+- `N` / `Maj+N` (`checkPoints` dans `ProjectView`) : points à vérifier, sauts GPS non corrigés, photos sans position,
+  photos non classées, triés par index.
+- `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`) ; pastille de sélection (`.selection-chip`) ;
+  carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
+- `Timeline` : bulle au survol (`HoverBubble`), zoom gardé sous `pss-timeline-<projet>` si le nombre de photos n'a
+  pas changé ; photo et onglet gardés sous `pss-view-<projet>`.
+- `Dialogs.tsx` : `Confirm` (Entrée / Échap) et `AddBasemap` ; plus aucun `window.confirm` / `prompt`.
+- `JobBar` : temps restant d'après la vitesse observée depuis l'ouverture ; notification (`Notification`) à la fin
+  d'une tâche de plus de 10 s si la fenêtre est cachée et l'autorisation donnée.
+- Carte : seules les corrections à la main sont entourées en violet (`pos_method` ≠ `time`).
+- Disposition : groupes de boutons joints (`.btn-group`) séparés par `.tool-sep` dans la barre d'outils ; lignes
+  alignées `.form-row` (libellé | champs) dans les cartes de plage (`.range-card`) et de séquence ; actions d'une
+  séquence en pied de carte, *Supprimer* à droite.
+
 ## Points à vérifier (contrôle qualité)
 
 `core/quality.py`, `GET /api/projects/{id}/quality` : calcul à la demande, rien n'est écrit ni modifié (le choix
