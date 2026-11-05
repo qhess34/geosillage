@@ -57,7 +57,10 @@ terrain en CSV) :
 
 ## 3. Vérifier un changement
 
-Il n'y a pas de CI : **ces vérifications sont à faire avant chaque commit**.
+**Ces vérifications sont à faire avant chaque commit.** GitHub Actions (`.github/workflows/ci.yml`, « Vérifications »)
+relance à chaque push et pull request les tests backend (avec ExifTool), la construction de l'interface et celle de
+l'image Docker : ✅ / ❌ à côté de chaque commit. Le test dans le navigateur n'y est pas : il reste à faire à la
+main.
 
 | Quoi | Commande | Attendu |
 |---|---|---|

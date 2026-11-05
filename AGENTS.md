@@ -58,7 +58,9 @@ cd frontend && npm run build                        # tsc + vite sans erreur
 ```
 
 Puis piloter l'interface dans un navigateur (Playwright, recette dans `doc/DEVELOPPEMENT.md` § 3) : aucune erreur
-JavaScript, affichage à 1280 et 390 px. Pas de CI : ces vérifications ne sont faites par personne d'autre.
+JavaScript, affichage à 1280 et 390 px. GitHub Actions (`.github/workflows/ci.yml`) relance tests, construction et
+image Docker à chaque push, mais pas le test dans le navigateur : après le push, vérifier que les vérifications
+passent.
 
 ## Pièges fréquents
 

@@ -1,0 +1,49 @@
+# Checks run on every push and pull request: backend tests, interface build, Docker image build.
+name: Vérifications
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Tests backend (pytest)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - name: ExifTool
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libimage-exiftool-perl && exiftool -ver
+      - run: pip install -r backend/requirements-dev.txt
+      - name: pytest
+        working-directory: backend
+        run: python -m pytest -q
+
+  frontend:
+    name: Interface (types + construction)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  docker:
+    name: Image Docker
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t panoramax-sequence-studio:ci .
