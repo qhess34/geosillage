@@ -1,5 +1,8 @@
 # Guide du code
 
+Fonctionnement interne. Pour commencer : [DEVELOPPEMENT.md](DEVELOPPEMENT.md) (installation, vérifications,
+recettes) et [AGENTS.md](../AGENTS.md) (règles).
+
 ## Vue d'ensemble
 
 Un seul processus local : FastAPI (`backend/app/main.py`) sert l'API REST sous `/api` et l'interface construite
@@ -25,7 +28,7 @@ backend/app/
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
   ProjectList.tsx  création, ouverture, suppression (avec confirmation) des projets
-  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Export, Bilan), raccourcis clavier
+  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export, Bilan), raccourcis clavier
   PhotoMap.tsx     MapLibre : une source GeoJSON (points colorés par séquence + trace), flèches de cap (SDF), plage, sélection
   Timeline.tsx     bande chronologique (canvas) : couleur par séquence, anomalies, interruptions, sélection de plage
   HeadingDial.tsx  cadran de cap (glisser, Maj = pas de 5°)
@@ -38,7 +41,9 @@ frontend/src/
   PhotoViewer.tsx  visionneuse plate pleine définition (molette = zoom, glisser = déplacer)
   timesync.ts      miroir JS de core/timesync.py pour l'aperçu en direct (positionAt, snap)
   ImportDialog.tsx sélecteur de dossiers (via /api/fs)
-  basemaps.ts      fonds de carte (OSM, Esri World Imagery, OpenTopoMap, XYZ personnalisés)
+  basemaps.ts      fonds de carte (OSM, Esri World Imagery, IGN Ortho, OpenTopoMap, XYZ personnalisés)
+  panoramaxLayer.ts surcouche des photos déjà publiées sur Panoramax (tuiles vectorielles, infobulle, auteur)
+  YawRotate.tsx    correction du montage de la caméra (angle ajouté à l'orientation)
 tools/make_samples.py  générateur de sorties GoPro MAX simulées + vérité terrain
 ```
 
