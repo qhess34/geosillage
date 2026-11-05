@@ -62,7 +62,8 @@ cd frontend && npm run build                        # tsc + vite sans erreur
 ```
 
 Puis piloter l'interface dans un navigateur (Playwright, recette dans `doc/DEVELOPPEMENT.md` § 3) : aucune erreur
-JavaScript, affichage à 1280 et 390 px. GitHub Actions (`.github/workflows/ci.yml`) relance tests, construction et
+JavaScript, affichage à 1280 et 1024 px (application pour ordinateur : l'affichage sur téléphone n'est pas
+exigé). GitHub Actions (`.github/workflows/ci.yml`) relance tests, construction et
 image Docker à chaque push, mais pas le test dans le navigateur : après le push, vérifier que les vérifications
 passent.
 

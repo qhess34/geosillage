@@ -144,9 +144,10 @@ France, IGN, ou l'adresse d'une autre instance.
 ![Surcouche Panoramax](images/10-panoramax.webp)
 *Surcouche Panoramax (données réelles) : rouge = photos de plus de 3 ans, orange = 1 à 3 ans ; au survol, date, appareil et auteur.*
 
-### Sur téléphone
+### Sur un petit écran
 
-L'écran s'empile : barre d'outils, carte, timeline, puis les onglets.
+L'application est faite pour un ordinateur. Sur un écran étroit (tablette, téléphone), l'écran s'empile — barre
+d'outils, carte, timeline, puis les onglets — mais cet affichage n'est pas garanti.
 
 ![Affichage sur téléphone](images/12-mobile.webp)
 *Affichage à 390 px de large.*

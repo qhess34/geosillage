@@ -67,7 +67,7 @@ main.
 |---|---|---|
 | Tests backend | `cd backend && ../.venv/bin/python -m pytest -q` | tous verts (~1 min) |
 | Types + construction de l'interface | `cd frontend && npm run build` | `✓ built`, aucune erreur `tsc` |
-| Comportement dans le navigateur | Playwright (ci-dessous) | aucune erreur JavaScript ; affichage à 1280 et 390 px |
+| Comportement dans le navigateur | Playwright (ci-dessous) | aucune erreur JavaScript ; affichage à 1280 et 1024 px (pas d'exigence sur téléphone) |
 | Image Docker (si `Dockerfile`, dépendances) | `docker compose build` | construction OK |
 
 ### Test de bout en bout (Playwright)
@@ -86,7 +86,7 @@ curl -s -X POST localhost:8765/api/projects/$PID/import -H 'Content-Type: applic
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const errors = [];
-  const p = await b.newPage({ viewport: { width: 1280, height: 800 } });   // refaire à 390 px de large
+  const p = await b.newPage({ viewport: { width: 1280, height: 800 } });   // refaire à 1024 px de large
   await p.route(/tile\.openstreetmap|arcgisonline|opentopomap|geopf|\.mvt/, r => r.fulfill({ status: 204 })); // pas de tuiles réseau
   p.on('pageerror', e => errors.push(e.message));
   await p.goto('http://127.0.0.1:8765/');
