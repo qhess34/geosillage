@@ -162,3 +162,138 @@ def test_changed_sequence_is_exported_again_before_publishing(project, fake):
     assert len(client.get(f"/api/projects/{pid}/exports").json()) == before + 1
     s = next(x for x in client.get(f"/api/projects/{pid}/sequences").json()["sequences"] if x["id"] == seqs[0]["id"])
     assert not s["needs_export"] and s["last_publication"]["state"] == "ready"
+
+
+# ---- Already published sequences ----
+
+
+class FakeWithItems(FakePanoramax):
+    """Adds the published pictures of each collection (paginated), PATCH and DELETE."""
+
+    def __init__(self):
+        super().__init__()
+        self.items = {}  # collection id -> {picture id: feature}
+        self.patches = []
+
+    def __call__(self, req):
+        p, m = req.url.path, req.method
+        parts = p.split("/")
+        if len(parts) >= 5 and parts[2] == "collections" and parts[4] == "items":
+            if req.headers.get("authorization") != "Bearer tok":
+                return httpx.Response(401, json={})
+            col = self.items.get(parts[3])
+            if col is None:
+                return httpx.Response(404, json={"message": "not found"})
+            if len(parts) == 5 and m == "GET":
+                feats = list(col.values())
+                start = int(req.url.params.get("offset", 0))
+                page = feats[start : start + 20]  # small pages: pagination is followed
+                links = [{"rel": "next", "href": f"/api/collections/{parts[3]}/items?limit=20&offset={start + 20}"}] if start + 20 < len(feats) else []
+                return httpx.Response(200, json={"features": page, "links": links})
+            pic = parts[5]
+            if m == "PATCH":
+                b = json.loads(req.content)
+                self.patches.append((pic, b))
+                f, pr = col[pic], col[pic]["properties"]
+                if "latitude" in b:
+                    f["geometry"]["coordinates"] = [b["longitude"], b["latitude"]]
+                if "heading" in b:
+                    pr["view:azimuth"] = b["heading"]
+                for k in ("yaw", "pitch", "roll"):
+                    if k in b:
+                        pr[f"pers:{k}"] = b[k]
+                return httpx.Response(200, json=f)
+            if m == "DELETE":
+                col.pop(pic, None)
+                return httpx.Response(204)
+        return super().__call__(req)
+
+    def publish_state_from(self, cid, pid, sid):
+        """Server values = what was exported (as after a correct publication)."""
+        with db.open_project(pid) as conn:
+            exp = panoramax._expected(conn, sid)
+            links = dict(conn.execute("SELECT photo_id, picture_id FROM published_photo WHERE sequence_id=?", (sid,)).fetchall())
+        self.items[cid] = {
+            pic: {"id": pic, "geometry": {"type": "Point", "coordinates": [exp[ph]["lon"], exp[ph]["lat"]]},
+                  "properties": {"view:azimuth": exp[ph]["heading"], "pers:yaw": exp[ph]["yaw"], "pers:pitch": 0, "pers:roll": 0,
+                                 "original_file:name": f"x{ph}.jpg", "datetime": "2026-06-14T09:30:00Z"}}
+            for ph, pic in links.items()
+        }
+
+
+@pytest.fixture()
+def fake_items(monkeypatch):
+    f = FakeWithItems()
+    monkeypatch.setattr(panoramax, "TRANSPORT", httpx.MockTransport(f))
+    return f
+
+
+def published(client, pid, seqs, fake):
+    connect(client, fake)
+    sid = seqs[0]["id"]
+    client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [sid]})
+    wait_jobs(client, pid)
+    s = next(x for x in client.get(f"/api/projects/{pid}/sequences").json()["sequences"] if x["id"] == sid)
+    cid = s["last_publication"]["collection_id"]
+    fake.publish_state_from(cid, pid, sid)
+    return sid, cid
+
+
+def test_compare_push_and_revert(project, fake_items):
+    client, pid, seqs = project
+    sid, cid = published(client, pid, seqs, fake_items)
+    base = f"/api/projects/{pid}/sequences/{sid}/panoramax"
+    d = client.get(f"{base}/compare").json()
+    assert (d["photos_to_update"], d["to_delete"], d["not_published"]) == (0, 0, d["not_published"])
+    # helmet camera badly aligned: +20° on the whole sequence; one position corrected; one photo excluded
+    client.post(f"/api/projects/{pid}/headings/yaw", json={"sequence_id": sid, "add": 20})
+    rows = client.get(f"/api/projects/{pid}/photos").json()
+    f = rows["fields"]
+    mine = [dict(zip(f, r)) for r in rows["rows"] if r[f.index("sequence_id")] == sid]
+    client.put(f"/api/projects/{pid}/photos/{mine[10]['id']}/position", json={"lat": mine[10]["lat"] + 0.0001, "lon": mine[10]["lon"]})
+    client.post(f"/api/projects/{pid}/photos/exclude", json={"photo_ids": [mine[20]["id"]]})
+    d = client.get(f"{base}/compare").json()
+    assert d["orientations"] >= len(mine) - 3 and d["positions"] >= 1 and d["to_delete"] == 1
+    assert "_patches" not in d
+    s = next(x for x in client.get(f"/api/projects/{pid}/sequences").json()["sequences"] if x["id"] == sid)
+    assert s["changed_since_publication"]
+
+    client.post(f"{base}/push", json={"delete_excluded": True})
+    wait_jobs(client, pid)
+    body = fake_items.patches[0][1]
+    assert body["yaw"] == pytest.approx(20.0) and body["pitch"] == body["roll"] == pytest.approx(0.01)  # nudge for the viewer
+    after = client.get(f"{base}/compare").json()
+    assert (after["photos_to_update"], after["to_delete"]) == (0, 0) and after["last_edit"]
+    s = next(x for x in client.get(f"/api/projects/{pid}/sequences").json()["sequences"] if x["id"] == sid)
+    assert not s["changed_since_publication"]
+
+    client.post(f"{base}/revert")
+    wait_jobs(client, pid)
+    back = client.get(f"{base}/compare").json()
+    assert back["orientations"] == d["orientations"] and back["last_edit"] is None
+
+
+def test_link_a_sequence_published_elsewhere(project, fake_items):
+    client, pid, seqs = project
+    connect(client, fake_items)
+    sid = seqs[0]["id"]
+    rows = client.get(f"/api/projects/{pid}/photos").json()
+    f = rows["fields"]
+    mine = [dict(zip(f, r)) for r in rows["rows"] if r[f.index("sequence_id")] == sid]
+    det = [client.get(f"/api/projects/{pid}/photos/{p['id']}").json() for p in mine[:12]]
+    from datetime import datetime, timezone
+    feats = {}
+    for i, d in enumerate(det):
+        pic = str(uuid.uuid4())
+        name = d["filename"] if i < 10 else "renamed.jpg"  # the last two only match by capture time
+        when = datetime.fromtimestamp(d["ts"], timezone.utc).isoformat()
+        feats[pic] = {"id": pic, "geometry": {"type": "Point", "coordinates": [d["lon"] or d["lon_orig"], d["lat"] or d["lat_orig"]]},
+                      "properties": {"original_file:name": name, "datetime": when, "view:azimuth": 0, "pers:yaw": 0}}
+    cid = str(uuid.uuid4())
+    fake_items.items[cid] = feats
+    r = client.post(f"/api/projects/{pid}/sequences/{sid}/panoramax/link", json={"collection": f"https://pnx.test/#focus=map&seq={cid}"}).json()
+    assert r == {"collection_id": cid, "matched": 12, "local": len(mine), "remote": 12}
+    d = client.get(f"/api/projects/{pid}/sequences/{sid}/panoramax/compare").json()
+    assert d["collection_id"] == cid and d["not_published"] == len(mine) - 12 and d["headings"] >= 1
+    bad = client.post(f"/api/projects/{pid}/sequences/{sid}/panoramax/link", json={"collection": "pas un identifiant"})
+    assert bad.status_code == 409

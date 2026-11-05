@@ -26,7 +26,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 3 | Recalage sur les voies OSM d'une sélection (tronçons, choix de la voie si ambiguïté, aperçu) | ✅ |
 | 3 (reste) | Import GPX | à faire |
 | 4 | Publication Panoramax par séquence (connexion par lien de validation, reprise d'un envoi interrompu) | ✅ |
-| 4 (suite) | Modification des séquences déjà publiées (positions, caps, orientation, suppressions) | à faire |
+| 4 (suite) | Modification des séquences déjà publiées : association, comparaison, envoi des différences, retour en arrière | ✅ |
 
 ## Documentation
 

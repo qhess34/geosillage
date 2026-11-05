@@ -1,0 +1,155 @@
+import { useState } from 'react'
+import { api, PublishedDiff, Sequence } from './api'
+
+// Séquences tab: corrections of a sequence already on Panoramax (published by the application, or linked)
+export default function PublishedEdit({
+  projectId,
+  s,
+  onStarted,
+  onError,
+}: {
+  projectId: string
+  s: Sequence
+  onStarted: () => void
+  onError: (msg: string) => void
+}) {
+  const [diff, setDiff] = useState<PublishedDiff | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const [address, setAddress] = useState('')
+  const [delExcluded, setDelExcluded] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  const compare = () => {
+    setBusy(true)
+    setNote(null)
+    api.pnxCompare(projectId, s.id).then(
+      (d) => {
+        setDiff(d)
+        setBusy(false)
+      },
+      (e) => {
+        setBusy(false)
+        onError(e.message)
+      },
+    )
+  }
+  const started = () => {
+    setDiff(null)
+    setConfirm(false)
+    onStarted()
+  }
+
+  if (!s.last_publication) {
+    return linking ? (
+      <form
+        className="row wrap small-text"
+        onSubmit={(e) => {
+          e.preventDefault()
+          api.pnxLink(projectId, s.id, address).then(
+            (r) => {
+              setLinking(false)
+              setNote(`Associée : ${r.matched} photo(s) sur ${r.remote} publiée(s) reconnue(s).`)
+              onStarted()
+            },
+            (er) => onError(er.message),
+          )
+        }}
+      >
+        <input
+          className="grow"
+          autoFocus
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Adresse ou identifiant de la séquence sur Panoramax"
+          aria-label="Séquence Panoramax"
+        />
+        <button className="small" type="submit" disabled={address.trim().length < 10}>
+          Associer
+        </button>
+        <button className="small" type="button" onClick={() => setLinking(false)}>
+          Annuler
+        </button>
+      </form>
+    ) : (
+      <div className="small-text">
+        <button className="link" onClick={() => setLinking(true)} title="Pour corriger une séquence publiée sans l'application (photos reconnues par nom de fichier ou heure de prise de vue)">
+          Associer à une séquence déjà publiée…
+        </button>
+        {note && <span className="muted"> {note}</span>}
+      </div>
+    )
+  }
+
+  const nothing = diff && diff.photos_to_update === 0 && diff.to_delete === 0
+  return (
+    <div className="published-edit small-text">
+      {!diff ? (
+        <button className="small" disabled={busy} onClick={compare} title="Compare les positions, caps et orientations avec ceux de la séquence publiée">
+          {busy ? 'Comparaison…' : 'Comparer avec Panoramax'}
+        </button>
+      ) : (
+        <div className="confirm-box">
+          {nothing ? (
+            <div>✓ La séquence publiée est à jour.</div>
+          ) : (
+            <div>
+              À envoyer : {diff.photos_to_update} photo(s) — {diff.positions} position(s), {diff.headings} cap(s), {diff.orientations}{' '}
+              orientation(s)
+              {diff.to_delete > 0 && <>, {diff.to_delete} photo(s) exclue(s) depuis</>}.
+            </div>
+          )}
+          {diff.not_published > 0 && (
+            <div className="warn-text">
+              {diff.not_published} photo(s) de la séquence ne sont pas sur Panoramax (ajoutées depuis) : elles ne peuvent pas être ajoutées,
+              republiez la séquence pour les inclure.
+            </div>
+          )}
+          {!nothing && (
+            <>
+              {diff.to_delete > 0 && (
+                <label className="option-line">
+                  <input type="checkbox" checked={delExcluded} onChange={(e) => setDelExcluded(e.target.checked)} /> Supprimer aussi de Panoramax
+                  les {diff.to_delete} photo(s) exclue(s) (définitif)
+                </label>
+              )}
+              <div className="muted">
+                Les corrections sont enregistrées par l'instance (affichage, carte), pas dans le fichier d'origine stocké sur Panoramax.
+              </div>
+              {confirm ? (
+                <div className="row wrap">
+                  <span>Envoyer ces corrections sur {diff.instance.replace(/^https?:\/\//, '')} ?</span>
+                  <button className="small primary" onClick={() => api.pnxPush(projectId, s.id, delExcluded).then(started, (e) => onError(e.message))}>
+                    Envoyer
+                  </button>
+                  <button className="small" onClick={() => setConfirm(false)}>
+                    Annuler
+                  </button>
+                </div>
+              ) : (
+                <button className="small primary" onClick={() => setConfirm(true)}>
+                  Envoyer les corrections
+                </button>
+              )}
+            </>
+          )}
+          <div className="row wrap">
+            {diff.last_edit && (
+              <button
+                className="small"
+                onClick={() => api.pnxRevert(projectId, s.id).then(started, (e) => onError(e.message))}
+                title="Renvoie les valeurs qu'avait Panoramax avant le dernier envoi de corrections (les photos supprimées ne reviennent pas)"
+              >
+                Remettre les valeurs d'avant (envoi du {new Date(diff.last_edit.ts * 1000).toLocaleString('fr-FR')})
+              </button>
+            )}
+            <button className="small" onClick={() => setDiff(null)}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

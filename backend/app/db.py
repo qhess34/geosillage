@@ -161,6 +161,19 @@ MIGRATIONS = [
         PRIMARY KEY (photo_id, instance)
     );
     """,
+    """
+    -- Corrections sent to an already published sequence: server values before / after, to put them back
+    CREATE TABLE IF NOT EXISTS published_edit(
+        id INTEGER PRIMARY KEY,
+        sequence_id INTEGER NOT NULL,
+        instance TEXT NOT NULL,
+        collection_id TEXT NOT NULL,
+        ts REAL NOT NULL,
+        data TEXT NOT NULL,           -- [{picture_id, before: {...}, after: {...}}]
+        deleted TEXT NOT NULL,        -- picture ids deleted (cannot be put back)
+        reverted INTEGER NOT NULL DEFAULT 0
+    );
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

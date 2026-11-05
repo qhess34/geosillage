@@ -392,7 +392,28 @@ séquence est prête. Un envoi interrompu (réseau coupé…) reprend où il s'�
 
 Ensuite, onglets *Séquences* et *Export* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
 sur le site de l'instance) ; *modifiée depuis la publication* si la séquence a changé depuis (corrections à
-envoyer : voir § 9 bis, à venir).
+envoyer : voir ci-dessous).
+
+### Corriger une séquence déjà publiée
+
+Après publication, on peut encore corriger ici positions, caps et orientation (caméra mal réglée sur le casque…)
+et **envoyer seulement les différences**, sans republier :
+
+1. Onglet *Séquences*, sur la séquence : **Comparer avec Panoramax**. Résumé : « À envoyer : 111 photo(s) —
+   2 position(s), 111 cap(s), 111 orientation(s) », photos exclues depuis, photos ajoutées depuis.
+2. **Envoyer les corrections**, puis confirmer. Les photos exclues depuis la publication peuvent aussi être
+   supprimées de Panoramax (case à cocher, définitif).
+3. **Remettre les valeurs d'avant** renvoie les valeurs qu'avait Panoramax avant le dernier envoi (les photos
+   supprimées ne reviennent pas).
+
+**Séquence publiée sans l'application** (par exemple vos séquences déjà en ligne) : sur la séquence locale
+correspondante, *Associer à une séquence déjà publiée…*, coller l'adresse de la séquence sur Panoramax (ou son
+identifiant) : les photos sont reconnues par leur nom de fichier, sinon par leur heure de prise de vue. Ensuite,
+*Comparer* et *Envoyer* comme ci-dessus.
+
+Limites (celles de Panoramax) : les corrections sont enregistrées par l'instance (affichage, carte, données servies)
+mais pas dans le fichier d'origine stocké sur Panoramax ; on ne peut ni ajouter de photos à une séquence publiée,
+ni la couper ou la fusionner : il faut alors la republier.
 
 ### Avec d'autres outils
 

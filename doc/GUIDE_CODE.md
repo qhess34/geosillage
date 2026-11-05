@@ -306,6 +306,23 @@ publication restée `uploading` reprend dans le même upload set (`GET …/files
 connexion, jeton privé, paramètres de l'envoi, reprise, réexport préalable). Un envoi réel n'a pas été testé :
 à faire avec le compte de l'utilisateur, en visibilité « moi seulement ».
 
+## Séquences déjà publiées (corrections)
+
+`panoramax.py` (`link`, `compare`, `push`, `revert`), routes `…/sequences/{sid}/panoramax/{link,compare,push,revert}`,
+interface `PublishedEdit.tsx` (onglet Séquences). L'API Panoramax permet de modifier une photo publiée
+(`PATCH /api/collections/{seq}/items/{pic}` : `latitude`/`longitude`, `heading` → `heading_computed = false`,
+`yaw`/`pitch`/`roll` = ce que lit le viewer) et de la supprimer (`DELETE`) ; pas de remplacement d'image, d'ajout ni
+de découpe. **Association** d'une séquence publiée ailleurs : identifiant extrait du texte collé (UUID), photos de la
+collection (`GET …/items`, pages `next`) appariées par `original_file:name` (nom exporté ou d'origine), puis par
+`datetime` à ± 1,5 s de `ts` / `gps_ts` ; écrit `published_photo` et une `publication` (`upload_set_id` vide).
+**Comparaison** : valeurs attendues = ce qu'écrit l'export (`_expected` : position effective, cap final arrondi
+comme Panoramax avec la règle « 0 → 0,6 », lacet 0–360) contre `geometry`, `view:azimuth`, `pers:*` ; écarts :
+position > 0,5 m, cap ≥ 1°, lacet > 0,5°, tangage/roulis nuls alors qu'un lacet est attendu (→ 0,01). Photos
+exclues ou sorties de la séquence → suppression proposée ; photos sans `published_photo` → « à republier ».
+**Envoi** (tâche `publish_update`) : PATCH des seules photos différentes (3 en parallèle), DELETE si demandé ;
+valeurs serveur d'avant gardées dans `published_edit` (retour en arrière) ; sans erreur, la date de la publication
+est avancée (`changed_since_publication` retombe). Tests : `test_publish.py` (faux serveur avec photos paginées).
+
 ## Réexport
 
 `sequence.modified_at` : posé par `undo.undoable` (et par annuler / rétablir) sur les séquences dont le contenu

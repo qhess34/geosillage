@@ -21,6 +21,7 @@ const JOB_LABELS: Record<string, string> = {
   check_files: 'Vérification des fichiers',
   export: 'Export',
   publish: 'Publication Panoramax',
+  publish_update: 'Corrections sur Panoramax',
 }
 
 const POS_LABELS: Record<string, string> = {

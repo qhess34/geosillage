@@ -70,3 +70,39 @@ def publications(pid: str):
     with db.open_project(pid) as conn:
         rows = conn.execute("SELECT p.*, s.name FROM publication p LEFT JOIN sequence s ON s.id = p.sequence_id ORDER BY p.id DESC LIMIT 50")
         return [dict(r) for r in rows]
+
+
+# ---- Already published sequences ----
+
+
+class LinkIn(BaseModel):
+    collection: str = Field(min_length=10, max_length=500)  # address or identifier of the published sequence
+
+
+@router.post("/projects/{pid}/sequences/{sid}/panoramax/link")
+def pnx_link(pid: str, sid: int, body: LinkIn):
+    """Link a sequence published outside the application (pictures matched by file name, then capture time)."""
+    return _err(lambda: panoramax.link(pid, sid, body.collection))
+
+
+@router.get("/projects/{pid}/sequences/{sid}/panoramax/compare")
+def pnx_compare(pid: str, sid: int):
+    """What would be sent: counts of positions / headings / orientations to correct, pictures to delete."""
+    d = _err(lambda: panoramax.compare(pid, sid))
+    return {k: v for k, v in d.items() if not k.startswith("_")}
+
+
+class PushIn(BaseModel):
+    delete_excluded: bool = False
+
+
+@router.post("/projects/{pid}/sequences/{sid}/panoramax/push", status_code=202)
+def pnx_push(pid: str, sid: int, body: PushIn):
+    _err(panoramax._account)
+    return {"job_id": jobs.start(pid, "publish_update", lambda ctx: panoramax.push(ctx, pid, sid, body.delete_excluded), unique=False)}
+
+
+@router.post("/projects/{pid}/sequences/{sid}/panoramax/revert", status_code=202)
+def pnx_revert(pid: str, sid: int):
+    _err(panoramax._account)
+    return {"job_id": jobs.start(pid, "publish_update", lambda ctx: panoramax.revert(ctx, pid, sid), unique=False)}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
 import { PUBLICATION_STATES, viewerUrl } from './PublishPanel'
+import PublishedEdit from './PublishedEdit'
 import YawRotate from './YawRotate'
 
 interface Props {
@@ -95,6 +96,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
           </>
         )}
       </div>
+      <PublishedEdit projectId={projectId} s={s} onStarted={props.onExported} onError={onError} />
       <div className="muted small-text">
         {fmtTime(s.start)} → {fmtTime(s.end, false)} · {fmtDuration(s.duration_s)} · {fmtDistance(s.distance_m)}
       </div>

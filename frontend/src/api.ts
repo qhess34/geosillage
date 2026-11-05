@@ -116,6 +116,18 @@ export interface Publication {
   message: string | null
 }
 
+export interface PublishedDiff {
+  instance: string
+  collection_id: string
+  positions: number
+  headings: number
+  orientations: number
+  photos_to_update: number
+  to_delete: number // photos excluded since the publication
+  not_published: number // photos added since: cannot be added, republish
+  last_edit: { id: number; ts: number } | null
+}
+
 export interface PanoramaxStatus {
   instance: string
   connected: boolean
@@ -372,6 +384,13 @@ export const api = {
   pnxLogout: () => req<PanoramaxStatus>('POST', '/api/panoramax/logout'),
   publish: (id: string, sequence_ids: number[], visibility: 'anyone' | 'owner-only', bike: boolean) =>
     req<{ job_id: string }>('POST', `/api/projects/${id}/publish`, { sequence_ids, visibility, bike }),
+  // sequences already published: link one published elsewhere, compare, send the corrections, put them back
+  pnxLink: (id: string, sid: number, collection: string) =>
+    req<{ collection_id: string; matched: number; local: number; remote: number }>('POST', `/api/projects/${id}/sequences/${sid}/panoramax/link`, { collection }),
+  pnxCompare: (id: string, sid: number) => req<PublishedDiff>('GET', `/api/projects/${id}/sequences/${sid}/panoramax/compare`),
+  pnxPush: (id: string, sid: number, delete_excluded: boolean) =>
+    req<{ job_id: string }>('POST', `/api/projects/${id}/sequences/${sid}/panoramax/push`, { delete_excluded }),
+  pnxRevert: (id: string, sid: number) => req<{ job_id: string }>('POST', `/api/projects/${id}/sequences/${sid}/panoramax/revert`),
   // snapping a selection onto OpenStreetMap ways
   snapPropose: (id: string, start_idx: number, end_idx: number) =>
     req<SnapProposal>('POST', `/api/projects/${id}/osm/snap/propose`, { start_idx, end_idx }),
