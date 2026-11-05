@@ -16,7 +16,7 @@ interface Props {
   onExported: () => void // an export job was started
   onError: (msg: string) => void
   pnx?: boolean // Panoramax project: published sequences, their cut and export do not change
-  onSnap?: (s: Sequence) => void // OSM snapping of the whole sequence
+  onSeqContext?: (s: Sequence, x: number, y: number) => void // right click on a sequence: context menu
 }
 
 function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; props: Props }) {
@@ -41,7 +41,14 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
   const inThis = current?.sequence_id === s.id
 
   return (
-    <li className={`seq ${inThis ? 'active' : ''}`}>
+    <li
+      className={`seq ${inThis ? 'active' : ''}`}
+      onContextMenu={(e) => {
+        if (!props.onSeqContext || (e.target as HTMLElement).closest('input, textarea')) return
+        e.preventDefault()
+        props.onSeqContext(s, e.clientX, e.clientY)
+      }}
+    >
       <div className="seq-head">
         <span className="chip" style={{ background: seqColor(sequences, s.id) }} />
         {editing ? (
@@ -128,11 +135,6 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         <button className="small" onClick={() => setEditing(true)}>
           Renommer
         </button>
-        {props.onSnap && (
-          <button className="small" onClick={() => props.onSnap?.(s)} title="Placer les photos de la séquence sur les rues / pistes d'OpenStreetMap (aperçu et choix avant de valider)">
-            Recaler sur OSM
-          </button>
-        )}
         <YawRotate projectId={projectId} target={{ sequence_id: s.id }} what="les photos de la séquence" onDone={() => props.onRefresh()} onError={onError} />
         {!props.pnx && inThis && current && current.idx !== s.start_idx && (
           <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title="Couper avant la photo courante (C)">

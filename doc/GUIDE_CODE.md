@@ -131,8 +131,10 @@ emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de
 **Routes** : `POST …/osm/snap/propose` (rien n'est modifié ; `manual_ids` : photos placées à la main) et
 `POST …/osm/snap/apply` (segments choisis → projection, `pos_method = 'osm'`, une opération annulable ; photos
 `manual` épargnées si `keep_manual`). **Interface** : `OsmSnapPanel.tsx` (au-dessus de l'onglet Photo, amené à
-l'écran à l'ouverture ; ouvert depuis une séquence de l'onglet Séquences, la section Position ou les outils de
-plage). Portée propre au panneau, **indépendante du découpage** (`seqStart` jamais utilisé) : `sequence` (séquence
+l'écran à l'ouverture ; ouvert par le menu contextuel `ContextMenu.tsx` : clic droit sur la carte (`PhotoMap.onContextMenu`), la
+timeline (`Timeline.onContextMenu`) ou une séquence (`SequencesTab.onSeqContext`) ; `photosContext` prend la
+sélection si la photo cliquée en fait partie, sinon la photo ; le menu propose aussi « Créer une séquence » si
+aucune photo choisie n'est classée, hors projet Panoramax). Portée propre au panneau, **indépendante du découpage** (`seqStart` jamais utilisé) : `sequence` (séquence
 de la photo à l'ouverture), `timeline` (plage tracée, seulement si aucun début n'est posé), `custom` (bornes « de
 cette photo / jusqu'à cette photo », ou `D` / `F` interceptés par la fenêtre en phase de capture tant
 qu'elle est ouverte : la fin suit ← → après `D`, proposition recalculée 0,5 s après la dernière touche) ; la portée est surlignée sur la carte et la timeline (`snapHighlight`, couches `range` + `range-ring` de la carte). Le panneau est une fenêtre flottante dans la zone

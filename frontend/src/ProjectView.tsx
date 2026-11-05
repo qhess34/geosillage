@@ -13,6 +13,7 @@ import { positionAt, Track } from './timesync'
 import { AGE_CLASSES, loadOverlay, OverlaySettings, PANORAMAX_PRESETS, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
+import ContextMenu, { MenuItem } from './ContextMenu'
 import OsmSnapPanel, { SnapPreview, SnapScope } from './OsmSnapPanel'
 import YawRotate from './YawRotate'
 
@@ -298,11 +299,10 @@ interface PhotoTabProps {
   seqButtons: React.ReactNode
   onView: (yawDeg: number) => void
   onChanged: (u?: UndoState) => void
-  onSnap: (fromRange: boolean) => void // open the OSM snapping panel (on the timeline range, or the photo's sequence)
   onError: (m: string) => void
 }
 
-function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onView, onChanged, onSnap, onError }: PhotoTabProps) {
+function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onView, onChanged, onError }: PhotoTabProps) {
   const [draft, setDraft] = useState<number | null>(null)
   const [typed, setTyped] = useState('')
   const [rangeValue, setRangeValue] = useState('15')
@@ -518,13 +518,6 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
               Revenir à la position d'origine
             </button>
           )}
-          <button
-            className="small"
-            onClick={() => onSnap(false)}
-            title="Placer des photos sur les rues / pistes d'OpenStreetMap : séquence de la photo, plage de la timeline ou photos choisies (le découpage des séquences ne change pas)"
-          >
-            Recaler sur OSM…
-          </button>
         </div>
       </div>
       {range && (
@@ -552,11 +545,6 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
             </button>
             <button className="small" onClick={() => batch('revert')}>
               Positions d'origine
-            </button>
-          </div>
-          <div className="row wrap">
-            <button className="small" onClick={() => onSnap(true)} title="Placer les photos de la plage sur les rues / pistes d'OpenStreetMap (choix de la voie si plusieurs sont possibles)">
-              Recaler sur OSM
             </button>
           </div>
         </div>
@@ -700,7 +688,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const mapPhotos = useMemo(() => (showExcluded ? photos : photos.filter((p) => !p.excluded)), [photos, showExcluded])
   const [centerTick, setCenterTick] = useState(0)
   // OSM snapping of a range: panel shown above the photo tab, preview on the map
-  const [snapOpen, setSnapOpen] = useState<{ scope: SnapScope; sequenceId: number | null } | null>(null)
+  const [snapOpen, setSnapOpen] = useState<{ scope: SnapScope; sequenceId: number | null; bounds?: [number, number] } | null>(null)
+  // context menu (right click / long press) on the map, the timeline or a sequence
+  const [ctx, setCtx] = useState<{ x: number; y: number; kind: 'photos' | 'sequence'; range?: [number, number]; sequenceId?: number | null } | null>(null)
   const [snapPreview, setSnapPreview] = useState<SnapPreview | null>(null)
   const [snapHighlight, setSnapHighlight] = useState<[number, number] | null>(null) // photos the snapping panel works on
   const setOverlay = (o: OverlaySettings) => {
@@ -1021,6 +1011,61 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     return () => window.removeEventListener('keydown', onKey)
   }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx])
 
+  // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
+  const photosContext = (idx: number | null, x: number, y: number) => {
+    if (range && (idx == null || (idx >= range[0] && idx <= range[1]))) setCtx({ x, y, kind: 'photos', range })
+    else if (idx != null) {
+      goIdx(idx)
+      setCtx({ x, y, kind: 'photos', range: [idx, idx] })
+    }
+  }
+  const ctxItems = (): { title: string; items: MenuItem[] } => {
+    if (!ctx) return { title: '', items: [] }
+    if (ctx.kind === 'sequence') {
+      const sq = sequences.find((x) => x.id === ctx.sequenceId)
+      return {
+        title: sq ? `${sq.name} (${sq.count} photos)` : 'Séquence',
+        items: [
+          {
+            label: 'Recaler sur OpenStreetMap…',
+            disabled: !sq,
+            onClick: () => {
+              if (!sq) return
+              goIdx(sq.start_idx)
+              setSnapOpen({ scope: 'sequence', sequenceId: sq.id })
+            },
+          },
+        ],
+      }
+    }
+    const r = ctx.range as [number, number]
+    const inSeq = photos[r[0]]?.sequence_id ?? null
+    const sameSeq = inSeq != null && photos.slice(r[0], r[1] + 1).every((p) => p.sequence_id === inSeq)
+    const sq = sameSeq ? sequences.find((x) => x.id === inSeq) : undefined
+    const items: MenuItem[] = [
+      {
+        label: r[0] === r[1] ? 'Recaler cette photo sur OpenStreetMap…' : `Recaler ces ${r[1] - r[0] + 1} photos sur OpenStreetMap…`,
+        onClick: () => setSnapOpen({ scope: 'custom', sequenceId: inSeq, bounds: r }),
+      },
+    ]
+    if (!isPnx && photos.slice(r[0], r[1] + 1).every((p) => p.sequence_id == null))
+      items.push({
+        label: r[0] === r[1] ? 'Créer une séquence avec cette photo' : `Créer une séquence avec ces ${r[1] - r[0] + 1} photos`,
+        onClick: () =>
+          api.createSequence(projectId, r[0], r[1]).then((st) => {
+            applyState({ ...st, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` })
+            setRange(null)
+            setSeqStart(null)
+          }, (er) => setError(er.message)),
+      })
+    if (sq)
+      items.push({
+        label: `Recaler toute la séquence « ${sq.name} »…`,
+        onClick: () => setSnapOpen({ scope: 'sequence', sequenceId: sq.id }),
+      })
+    return { title: r[0] === r[1] ? `Photo ${r[0] + 1}` : `Photos ${r[0] + 1} → ${r[1] + 1}`, items }
+  }
+
   const chooseBasemap = (id: string) => {
     if (id === '__add') {
       const name = prompt('Nom du fond de carte')
@@ -1128,6 +1173,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       <main className="main" style={{ gridTemplateColumns: `1fr 6px ${panelWidth}px` }}>
         <div className="center">
           <PhotoMap
+            onContextMenu={(id, x, y) => photosContext(id == null ? null : photos.find((p) => p.id === id)?.idx ?? null, x, y)}
             photos={mapPhotos}
             sequences={sequences}
             basemap={basemap}
@@ -1188,9 +1234,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           )}
             {snapOpen && (
               <OsmSnapPanel
-                key={`${snapOpen.scope}-${snapOpen.sequenceId}`}
+                key={`${snapOpen.scope}-${snapOpen.sequenceId}-${snapOpen.bounds?.join('-')}`}
                 projectId={projectId}
                 initialScope={snapOpen.scope}
+                initialBounds={snapOpen.bounds}
                 sequenceId={snapOpen.sequenceId}
                 timelineRange={seqStart == null ? range : null}
                 current={current}
@@ -1207,7 +1254,15 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onError={fail}
               />
             )}
-          <Timeline photos={photos} sequences={sequences} selectedIdx={current?.idx ?? null} range={snapOpen && snapHighlight ? snapHighlight : range} onPick={goIdx} />
+          <Timeline
+            photos={photos}
+            sequences={sequences}
+            selectedIdx={current?.idx ?? null}
+            range={snapOpen && snapHighlight ? snapHighlight : range}
+            onPick={goIdx}
+            onContextMenu={photosContext}
+          />
+          {ctx && <ContextMenu x={ctx.x} y={ctx.y} {...ctxItems()} onClose={() => setCtx(null)} />}
         </div>
         <div className="resizer" onMouseDown={startResize} title="Redimensionner" />
         <aside className="side">
@@ -1238,12 +1293,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   seqButtons={isPnx ? null : <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} big />}
                   onView={setViewYaw}
                   onChanged={afterHeadingChange}
-                  onSnap={(fromRange) =>
-                    setSnapOpen({
-                      scope: fromRange && range && seqStart == null ? 'timeline' : current?.sequence_id != null ? 'sequence' : 'custom',
-                      sequenceId: current?.sequence_id ?? null,
-                    })
-                  }
                   onError={fail}
                 />
               ) : (
@@ -1252,10 +1301,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'sequences' && (
               <SequencesTab
                 pnx={isPnx}
-                onSnap={(sq) => {
-                  goIdx(sq.start_idx)
-                  setSnapOpen({ scope: 'sequence', sequenceId: sq.id })
-                }}
+                onSeqContext={(sq, x, y) => setCtx({ x, y, kind: 'sequence', sequenceId: sq.id })}
                 projectId={projectId}
                 sequences={sequences}
                 current={current}

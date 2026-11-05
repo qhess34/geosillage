@@ -38,6 +38,7 @@ export type SnapScope = 'sequence' | 'timeline' | 'custom'
 export default function OsmSnapPanel({
   projectId,
   initialScope,
+  initialBounds,
   sequenceId,
   timelineRange,
   current,
@@ -51,6 +52,7 @@ export default function OsmSnapPanel({
 }: {
   projectId: string
   initialScope: SnapScope
+  initialBounds?: [number, number] | null // photos chosen when opening (custom scope)
   sequenceId: number | null // sequence of the photo when the panel was opened
   timelineRange: [number, number] | null // range drawn on the timeline (drag / Shift+click)
   current: PhotoRow | null
@@ -89,7 +91,7 @@ export default function OsmSnapPanel({
     const top = Math.max(0, Math.min(parent.height - 40, e.clientY - parent.top - drag.current.dy))
     setPos({ left, top })
   }
-  const [bounds, setBounds] = useState<[number | null, number | null]>([current?.idx ?? null, null])
+  const [bounds, setBounds] = useState<[number | null, number | null]>(initialBounds ?? [current?.idx ?? null, null])
   // after D, the end follows the navigation (← →) until F, as for a sequence — but nothing is cut here
   const [following, setFollowing] = useState(false)
   const cur = useRef(current)

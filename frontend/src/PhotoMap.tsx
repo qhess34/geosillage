@@ -21,6 +21,7 @@ interface Props {
   centerTick: number // incremented to center the map on the selected photo once
   snapPreview?: SnapPreview | null // OSM snapping preview: candidate ways and moves
   onSelect: (id: number, extend: boolean) => void
+  onContextMenu?: (photoId: number | null, x: number, y: number) => void // right click / long press
   onMove: (id: number, lat: number, lon: number) => void
   onSyncOffset: (offset: number, final: boolean) => void
 }
@@ -150,7 +151,7 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, overlay, follow, centerTick, snapPreview, onSelect, onMove, onSyncOffset }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, overlay, follow, centerTick, snapPreview, onSelect, onMove, onSyncOffset, onContextMenu }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
@@ -158,8 +159,8 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
   const dragging = useRef(false)
   const ready = useRef(false)
   const fitted = useRef(false)
-  const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview })
-  latest.current = { photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview }
+  const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview, onContextMenu })
+  latest.current = { photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview, onContextMenu }
 
   const rangeFilter = (r: [number, number] | null): maplibregl.FilterSpecification =>
     r ? ['all', ['>=', ['get', 'idx'], r[0]], ['<=', ['get', 'idx'], r[1]]] : ['==', ['get', 'idx'], -1]
@@ -364,6 +365,14 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       // Edit mode: a click on the map places the selected photo if it has no position yet
       const sel = photos.find((p) => p.id === selectedId)
       if (editMode && sel && (sel.lat == null || sel.lon == null)) onMove(sel.id, e.lngLat.lat, e.lngLat.lng)
+    })
+    m.on('contextmenu', (e) => {
+      const cb = latest.current.onContextMenu
+      if (!cb) return
+      e.originalEvent.preventDefault()
+      const f = m.getLayer('photos') ? m.queryRenderedFeatures(e.point, { layers: ['photos'] })[0] : undefined
+      const ev = e.originalEvent as MouseEvent
+      cb(f ? Number(f.properties?.id) : null, ev.clientX, ev.clientY)
     })
     bindOverlayTooltip(m, () => latest.current.overlay.url)
     m.on('mouseenter', 'photos', () => (m.getCanvas().style.cursor = 'pointer'))

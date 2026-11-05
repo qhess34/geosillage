@@ -7,6 +7,7 @@ interface Props {
   selectedIdx: number | null
   range: [number, number] | null
   onPick: (idx: number, extend: boolean) => void
+  onContextMenu?: (idx: number, x: number, y: number) => void // right click / long press
 }
 
 // Chronological strip: one column per photo (x = index), coloured by sequence.
@@ -15,7 +16,7 @@ interface Props {
 const DRAG_PX = 8 // minimal horizontal movement for a drag to select a range
 const MIN_SPAN = 20 // photos visible at the maximal zoom
 
-export default function Timeline({ photos, sequences, selectedIdx, range, onPick }: Props) {
+export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const dragging = useRef(false)
   const downX = useRef(0)
@@ -146,8 +147,13 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
       ref={canvas}
       className="timeline"
       title="Clic : aller à la photo · Maj+clic ou glisser : sélectionner une plage"
+      onContextMenu={(e) => {
+        if (!onContextMenu || !photos.length) return
+        e.preventDefault()
+        onContextMenu(idxAt(e as unknown as React.PointerEvent), e.clientX, e.clientY)
+      }}
       onPointerDown={(e) => {
-        if (!photos.length) return
+        if (!photos.length || e.button === 2) return
         ;(e.target as Element).setPointerCapture(e.pointerId)
         dragging.current = true
         downX.current = e.clientX

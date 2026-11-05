@@ -255,9 +255,12 @@ report affiche un message et s'annule avec `Ctrl+Z`. Décocher la case pour corr
 
 ### Recaler sur les voies OpenStreetMap
 
-Le recalage est **indépendant du découpage des séquences** (il n'utilise ni *Début* ni *Fin*). Pour l'ouvrir :
-- onglet *Séquences* : **Recaler sur OSM** sur une séquence (toute la séquence) ;
-- onglet *Photo*, section *Position* : **Recaler sur OSM…**.
+Le recalage est **indépendant du découpage des séquences**. Il s'ouvre par le **menu contextuel** (clic droit, ou
+appui long sur un écran tactile) :
+- sur une photo de la carte ou de la timeline : *Recaler cette photo*, ou *Recaler toute la séquence* de la photo ;
+- sur une sélection (plage tracée sur la timeline, ou en cours avec *Début*) : *Recaler ces N photos* ; si aucune
+  de ces photos n'est dans une séquence, le menu propose aussi **Créer une séquence avec ces photos** ;
+- sur une séquence de l'onglet *Séquences* : *Recaler sur OpenStreetMap*.
 
 Le recalage s'ouvre dans une **fenêtre flottante par-dessus la carte** : la carte reste visible (aperçu) et
 utilisable autour ; la fenêtre se déplace par sa barre de titre et se ferme avec ✕ ou `Échap`.
