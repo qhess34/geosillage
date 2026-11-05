@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FLAGS, PhotoRow, seqColor, Sequence } from './api'
+import { FLAGS, PhotoRow, QualityIssue, seqColor, Sequence } from './api'
 
 interface Props {
   photos: PhotoRow[]
@@ -8,6 +8,7 @@ interface Props {
   range: [number, number] | null
   onPick: (idx: number, extend: boolean) => void
   onContextMenu?: (idx: number, x: number, y: number) => void // right click / long press
+  warnings?: QualityIssue[] // points to check (stops, spacing…): amber marks above the strip
 }
 
 // Chronological strip: one column per photo (x = index), coloured by sequence.
@@ -16,7 +17,7 @@ interface Props {
 const DRAG_PX = 8 // minimal horizontal movement for a drag to select a range
 const MIN_SPAN = 20 // photos visible at the maximal zoom
 
-export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu }: Props) {
+export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu, warnings }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const dragging = useRef(false)
   const downX = useRef(0)
@@ -106,6 +107,12 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
           g.fillRect(x(i) - 1, 0, 2, h)
         }
       }
+      // points to check: amber marks at the top (the photos concerned stay as they are)
+      g.fillStyle = '#d97706'
+      for (const wr of warnings ?? []) {
+        if (wr.end_idx < start || wr.start_idx >= start + span) continue
+        g.fillRect(x(wr.start_idx), 2, Math.max(3, x(wr.end_idx + 1) - x(wr.start_idx)), 6)
+      }
       if (selectedIdx != null) {
         g.fillStyle = '#facc15'
         g.strokeStyle = '#111827'
@@ -124,7 +131,7 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
     const ro = new ResizeObserver(draw)
     ro.observe(c)
     return () => ro.disconnect()
-  }, [photos, sequences, selectedIdx, range, start, span]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [photos, sequences, selectedIdx, range, start, span, warnings]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const idxAt = (e: React.PointerEvent) => {
     const b = (canvas.current as HTMLCanvasElement).getBoundingClientRect()

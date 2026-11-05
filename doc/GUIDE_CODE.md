@@ -405,6 +405,17 @@ Si la photo suivante est cohérente avec la référence, c'est un saut isolé : 
 Sinon c'est un décalage durable : la photo est signalée une fois et devient la référence.
 Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`).
 
+## Points à vérifier (contrôle qualité)
+
+`core/quality.py`, `GET /api/projects/{id}/quality` : calcul à la demande, rien n'est écrit ni modifié (le choix
+de la photo à garder dans un arrêt revient à l'utilisateur). Photos non exclues et utilisables, dans l'ordre :
+`stop` (≥ `STOP_MIN` photos consécutives à moins de `STOP_M` les unes des autres), `spacing` (> `SPACING_M` entre deux
+photos consécutives, pas à travers une interruption, un saut GPS ni des photos exclues), `gps_dop` (> `DOP_MAX`),
+`heading` (cap manuel à plus de `HEADING_DIFF` du cap calculé) ; photos consécutives regroupées en tronçons
+`{kind, start_idx, end_idx, count, detail}`. Interface : rechargé à chaque rechargement des photos (`ProjectView`),
+marques orange en haut de la `Timeline` (`warnings`) et section du *Bilan* (`QualityChecks`). Tests :
+`test_quality.py`.
+
 ## Pièges connus
 
 - ExifTool doit être installé (`libimage-exiftool-perl`) ; chemin modifiable via `PSS_EXIFTOOL`.

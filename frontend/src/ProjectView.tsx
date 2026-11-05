@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, FLAG_LABELS, FLAGS, Job, MissingRun, PhotoDetail, PhotoRow, Project, SeqState, Sequence, UndoState } from './api'
+import { api, FLAG_LABELS, FLAGS, Job, MissingRun, PhotoDetail, PhotoRow, Project, QualityIssue, SeqState, Sequence, UndoState } from './api'
 import { Basemap, BUILTIN_BASEMAPS, loadCustomBasemaps, saveCustomBasemaps } from './basemaps'
 import ExportTab from './ExportTab'
 import { fmtCoord, fmtDistance, fmtDuration, fmtSize, fmtTime } from './format'
@@ -132,6 +132,57 @@ function shifted(lat: number, lon: number, east: number, north: number): { lat: 
 }
 
 // Photos without a position, by block, with the positioned photos before / after them (Bilan tab)
+const QUALITY: Record<QualityIssue['kind'], { title: string; help: string }> = {
+  stop: {
+    title: 'Arrêts',
+    help: "Plusieurs photos au même endroit (feu rouge, pause). Gardez la ou les meilleures — pas forcément la première — et excluez les autres (X).",
+  },
+  spacing: { title: 'Grands écarts', help: 'Plus de 25 m entre deux photos qui se suivent : vitesse élevée, photos manquantes ou position à vérifier.' },
+  gps_dop: { title: 'Précision GPS faible', help: 'Le GPS de la caméra signale une position peu précise (DOP > 5) : vérifiez la position sur la carte.' },
+  heading: { title: 'Caps à vérifier', help: 'Cap saisi à la main très différent du cap calculé depuis la trace : erreur de saisie ?' },
+}
+
+// Points to check before publishing, also marked in amber on the timeline. Nothing is changed automatically.
+function QualityChecks({ issues, onShow }: { issues: QualityIssue[]; onShow: (r: [number, number]) => void }) {
+  const kinds = (Object.keys(QUALITY) as QualityIssue['kind'][]).filter((k) => issues.some((i) => i.kind === k))
+  return (
+    <div className="small-text quality">
+      <h3>Points à vérifier ({issues.length})</h3>
+      {issues.length === 0 ? (
+        <p className="muted">Rien à signaler.</p>
+      ) : (
+        <>
+          <p className="muted">Repérés en orange en haut de la timeline. Rien n'est modifié automatiquement : « Voir » sélectionne les photos concernées.</p>
+          {kinds.map((k) => {
+            const list = issues.filter((i) => i.kind === k)
+            return (
+              <details key={k} open={list.length <= 5}>
+                <summary>
+                  <strong>{QUALITY[k].title}</strong> ({list.length})
+                </summary>
+                <p className="muted">{QUALITY[k].help}</p>
+                <ul className="missing-list">
+                  {list.map((i) => (
+                    <li key={`${k}-${i.start_idx}`}>
+                      <span>
+                        {i.count > 1 ? `Photos ${i.start_idx + 1} → ${i.end_idx + 1}` : `Photo ${i.start_idx + 1}`}
+                        <span className="muted"> · {i.detail}</span>
+                      </span>
+                      <button className="small" onClick={() => onShow([i.start_idx, i.end_idx])}>
+                        Voir
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )
+          })}
+        </>
+      )}
+    </div>
+  )
+}
+
 function MissingPositions({
   projectId,
   photos,
@@ -631,6 +682,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [project, setProject] = useState<Project | null>(null)
   const isPnx = project?.kind === 'panoramax' // sequences already published: corrections only, no cut, no export
   const [photos, setPhotos] = useState<PhotoRow[]>([])
+  const [quality, setQuality] = useState<QualityIssue[]>([])
   const [sequences, setSequences] = useState<Sequence[]>([])
   const [undoState, setUndoState] = useState<UndoState>({ undo: null, redo: null })
   const [selected, setSelected] = useState<number | null>(null)
@@ -726,6 +778,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const byIdx = photos
   const current = useMemo(() => photos.find((p) => p.id === selected) ?? null, [photos, selected])
 
+  // points to check, recomputed whenever the photos change (positions, exclusions, headings)
+  useEffect(() => {
+    if (photos.length) api.quality(projectId).then(setQuality, () => undefined)
+    else setQuality([])
+  }, [projectId, photos])
   const reloadPhotos = useCallback(async () => setPhotos(await api.photos(projectId)), [projectId])
 
   const refresh = useCallback(async () => {
@@ -1264,6 +1321,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             range={snapOpen && snapHighlight ? snapHighlight : range}
             onPick={goIdx}
             onContextMenu={photosContext}
+            warnings={quality}
           />
           {ctx && <ContextMenu x={ctx.x} y={ctx.y} {...ctxItems()} onClose={() => setCtx(null)} />}
         </div>
@@ -1365,6 +1423,14 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <>
                 <Summary p={project} />
+                <QualityChecks
+                  issues={quality}
+                  onShow={(r) => {
+                    goIdx(r[0])
+                    setRange(r[1] > r[0] ? r : null)
+                    setTab('photo')
+                  }}
+                />
                 <MissingPositions
                   projectId={projectId}
                   photos={photos}

@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from . import db, exporter, jobs, undo
-from .core import headings, osm, positions, sequences, timesync
+from .core import headings, osm, positions, quality, sequences, timesync
 
 router = APIRouter(prefix="/api/projects/{pid}")
 
@@ -389,6 +389,13 @@ def positions_batch(pid: str, body: PositionsBatchIn):
             attached = positions.attach_to_sequences(conn, ids)
         headings.recompute(conn, mark_stale_ids=set(ids))
         return {"changed": changed, "skipped": skipped, "attached": attached, "undo": undo.state(conn)}
+
+
+@router.get("/quality")
+def quality_check(pid: str):
+    """Points to check before publishing (stops, spacing, GPS precision, headings): nothing is changed."""
+    with db.open_project(pid) as conn:
+        return quality.check(conn)
 
 
 @router.get("/positions/missing")

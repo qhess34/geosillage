@@ -204,6 +204,7 @@ select {
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   min-width: 0;
+  flex-wrap: wrap; /* more buttons when a range is selected: wrap instead of overflowing */
 }
 .banner {
   padding: 4px 10px;

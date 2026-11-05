@@ -98,6 +98,16 @@ export interface PhotoRow {
   excluded: number // 1 = excluded by the user (out of sequences, never exported)
 }
 
+// Point to check before publishing (reported only, never acted on)
+export interface QualityIssue {
+  kind: 'stop' | 'spacing' | 'gps_dop' | 'heading'
+  start_idx: number
+  end_idx: number
+  count: number
+  detail: string
+  meters?: number
+}
+
 export interface SnapCandidate {
   id: number
   name: string
@@ -422,6 +432,7 @@ export const api = {
     body: { start_idx: number; end_idx: number; segments: { start_idx: number; end_idx: number; way_id: number }[]; keep_manual: boolean },
   ) => req<{ moved: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/osm/snap/apply`, body),
   // blocks of photos without a position, with the positioned photos before / after them
+  quality: (id: string) => req<QualityIssue[]>('GET', `/api/projects/${id}/quality`),
   missingPositions: (id: string) => req<MissingRun[]>('GET', `/api/projects/${id}/positions/missing`),
   exports: (id: string) => req<ExportRecord[]>('GET', `/api/projects/${id}/exports`),
   thumbUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/thumb`,

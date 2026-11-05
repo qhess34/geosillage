@@ -340,6 +340,21 @@ L'angle est **ajouté** à l'orientation de chaque photo : les angles de tête d
 montée à l'envers. L'angle opposé revient en arrière, `Ctrl+Z` aussi. Vérifier le sens dans la visionneuse après
 correction. Le fichier JPEG n'est jamais tourné : seule la balise d'orientation change.
 
+### Points à vérifier avant de publier
+
+Onglet *Bilan*, section **Points à vérifier**, et marques **orange en haut de la timeline** :
+
+- **Arrêts** : au moins 3 photos de suite au même endroit (moins de 2 m entre elles : feu rouge, pause). Choisir la
+  ou les photos à garder — pas forcément la première : la plus nette, la mieux cadrée — et exclure les autres (`X`) ;
+- **Grands écarts** : plus de 25 m entre deux photos qui se suivent (vitesse, photos manquantes, position fausse).
+  Un trou laissé par des photos que vous avez exclues n'est pas signalé ;
+- **Précision GPS faible** : la caméra indique une position peu précise (DOP > 5) ; vérifier la position sur la carte ;
+- **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?).
+
+*Voir* ouvre l'onglet *Photo* sur la première photo et sélectionne les photos concernées. **Rien n'est modifié
+automatiquement** ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
+signalés à part (anomalies, *Photos sans position*).
+
 ---
 
 ## 8. Exporter
