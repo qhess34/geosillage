@@ -9,6 +9,7 @@ import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
 import PublishPanel from './PublishPanel'
 import StepBar from './StepBar'
+import StopCompare from './StopCompare'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
@@ -144,7 +145,7 @@ const QUALITY: Record<QualityIssue['kind'], { title: string; help: string }> = {
 }
 
 // Points to check before publishing, also marked in amber on the timeline. Nothing is changed automatically.
-function QualityChecks({ issues, onShow }: { issues: QualityIssue[]; onShow: (r: [number, number]) => void }) {
+function QualityChecks({ issues, onShow, onCompare }: { issues: QualityIssue[]; onShow: (r: [number, number]) => void; onCompare: (r: [number, number]) => void }) {
   const kinds = (Object.keys(QUALITY) as QualityIssue['kind'][]).filter((k) => issues.some((i) => i.kind === k))
   return (
     <div className="small-text quality">
@@ -169,9 +170,16 @@ function QualityChecks({ issues, onShow }: { issues: QualityIssue[]; onShow: (r:
                         {i.count > 1 ? `Photos ${i.start_idx + 1} → ${i.end_idx + 1}` : `Photo ${i.start_idx + 1}`}
                         <span className="muted"> · {i.detail}</span>
                       </span>
-                      <button className="small" onClick={() => onShow([i.start_idx, i.end_idx])}>
-                        Voir
-                      </button>
+                      <span className="row">
+                        {k === 'stop' && (
+                          <button className="small" onClick={() => onCompare([i.start_idx, i.end_idx])} title="Photos de l'arrêt côte à côte : choisir celles à garder">
+                            Comparer
+                          </button>
+                        )}
+                        <button className="small" onClick={() => onShow([i.start_idx, i.end_idx])}>
+                          Voir
+                        </button>
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -757,6 +765,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [tab, setTab] = useState<Tab>('photo')
   const [showImport, setShowImport] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [stopCompare, setStopCompare] = useState<[number, number] | null>(null) // photos of a stop side by side
   const [editMode, setEditMode] = useState(false)
   const [track, setTrack] = useState<Track | null>(null)
   const [syncOffset, setSyncOffset] = useState<number | null>(null)
@@ -1233,6 +1242,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         quality={quality}
         tab={tab}
         onTab={setTab}
+        onCompare={setStopCompare}
         onShow={(r) => {
           goIdx(r[0])
           setRange(r[1] > r[0] ? r : null)
@@ -1439,6 +1449,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 <Summary p={project} />
                 <QualityChecks
                   issues={quality}
+                  onCompare={setStopCompare}
                   onShow={(r) => {
                     goIdx(r[0])
                     setRange(r[1] > r[0] ? r : null)
@@ -1499,6 +1510,24 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       </main>
       <JobBar jobs={project.jobs} projectId={projectId} />
       {showImport && <ImportDialog projectId={projectId} onClose={() => setShowImport(false)} onStarted={refresh} />}
+      {stopCompare && (
+        <StopCompare
+          projectId={projectId}
+          photos={photos}
+          range={stopCompare}
+          onClose={() => setStopCompare(null)}
+          onGo={(idx) => {
+            setStopCompare(null)
+            goIdx(idx)
+            setTab('photo')
+          }}
+          onDone={(s, n) => {
+            setStopCompare(null)
+            applyState({ ...s, done: `${n} photo(s) de l'arrêt exclue(s) — Ctrl+Z pour annuler` })
+          }}
+          onError={fail}
+        />
+      )}
       {showHelp && (
         <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setShowHelp(false)}>
           <div className="modal small-modal" role="dialog" aria-label="Raccourcis clavier">

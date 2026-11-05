@@ -25,6 +25,7 @@ export default function StepBar({
   tab,
   onTab,
   onShow,
+  onCompare,
 }: {
   project: Project
   photos: PhotoRow[]
@@ -33,6 +34,7 @@ export default function StepBar({
   tab: StepTab
   onTab: (t: StepTab) => void
   onShow: (range: [number, number]) => void // select photos and open the Photo tab
+  onCompare: (range: [number, number]) => void // photos of a stop side by side
 }) {
   const pnx = project.kind === 'panoramax'
   const usable = photos.filter((p) => !p.excluded && !(p.flags & UNUSABLE))
@@ -72,9 +74,9 @@ export default function StepBar({
       ? `${plural(stops.length, 'arrêt', 'arrêts')} à trier`
       : `${dups ? `${plural(dups, 'doublon écarté', 'doublons écartés')} · ` : ''}aucun arrêt`,
     help: stops.length
-      ? 'Photos prises au même endroit (feu rouge, pause) : gardez la ou les meilleures et excluez les autres (X). Clic : premier arrêt.'
+      ? 'Photos prises au même endroit (feu rouge, pause) : gardez la ou les meilleures et excluez les autres. Clic : comparer les photos du premier arrêt.'
       : 'Les fichiers identiques sont écartés à l\'import. Aucune série de photos au même endroit.',
-    go: () => (stops.length ? show(stops[0]) : onTab('summary')),
+    go: () => (stops.length ? onCompare([stops[0].start_idx, stops[0].end_idx]) : onTab('summary')),
   })
 
   // 4. GPS correction: positions, GPS jumps, points to check about positions and headings

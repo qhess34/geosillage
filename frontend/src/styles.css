@@ -1067,3 +1067,59 @@ input.coord {
 .steps .warn .sub {
   color: #b45309;
 }
+
+/* Photos of a stop side by side */
+.wide-modal {
+  width: min(1100px, 100%);
+}
+.stop-preview {
+  margin: 0 0 10px;
+}
+.stop-preview img {
+  display: block;
+  width: 100%;
+  height: min(38vh, 420px);
+  object-fit: contain;
+  border-radius: 6px;
+  background: #111;
+}
+.stop-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+.stop-grid li {
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  font-size: 12px;
+}
+.stop-grid li.keep {
+  border-color: #059669;
+}
+.stop-grid li.drop {
+  opacity: 0.55;
+}
+.stop-grid label {
+  cursor: pointer;
+  display: block;
+}
+.stop-grid label > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stop-grid label .muted {
+  margin-left: auto;
+}
+.stop-grid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
