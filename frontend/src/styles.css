@@ -204,7 +204,17 @@ select {
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   min-width: 0;
-  flex-wrap: wrap; /* more buttons when a range is selected: wrap instead of overflowing */
+}
+/* the map background menu shrinks (more buttons when a range is selected) instead of overflowing */
+.toolbar select {
+  flex: 0 1 220px;
+  min-width: 90px;
+  width: 220px;
+}
+@media (max-width: 1180px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
 }
 .banner {
   padding: 4px 10px;
