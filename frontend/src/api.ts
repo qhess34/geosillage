@@ -65,6 +65,7 @@ export interface Project {
   summary: Summary
   headings: HeadingStats
   sources: SourcesState
+  sync_offset_s: number | null // last GPS delay applied, null = never synchronised
   corrected_positions: number
   jobs: Job[]
 }

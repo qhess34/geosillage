@@ -1,6 +1,6 @@
 import { FLAGS, PhotoRow, Project, QualityIssue, Sequence } from './api'
 
-// Progress of the ride, step by step: import → duplicates and stops → GPS correction → sequences → export → upload.
+// Progress of the ride, step by step: import → GPS delay (sync) → duplicates and stops → GPS correction → sequences → export → upload.
 // Computed from what the interface already has (photos, sequences, points to check); a click opens the right place.
 export type StepTab = 'photo' | 'sequences' | 'sync' | 'export' | 'send' | 'summary'
 type State = 'ok' | 'warn' | 'todo'
@@ -49,7 +49,19 @@ export default function StepBar({
     go: () => onTab('summary'),
   })
 
-  // 2. Duplicates and stops: identical files are set aside on import; stops are sorted by hand
+  // 2. GPS delay: photos placed on the track by the time synchronisation
+  const synced = photos.filter((p) => p.pos_method === 'time').length
+  const off = project.sync_offset_s
+  steps.push({
+    id: 'sync',
+    label: 'Synchro',
+    state: synced ? 'ok' : 'todo',
+    sub: synced ? `${off != null ? `${off >= 0 ? '+' : ''}${off.toFixed(1)} s · ` : ''}${plural(synced, 'photo', 'photos')}` : 'pas encore faite',
+    help: 'Retard du GPS de la caméra : faites glisser une photo le long de la trace sur la vue satellite (onglet Synchro).',
+    go: () => onTab('sync'),
+  })
+
+  // 3. Duplicates and stops: identical files are set aside on import; stops are sorted by hand
   const stops = quality.filter((q) => q.kind === 'stop')
   const dups = project.summary.duplicates
   steps.push({
@@ -65,7 +77,7 @@ export default function StepBar({
     go: () => (stops.length ? show(stops[0]) : onTab('summary')),
   })
 
-  // 3. GPS correction: positions, GPS jumps, points to check about positions and headings
+  // 4. GPS correction: positions, GPS jumps, points to check about positions and headings
   const missing = usable.filter((p) => !placed(p))
   const jumps = usable.filter((p) => p.flags & FLAGS.GPS_JUMP && p.pos_method == null)
   const gpsPoints = quality.filter((q) => q.kind !== 'stop')
@@ -80,8 +92,8 @@ export default function StepBar({
     state: !photos.length ? 'todo' : gpsParts.length ? 'warn' : 'ok',
     sub: gpsParts.length ? gpsParts.join(' · ') : 'rien à signaler',
     help:
-      'Retard GPS (onglet Synchro), positions (M), recalage OSM, caps. ' +
-      (gpsParts.length ? 'Clic : le premier point (photos sans position : Bilan).' : 'Plus rien n\'est signalé ; la synchro reste possible (onglet Synchro).'),
+      'Positions (M), photos sans position, recalage OSM, caps. ' +
+      (gpsParts.length ? 'Clic : le premier point (photos sans position : Bilan).' : 'Plus rien n\'est signalé.'),
     go: () =>
       missing.length
         ? onTab('summary')
@@ -89,11 +101,11 @@ export default function StepBar({
           ? onShow([jumps[0].idx, jumps[0].idx])
           : gpsPoints.length
             ? show(gpsPoints[0])
-            : onTab('sync'),
+            : onTab('summary'),
   })
 
   if (!pnx) {
-    // 4. Sequences
+    // 5. Sequences
     const unclassified = usable.filter((p) => p.sequence_id == null)
     steps.push({
       id: 'seq',
@@ -108,7 +120,7 @@ export default function StepBar({
       go: () => onTab('sequences'),
     })
 
-    // 5. Export
+    // 6. Export
     const exported = sequences.filter((s) => s.last_export)
     const again = sequences.filter((s) => s.last_export && s.needs_export)
     steps.push({
@@ -121,7 +133,7 @@ export default function StepBar({
     })
   }
 
-  // 6. Upload (Panoramax project: corrections to send)
+  // 7. Upload (Panoramax project: corrections to send)
   const published = sequences.filter((s) => s.last_publication?.state === 'ready')
   const changed = sequences.filter((s) => s.last_publication && s.changed_since_publication)
   const failed = sequences.filter((s) => s.last_publication && ['error', 'uploading'].includes(s.last_publication.state))
@@ -148,7 +160,7 @@ export default function StepBar({
         },
   )
 
-  const current: Record<string, string> = { sync: 'gps', sequences: 'seq', export: 'export', send: 'send' }
+  const current: Record<string, string> = { sync: 'sync', sequences: 'seq', export: 'export', send: 'send' }
   return (
     <nav className="steps" aria-label="Étapes">
       {steps.map((s, i) => (

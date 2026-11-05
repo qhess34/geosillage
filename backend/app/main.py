@@ -80,6 +80,7 @@ def project_get(pid: str):
             "summary": analysis.summary(conn),
             "headings": headings.stats(conn),
             "sources": exporter.modified_sources(conn),
+            "sync_offset_s": db.get_meta(conn, "last_time_offset"),  # last GPS delay applied (step bar)
             "corrected_positions": conn.execute("SELECT COUNT(*) FROM photo WHERE lat IS NOT NULL").fetchone()[0],
             "jobs": jobs.list_jobs(conn, 10),
         }

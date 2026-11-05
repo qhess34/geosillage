@@ -409,7 +409,8 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 
 `StepBar.tsx`, sous la barre d'outils : calculée côté interface à partir de ce qui est déjà chargé (`photos`,
 `sequences`, `project.summary`, points à vérifier `quality`), sans route dédiée. Étapes dans l'ordre de travail :
-import, doublons et arrêts (`quality` `stop`), correction GPS (photos sans position, `GPS_JUMP` sans `pos_method`,
+import, synchro (photos `pos_method = 'time'`, décalage `sync_offset_s` de `GET /api/projects/{id}`, méta
+`last_time_offset`), doublons et arrêts (`quality` `stop`), correction GPS (photos sans position, `GPS_JUMP` sans `pos_method`,
 autres points de `quality`), séquences (photos utilisables non classées), export (`last_export`, `needs_export`),
 envoi (`last_publication`, `changed_since_publication`) ; projet Panoramax : sans séquences ni export. États
 `ok` / `warn` / `todo` ; `onTab` ouvre un onglet, `onShow` sélectionne des photos (onglet Photo). `.workspace` est
