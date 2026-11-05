@@ -134,7 +134,8 @@ emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de
 l'écran à l'ouverture ; ouvert depuis une séquence de l'onglet Séquences, la section Position ou les outils de
 plage). Portée propre au panneau, **indépendante du découpage** (`seqStart` jamais utilisé) : `sequence` (séquence
 de la photo à l'ouverture), `timeline` (plage tracée, seulement si aucun début n'est posé), `custom` (bornes « de
-cette photo / jusqu'à cette photo ») ; la portée est surlignée sur la carte et la timeline (`snapHighlight`, couches `range` + `range-ring` de la carte). Le panneau est une fenêtre flottante dans la zone
+cette photo / jusqu'à cette photo », ou `D` / `F` interceptés par la fenêtre en phase de capture tant
+qu'elle est ouverte : la fin suit ← → après `D`, proposition recalculée 0,5 s après la dernière touche) ; la portée est surlignée sur la carte et la timeline (`snapHighlight`, couches `range` + `range-ring` de la carte). Le panneau est une fenêtre flottante dans la zone
 carte (`.snap-modal`, déplaçable par sa barre de titre, `Échap` la ferme) : la carte et la navigation restent
 utilisables. **Timeline** : fenêtre visible `[start, start + span)` (zoom molette autour du curseur ou − / + / Tout,
 au plus 20 photos ; défilement par la barre, Maj+molette ou glissement horizontal ; la photo courante est ramenée

@@ -263,8 +263,10 @@ Le recalage s'ouvre dans une **fenêtre flottante par-dessus la carte** : la car
 utilisable autour ; la fenêtre se déplace par sa barre de titre et se ferme avec ✕ ou `Échap`.
 
 Dans le panneau, choisir les photos à recaler : **la séquence** de la photo, **la plage de la timeline** (glisser
-sur la timeline, ou Maj+clic), ou **des photos choisies** : *De cette photo*, avancer avec `→`, puis *Jusqu'à cette
-photo*. Les photos concernées sont surlignées sur la carte (halo jaune et anneau orange) et sur la timeline. L'application récupère les rues, pistes cyclables et chemins d'OpenStreetMap autour de la sélection (connexion
+sur la timeline, ou Maj+clic), ou **des photos choisies** : `D` sur la première photo, avancer avec `→`, puis `F`
+sur la dernière (ou les boutons *De cette photo* / *Jusqu'à cette photo*). Tant que la fenêtre de recalage est
+ouverte, `D` / `F` choisissent les photos à recaler et ne touchent pas aux séquences ; fenêtre fermée, ils
+redeviennent *Début* / *Fin* de séquence. Les photos concernées sont surlignées sur la carte (halo jaune et anneau orange) et sur la timeline. L'application récupère les rues, pistes cyclables et chemins d'OpenStreetMap autour de la sélection (connexion
 Internet nécessaire) et la découpe en tronçons :
 - **voie évidente** : cochée d'office (« Rue de la Loge (rue) · 2,8 m en moyenne ») ;
 - **plusieurs voies possibles** (piste cyclable le long d'une route, rues parallèles) : à choisir dans la liste ;

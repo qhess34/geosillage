@@ -89,18 +89,36 @@ export default function OsmSnapPanel({
     const top = Math.max(0, Math.min(parent.height - 40, e.clientY - parent.top - drag.current.dy))
     setPos({ left, top })
   }
-  // Escape closes the window (the map stays usable around it: preview, navigation with ← →)
+  const [bounds, setBounds] = useState<[number | null, number | null]>([current?.idx ?? null, null])
+  // after D, the end follows the navigation (← →) until F, as for a sequence — but nothing is cut here
+  const [following, setFollowing] = useState(false)
+  const cur = useRef(current)
+  cur.current = current
+  useEffect(() => {
+    if (following && current) setBounds((b) => [b[0], current.idx])
+  }, [following, current])
+  // Keys while the window is open: Escape closes it; D / F choose the photos to snap (instead of cutting a sequence)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopImmediatePropagation()
-        onClose()
-      }
+      const t = e.target as HTMLElement
+      if (t?.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return
+      const k = e.key.toLowerCase()
+      if (e.key === 'Escape') onClose()
+      else if (k === 'd' && cur.current) {
+        setScope('custom')
+        setBounds([cur.current.idx, cur.current.idx])
+        setFollowing(true)
+      } else if (k === 'f' && cur.current) {
+        setScope('custom')
+        setBounds((b) => [b[0] ?? cur.current!.idx, cur.current!.idx])
+        setFollowing(false)
+      } else return
+      e.preventDefault()
+      e.stopImmediatePropagation()
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
-  const [bounds, setBounds] = useState<[number | null, number | null]>([current?.idx ?? null, null])
   const seq = sequences.find((x) => x.id === sequenceId) ?? null
   const range: [number, number] | null =
     scope === 'sequence'
@@ -125,17 +143,28 @@ export default function OsmSnapPanel({
       return
     }
     setLoading(true)
-    api.snapPropose(projectId, range[0], range[1]).then(
-      (p) => {
-        setProp(p)
-        setChoices(p.segments.map((s) => (s.status === 'clear' ? s.way_id : null)))
-        setLoading(false)
-      },
-      (e) => {
-        setLoading(false)
-        onError(e.message)
-      },
+    let cancelled = false
+    const t = window.setTimeout(
+      () =>
+        api.snapPropose(projectId, range[0], range[1]).then(
+          (p) => {
+            if (cancelled) return
+            setProp(p)
+            setChoices(p.segments.map((s) => (s.status === 'clear' ? s.way_id : null)))
+            setLoading(false)
+          },
+          (e) => {
+            if (cancelled) return
+            setLoading(false)
+            onError(e.message)
+          },
+        ),
+      following ? 500 : 0, // while the range follows ← →: one request once the navigation pauses
     )
+    return () => {
+      cancelled = true
+      window.clearTimeout(t)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, rangeKey])
 
@@ -217,7 +246,7 @@ export default function OsmSnapPanel({
         </button>
       </div>
       <fieldset className="modes">
-        <legend>Photos à recaler (indépendant du découpage des séquences)</legend>
+        <legend>Photos à recaler (D / F : début / fin de la sélection, sans toucher aux séquences)</legend>
         <label>
           <input type="radio" checked={scope === 'sequence'} disabled={!seq} onChange={() => setScope('sequence')} /> Séquence{' '}
           {seq ? `« ${seq.name} » (${seq.start_idx + 1} → ${seq.end_idx + 1})` : '(photo non classée)'}
@@ -238,7 +267,7 @@ export default function OsmSnapPanel({
             <button className="small" disabled={!current} onClick={() => current && setBounds([bounds[0], current.idx])}>
               Jusqu'à cette photo{current ? ` (${current.idx + 1})` : ''}
             </button>
-            <span className="muted">naviguez avec ← → entre les deux</span>
+            <span className="muted">ou D sur la première photo, ← →, puis F sur la dernière{following ? ' (en cours…)' : ''}</span>
           </div>
         )}
       </fieldset>
