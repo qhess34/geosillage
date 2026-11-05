@@ -27,6 +27,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 3 (reste) | Import GPX | à faire |
 | 4 | Publication Panoramax par séquence (connexion par lien de validation, reprise d'un envoi interrompu) | ✅ |
 | 4 (suite) | Projet Panoramax : corriger des séquences déjà publiées (choisies dans son compte), envoi des seules différences, retour en arrière | ✅ |
+| Qualité | Tests d'interface (Playwright) dans les vérifications automatiques GitHub | backlog |
 
 ## Documentation
 
