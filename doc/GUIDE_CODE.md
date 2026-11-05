@@ -120,8 +120,9 @@ avec 20 m mais 16 photos incertaines. À revalider sur de vraies photos.
 ## Recalage sur les voies OpenStreetMap
 
 `core/osm.py`. **Données** : `fetch_ways` interroge Overpass (`PSS_OVERPASS_URL`, défaut overpass-api.de) sur
-l'emprise des photos + 50 m, arrondie vers l'extérieur à 0,002° (`bbox_of`), voies `highway` parcourues à pied, à vélo (gravel, VTT : `track`, `path`…) ou en voiture, autoroutes comprises
-(`HIGHWAYS`), géométrie et nœuds (`out geom tags`) ; réponse gardée dans la table `osm_cache` du projet (clé =
+l'emprise des photos + 50 m, arrondie vers l'extérieur à 0,002° (`bbox_of`), **toutes** les voies `highway` (gravel / VTT : n'importe quel chemin ; à pied, en voiture), sauf celles qu'on
+ne parcourt pas (`NOT_TRAVELLED` : en projet, disparues, quais, ascenseurs, couloirs, aires de service) ; la clé du
+cache porte `CACHE_VERSION`, à changer avec la requête, géométrie et nœuds (`out geom tags`) ; réponse gardée dans la table `osm_cache` du projet (clé =
 emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de contact et `Accept` obligatoires ;
 3 essais. **Appariement** (`match`, calcul pur sur une projection plane locale) : voies à moins de `max_dist`
 (15 m) de chaque photo ; suite de voies la plus probable par Viterbi (coût = distance + changement de voie :

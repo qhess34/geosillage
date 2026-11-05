@@ -126,3 +126,10 @@ def test_snap_api_overpass_unreachable(project, monkeypatch):
     monkeypatch.setattr(osm, "_overpass", down)
     r = client.post(f"/api/projects/{pid}/osm/snap/propose", json={"start_idx": 5, "end_idx": 20})
     assert r.status_code == 502 and "injoignable" in r.json()["detail"]
+
+
+def test_query_keeps_every_travelled_way():
+    """Gravel / mountain bike: any track or path counts; only ways nobody travels are left out."""
+    q = osm.overpass_query((43.6, 3.87, 43.61, 3.88))
+    assert 'way["highway"]["highway"!~"^(' in q and "proposed" in q and "platform" in q
+    assert "track" not in q and "path" not in q  # no allow-list any more

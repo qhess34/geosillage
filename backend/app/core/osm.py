@@ -20,11 +20,10 @@ from .. import db
 
 # Overpass server (PSS_OVERPASS_URL: another instance or a mirror)
 OVERPASS_URL = os.environ.get("PSS_OVERPASS_URL") or "https://overpass-api.de/api/interpreter"
-# Ways travelled on foot, by bike (including gravel / mountain bike tracks and paths) or by car
-HIGHWAYS = (
-    "cycleway|path|track|footway|bridleway|steps|pedestrian|living_street|residential|service|unclassified|road|"
-    "tertiary|tertiary_link|secondary|secondary_link|primary|primary_link|trunk|trunk_link|motorway|motorway_link"
-)
+# Every highway way can be travelled (gravel / mountain bike: any track or path, on foot, by car): only the ways
+# that are not travelled (planned, gone, platforms, lifts, indoor corridors, service areas) are left out
+NOT_TRAVELLED = "proposed|abandoned|razed|disused|dismantled|platform|elevator|corridor|rest_area|services|bus_stop"
+CACHE_VERSION = "2"  # changes when the query does (cached responses of an older query are fetched again)
 # Overpass refuses anonymous clients (406): identify the application, with a contact link
 USER_AGENT = "PanoramaxSequenceStudio/1.0 (+https://github.com/qhess34/panoramax-preprocess)"
 MAX_DIST_M = 15.0
@@ -53,7 +52,7 @@ def bbox_of(points: list[tuple[float, float]], margin_m: float = 50.0) -> tuple[
 
 def overpass_query(bbox) -> str:
     s, w, n, e = bbox
-    return f'[out:json][timeout:60];way["highway"~"^({HIGHWAYS})$"]({s:.4f},{w:.4f},{n:.4f},{e:.4f});out geom tags;'
+    return f'[out:json][timeout:60];way["highway"]["highway"!~"^({NOT_TRAVELLED})$"]({s:.4f},{w:.4f},{n:.4f},{e:.4f});out geom tags;'
 
 
 def parse_overpass(data: dict) -> list[dict]:
@@ -76,7 +75,7 @@ def parse_overpass(data: dict) -> list[dict]:
 
 def fetch_ways(conn, bbox, fetch=None) -> list[dict]:
     """Ways of the bounding box: from the project cache, otherwise from Overpass (fetch: replaceable for tests)."""
-    key = ",".join(f"{v:.4f}" for v in bbox)
+    key = f"v{CACHE_VERSION}:" + ",".join(f"{v:.4f}" for v in bbox)
     row = conn.execute("SELECT data FROM osm_cache WHERE bbox=?", (key,)).fetchone()
     if row:
         return parse_overpass(json.loads(row["data"]))
