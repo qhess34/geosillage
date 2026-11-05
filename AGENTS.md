@@ -7,7 +7,8 @@ Consignes pour les agents IA (et les humains) qui travaillent sur ce dépôt. À
 Application **locale** (FastAPI + React) qui prépare des sorties de photos 360° GoPro MAX avant publication sur
 Panoramax : import, découpe en séquences, retard GPS, positions, caps et orientation, export d'un dossier par
 séquence avec EXIF corrigés (ExifTool), publication sur une instance Panoramax (une séquence = un envoi, depuis son
-dernier export).
+dernier export). Deux types de projet : **sortie** (photos du disque) et **Panoramax** (séquences déjà publiées,
+photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'export ; `routes_edit.ride_only`).
 
 | Document | Contenu |
 |---|---|

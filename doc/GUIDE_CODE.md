@@ -312,9 +312,7 @@ connexion, jeton privé, paramètres de l'envoi, reprise, réexport préalable).
 interface `PublishedEdit.tsx` (onglet Séquences). L'API Panoramax permet de modifier une photo publiée
 (`PATCH /api/collections/{seq}/items/{pic}` : `latitude`/`longitude`, `heading` → `heading_computed = false`,
 `yaw`/`pitch`/`roll` = ce que lit le viewer) et de la supprimer (`DELETE`) ; pas de remplacement d'image, d'ajout ni
-de découpe. **Association** d'une séquence publiée ailleurs : identifiant extrait du texte collé (UUID), photos de la
-collection (`GET …/items`, pages `next`) appariées par `original_file:name` (nom exporté ou d'origine), puis par
-`datetime` à ± 1,5 s de `ts` / `gps_ts` ; écrit `published_photo` et une `publication` (`upload_set_id` vide).
+de découpe. Les séquences publiées ailleurs se corrigent dans un **projet Panoramax** (ci-dessous).
 **Comparaison** : valeurs attendues = ce qu'écrit l'export (`_expected` : position effective, cap final arrondi
 comme Panoramax avec la règle « 0 → 0,6 », lacet 0–360) contre `geometry`, `view:azimuth`, `pers:*` ; écarts :
 position > 0,5 m, cap ≥ 1°, lacet > 0,5°, tangage/roulis nuls alors qu'un lacet est attendu (→ 0,01). Photos
@@ -322,6 +320,25 @@ exclues ou sorties de la séquence → suppression proposée ; photos sans `publ
 **Envoi** (tâche `publish_update`) : PATCH des seules photos différentes (3 en parallèle), DELETE si demandé ;
 valeurs serveur d'avant gardées dans `published_edit` (retour en arrière) ; sans erreur, la date de la publication
 est avancée (`changed_since_publication` retombe). Tests : `test_publish.py` (faux serveur avec photos paginées).
+
+## Projets Panoramax (séquences déjà publiées)
+
+`meta.kind = 'panoramax'` (`db.create_project(name, kind, meta)`, `db.is_panoramax`), `meta.pnx_instance`,
+`meta.pnx_collections`. Création : `POST /api/panoramax/projects` (séquences du compte :
+`GET /api/panoramax/my-sequences` ← `GET {instance}/api/users/me/collection`, liens `child`), tâche `pnx_import`
+(`panoramax.import_sequences`) : une ligne `photo` par image, **sans fichier** (`path = 'pnx:<picture id>'`,
+`size`/`mtime` à 0), `lat_orig/lon_orig` = géométrie, `heading_exif` et `heading_manual` = `view:azimuth` (le cap
+Panoramax est gardé tel quel ; « Revenir au cap calculé » efface `heading_manual`), `yaw_offset` = `pers:yaw`
+ramené à ±180 ; une `sequence` par séquence publiée + `publication` (`ready`) + `published_photo` : comparer /
+envoyer / remettre fonctionnent sans changement. Juste après l'import, la comparaison est vide (sauf lacet sans
+tangage/roulis, que le viewer n'applique pas : 0,01 proposé). Images : miniatures téléchargées
+(`importer.thumbnails`, échec réseau → `thumb = -1` sans marquer la photo illisible) ; `GET …/photos/{id}/image`
+relaie `sd.jpg` (`?hd=1` : `hd.jpg`, lien « Original »), avec le jeton pour les séquences privées. Garde
+`routes_edit.ride_only` (409) sur l'import, la vérification des fichiers, la création / découpe / fusion /
+limites / suppression de séquences, l'export, le réexport, les sources et la publication. Interface : `isPnx` dans
+`ProjectView` (pas d'*Importer*, de *Couper*, de *Début/Fin* ni des touches D/F/C ; onglet *Envoyer* =
+`SendTab.tsx`), `SequencesTab` (`pnx`), `NewPanoramaxProject.tsx` (accueil), `PnxConnection` (dans
+`PublishPanel.tsx`, partagé). Tests : `test_publish.py` (`FakeAccount`).
 
 ## Réexport
 

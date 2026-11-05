@@ -127,10 +127,16 @@ def thumbnails(ctx: jobs.JobContext) -> None:
     def one(row):
         ctx.check()
         try:
-            make_thumbnail(row["path"], tdir / f"{row['id']}.jpg")
+            if row["path"].startswith("pnx:"):  # Panoramax picture: its thumbnail is downloaded
+                from . import panoramax
+
+                (tdir / f"{row['id']}.jpg").write_bytes(panoramax.picture_bytes(pid, row["path"], "thumb"))
+            else:
+                make_thumbnail(row["path"], tdir / f"{row['id']}.jpg")
             return row["id"], 1
         except Exception:
-            return row["id"], -1
+            # a Panoramax picture that could not be downloaded is not unreadable: retried later (-2)
+            return row["id"], -2 if row["path"].startswith("pnx:") else -1
 
     done = 0
     pending: list[tuple[int, int]] = []
@@ -139,10 +145,10 @@ def thumbnails(ctx: jobs.JobContext) -> None:
             if not pending:
                 return
             with db.transaction(conn):
-                conn.executemany("UPDATE photo SET thumb=? WHERE id=?", [(s, i) for i, s in pending])
+                conn.executemany("UPDATE photo SET thumb=? WHERE id=?", [(max(s, -1), i) for i, s in pending])
                 conn.executemany(
                     "UPDATE photo SET flags = flags | ? WHERE id=?",
-                    [(db.UNREADABLE, i) for i, s in pending if s < 0],
+                    [(db.UNREADABLE, i) for i, s in pending if s == -1],
                 )
             pending.clear()
 

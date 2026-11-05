@@ -257,7 +257,10 @@ def get_settings(conn) -> dict:
     return {**config.DEFAULT_SETTINGS, **(get_meta(conn, "settings", {}) or {})}
 
 
-def create_project(name: str) -> str:
+PANORAMAX = "panoramax"  # project kind: sequences already published on Panoramax (no photo on disk)
+
+
+def create_project(name: str, kind: str = "ride", meta: dict | None = None) -> str:
     config.ensure_dirs()
     pid = uuid.uuid4().hex
     d = project_dir(pid)
@@ -269,6 +272,9 @@ def create_project(name: str) -> str:
         set_meta(conn, "name", name)
         set_meta(conn, "created_at", time.time())
         set_meta(conn, "settings", {})
+        set_meta(conn, "kind", kind)
+        for k, v in (meta or {}).items():
+            set_meta(conn, k, v)
     finally:
         conn.close()
     return pid
@@ -289,11 +295,16 @@ def list_projects() -> list[dict]:
                         "name": get_meta(conn, "name", d.name),
                         "created_at": get_meta(conn, "created_at", 0),
                         "photo_count": n,
+                        "kind": get_meta(conn, "kind", "ride"),
                     }
                 )
         except (sqlite3.DatabaseError, ProjectNotFound):
             continue
     return sorted(out, key=lambda p: p["created_at"], reverse=True)
+
+
+def is_panoramax(conn) -> bool:
+    return get_meta(conn, "kind", "ride") == PANORAMAX
 
 
 def delete_project(project_id: str) -> None:

@@ -19,6 +19,12 @@ def _seq_errors(fn):
         raise HTTPException(409, str(e))
 
 
+def ride_only(conn) -> None:
+    """Operations on files or on the cut of sequences do not exist in a Panoramax project (published sequences)."""
+    if db.is_panoramax(conn):
+        raise HTTPException(409, "Impossible dans un projet Panoramax (séquences déjà publiées) : seules les corrections sont envoyées")
+
+
 def _state(conn) -> dict:
     return {"sequences": sequences.list_with_stats(conn), "undo": undo.state(conn)}
 
@@ -54,6 +60,7 @@ def seq_list(pid: str):
 @router.post("/sequences", status_code=201)
 def seq_create(pid: str, body: RangeIn):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Création de séquence"):
             res = _seq_errors(lambda: sequences.create(conn, body.start_idx, body.end_idx, body.name))
         return {**res, **_state(conn)}
@@ -62,6 +69,7 @@ def seq_create(pid: str, body: RangeIn):
 @router.post("/sequences/bulk", status_code=201)
 def seq_bulk(pid: str, body: BulkIn):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, f"Création de {len(body.segments)} séquences"):
             res = _seq_errors(lambda: sequences.create_many(conn, body.segments))
         return {"created": res, **_state(conn)}
@@ -85,6 +93,7 @@ def seq_update(pid: str, sid: int, body: SeqPatch):
 @router.put("/sequences/{sid}/bounds")
 def seq_bounds(pid: str, sid: int, body: RangeIn):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Modification des limites"):
             _seq_errors(lambda: sequences.set_bounds(conn, sid, body.start_idx, body.end_idx))
         return _state(conn)
@@ -93,6 +102,7 @@ def seq_bounds(pid: str, sid: int, body: RangeIn):
 @router.delete("/sequences/{sid}")
 def seq_delete(pid: str, sid: int):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Suppression de séquence"):
             _seq_errors(lambda: sequences.delete(conn, sid))
         return _state(conn)
@@ -101,6 +111,7 @@ def seq_delete(pid: str, sid: int):
 @router.post("/sequences/{sid}/split")
 def seq_split(pid: str, sid: int, photo_id: int):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Division de séquence"):
             new = _seq_errors(lambda: sequences.split(conn, sid, photo_id))
         return {"new_id": new, **_state(conn)}
@@ -109,6 +120,7 @@ def seq_split(pid: str, sid: int, photo_id: int):
 @router.post("/sequences/merge")
 def seq_merge(pid: str, body: IdsIn):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Fusion de séquences"):
             target = _seq_errors(lambda: sequences.merge(conn, body.ids))
         return {"id": target, **_state(conn)}
@@ -117,6 +129,7 @@ def seq_merge(pid: str, body: IdsIn):
 @router.post("/sequences/remove-photos")
 def seq_remove_photos(pid: str, body: IdsIn):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Retrait de photos"):
             sequences.remove_photos(conn, body.ids)
         return _state(conn)
@@ -148,6 +161,7 @@ def photos_exclude(pid: str, body: ExcludeIn):
 @router.post("/sequences/from-unclassified", status_code=201)
 def seq_from_unclassified(pid: str):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Séquences créées avec les photos non classées"):
             res = _seq_errors(lambda: sequences.create_from_unclassified(conn))
         return {"created": res, **_state(conn)}
@@ -157,6 +171,7 @@ def seq_from_unclassified(pid: str):
 def sequences_cut(pid: str, photo_id: int):
     """Cut the ride at this photo (split its sequence, or create the sequence around it and split it)."""
     with db.open_project(pid) as conn:
+        ride_only(conn)
         with undo.undoable(conn, "Découpe"):
             what = _seq_errors(lambda: sequences.cut_at(conn, photo_id))
         return {"done": what, **_state(conn)}
@@ -580,6 +595,7 @@ def export_start(pid: str, body: ExportIn):
         if out.exists() and not out.is_dir():
             raise HTTPException(400, "Le chemin d'export n'est pas un dossier")
     with db.open_project(pid) as conn:
+        ride_only(conn)
         if body.mode == "copy":
             # Copies inside a source folder would be imported again as new photos
             for (src,) in conn.execute("SELECT path FROM source_dir"):
@@ -601,6 +617,7 @@ def export_start(pid: str, body: ExportIn):
 def sequence_reexport(pid: str, sid: int):
     """Export this sequence again with the settings of its last export (folder, mode, options)."""
     with db.open_project(pid) as conn:
+        ride_only(conn)
         last = exporter.last_exports(conn).get(sid)
         if not conn.execute("SELECT 1 FROM sequence WHERE id=?", (sid,)).fetchone():
             raise HTTPException(404, "Séquence introuvable")
@@ -633,6 +650,7 @@ def sources_state(pid: str):
 def sources_trash_excluded(pid: str):
     """Move the files of excluded photos into a `_exclues` folder next to them (restorable)."""
     with db.open_project(pid) as conn:
+        ride_only(conn)
         n = conn.execute("SELECT COUNT(*) FROM photo WHERE excluded=1 AND path NOT LIKE '%/_exclues/%'").fetchone()[0]
     if not n:
         raise HTTPException(400, "Aucune photo exclue à déplacer")
@@ -644,6 +662,7 @@ def sources_trash_excluded(pid: str):
 @router.post("/sources/restore", status_code=202)
 def sources_restore(pid: str):
     with db.open_project(pid) as conn:
+        ride_only(conn)
         state = exporter.modified_sources(conn)
     if not state["modified"] and not state["moved"]:
         raise HTTPException(400, "Aucune photo source modifiée")

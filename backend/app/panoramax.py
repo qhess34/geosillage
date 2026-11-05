@@ -394,66 +394,6 @@ def _collection_id(c: httpx.Client, conn, pub) -> str:
     return colls[0]["id"]
 
 
-def link(pid: str, sid: int, collection: str) -> dict:
-    """Links a sequence published outside the application to the local one: pictures matched by original file
-    name (exported or source name), otherwise by capture time (± 1.5 s)."""
-    m = UUID_RE.search(collection or "")
-    if not m:
-        raise PanoramaxError("Identifiant de séquence Panoramax introuvable dans le texte (collez l'adresse ou l'identifiant)")
-    cid = m.group(0).lower()
-    inst, token = _account()
-    with client(inst, token) as c:
-        feats = _items(c, cid)
-    if not feats:
-        raise PanoramaxError("La séquence publiée ne contient aucune photo")
-    with db.open_project(pid) as conn:
-        photos = conn.execute(
-            "SELECT id, filename, path, moved_from, ts, gps_ts FROM photo WHERE sequence_id=? ORDER BY idx", (sid,)
-        ).fetchall()
-        rep = conn.execute("SELECT report FROM export WHERE sequence_id=? ORDER BY id DESC LIMIT 1", (sid,)).fetchone()
-        exported = {it["photo_id"]: os.path.basename(it["file"]) for it in (json.loads(rep[0]).get("items", []) if rep else [])}
-        by_name = {}
-        for p in photos:
-            for n in {p["filename"], os.path.basename(p["moved_from"] or p["path"]), exported.get(p["id"])}:
-                if n:
-                    by_name.setdefault(n.lower(), p["id"])
-        matched: dict[int, tuple[str, str]] = {}
-        unmatched = []
-        for f in feats:
-            name = (f["properties"].get("original_file:name") or "").lower()
-            pid_ = by_name.get(name)
-            if pid_ is not None and pid_ not in matched:
-                matched[pid_] = (f["id"], f["properties"].get("original_file:name") or "")
-            else:
-                unmatched.append(f)
-        if unmatched:
-            from datetime import datetime
-
-            free = [p for p in photos if p["id"] not in matched]
-            for f in unmatched:
-                try:
-                    t = datetime.fromisoformat(f["properties"]["datetime"].replace("Z", "+00:00")).timestamp()
-                except (KeyError, ValueError):
-                    continue
-                best = min(free, key=lambda p: min(abs((p["gps_ts"] or 1e18) - t), abs((p["ts"] or 1e18) - t)), default=None)
-                if best and min(abs((best["gps_ts"] or 1e18) - t), abs((best["ts"] or 1e18) - t)) <= 1.5:
-                    matched[best["id"]] = (f["id"], f["properties"].get("original_file:name") or "")
-                    free.remove(best)
-        if not matched:
-            raise PanoramaxError("Aucune photo de la séquence publiée ne correspond à cette séquence (noms de fichiers, heures)")
-        conn.execute("DELETE FROM published_photo WHERE sequence_id=? AND instance=?", (sid, inst))
-        now = time.time()
-        conn.executemany(
-            "INSERT OR REPLACE INTO published_photo(photo_id, instance, sequence_id, upload_set_id, picture_id, file_name, sent_at) VALUES(?, ?, ?, '', ?, ?, ?)",
-            [(p, inst, sid, pic, name, now) for p, (pic, name) in matched.items()],
-        )
-        conn.execute(
-            "INSERT INTO publication(sequence_id, instance, upload_set_id, collection_id, ts, photo_count, state, message) VALUES(?, ?, '', ?, ?, ?, 'ready', ?)",
-            (sid, inst, cid, now, len(feats), "associée à une séquence déjà publiée"),
-        )
-    return {"collection_id": cid, "matched": len(matched), "local": len(photos), "remote": len(feats)}
-
-
 def _expected(conn, sid: int) -> dict[int, dict]:
     """What the export writes for each photo of the sequence: position, heading (rounded like Panoramax), yaw."""
     rows = conn.execute(
@@ -632,3 +572,141 @@ def revert(ctx, pid: str, sid: int) -> None:
         conn.execute("UPDATE published_edit SET reverted=1 WHERE id=?", (e["id"],))
     if errors:
         raise PanoramaxError(f"{len(errors)} photo(s) non remise(s) : {errors[0]}")
+
+
+# ---- Panoramax projects: editing sequences already published (photos stay on Panoramax) ----
+
+PNX_PREFIX = "pnx:"  # photo.path of a Panoramax picture: pnx:<picture id>
+
+
+def my_sequences() -> list[dict]:
+    """Sequences of the connected account (newest first)."""
+    inst, token = _account()
+    out, url = [], "/api/users/me/collection?limit=100"
+    with client(inst, token) as c:
+        while url and len(out) < 2000:
+            r = c.get(url)
+            if r.status_code >= 400:
+                raise _error(r, "Liste de vos séquences")
+            j = r.json()
+            for l in j.get("links", []):
+                if l.get("rel") != "child":
+                    continue
+                m = UUID_RE.search(l.get("id") or l.get("href", ""))
+                if not m:
+                    continue
+                stats = l.get("stats:items") or {}
+                interval = ((l.get("extent") or {}).get("temporal") or {}).get("interval") or [[None, None]]
+                out.append(
+                    {
+                        "id": m.group(0).lower(),
+                        "title": l.get("title") or "",
+                        "count": stats.get("count") if isinstance(stats, dict) else None,
+                        "start": interval[0][0] if interval and interval[0] else None,
+                        "created": l.get("created"),
+                    }
+                )
+            url = next((l["href"] for l in j.get("links", []) if l.get("rel") == "next"), None)
+    return out
+
+
+def create_panoramax_project(name: str, collections: list[str]) -> str:
+    """New project made of published sequences; their pictures are imported in the background."""
+    inst, _ = _account()
+    ids = []
+    for c in collections:
+        m = UUID_RE.search(c or "")
+        if not m:
+            raise PanoramaxError(f"Identifiant de séquence introuvable : {c}")
+        if m.group(0).lower() not in ids:
+            ids.append(m.group(0).lower())
+    if not ids:
+        raise PanoramaxError("Choisissez au moins une séquence")
+    pid = db.create_project(name, db.PANORAMAX, {"pnx_instance": inst, "pnx_collections": ids})
+    jobs.start(pid, "pnx_import", lambda ctx: import_sequences(ctx, pid, ids))
+    return pid
+
+
+def _ts(s: str | None) -> float | None:
+    from datetime import datetime
+
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp() if s else None
+    except ValueError:
+        return None
+
+
+def import_sequences(ctx, pid: str, collection_ids: list[str]) -> None:
+    """Pictures of the published sequences → photos of the project (no file): Panoramax position, heading and
+    yaw are the starting point; one local sequence per published sequence, linked for compare / send."""
+    from .core import analysis
+
+    inst, token = _account()
+    with db.open_project(pid) as conn:
+        if db.get_meta(conn, "pnx_instance") != inst:
+            raise PanoramaxError("Ce projet est lié à une autre instance que celle où vous êtes connecté")
+    total_done = 0
+    with client(inst, token) as c:
+        for n, cid in enumerate(collection_ids, 1):
+            ctx.check()
+            r = c.get(f"/api/collections/{cid}")
+            if r.status_code >= 400:
+                raise _error(r, f"Séquence {cid}")
+            title = r.json().get("title") or f"Séquence Panoramax {n}"
+            ctx.progress(total_done, None, f"Lecture de « {title} » ({n}/{len(collection_ids)})", force=True)
+            feats = _items(c, cid)
+            now = time.time()
+            with db.open_project(pid) as conn, db.transaction(conn):
+                sid = conn.execute("INSERT INTO sequence(name, created_at) VALUES(?, ?)", (title, now)).lastrowid
+                for f in feats:
+                    p = f.get("properties", {})
+                    lon, lat = ((f.get("geometry") or {}).get("coordinates") or [None, None])[:2]
+                    t = _ts(p.get("datetime"))
+                    yaw = float(p.get("pers:yaw") or 0.0) % 360.0
+                    yaw = yaw - 360.0 if yaw > 180.0 else yaw
+                    fov = (p.get("pers:interior_orientation") or {}).get("field_of_view")
+                    head = p.get("view:azimuth")
+                    conn.execute(
+                        """INSERT OR IGNORE INTO photo(path, filename, size, mtime, ts, ts_text, gps_ts, lat_orig, lon_orig,
+                               heading_exif, heading_manual, is_360, projection, yaw_offset, sequence_id)
+                           VALUES(?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            PNX_PREFIX + f["id"], p.get("original_file:name") or f["id"], t, p.get("datetime"), t, lat, lon,
+                            head, head, 1 if fov == 360 else 0, "equirectangular" if fov == 360 else None,
+                            yaw or None, sid,
+                        ),
+                    )
+                rows = conn.execute("SELECT id, path FROM photo WHERE sequence_id=?", (sid,)).fetchall()
+                conn.executemany(
+                    "INSERT OR REPLACE INTO published_photo(photo_id, instance, sequence_id, upload_set_id, picture_id, file_name, sent_at) VALUES(?, ?, ?, '', ?, '', ?)",
+                    [(r["id"], inst, sid, r["path"][len(PNX_PREFIX):], now) for r in rows],
+                )
+                conn.execute(
+                    "INSERT INTO publication(sequence_id, instance, upload_set_id, collection_id, ts, photo_count, state, message) VALUES(?, ?, '', ?, ?, ?, 'ready', ?)",
+                    (sid, inst, cid, now + 1, len(feats), "séquence importée de Panoramax"),
+                )
+            total_done += len(feats)
+    with db.open_project(pid) as conn:
+        analysis.run(conn)
+        from .core import sequences as core_seq
+
+        for (sid,) in conn.execute("SELECT id FROM sequence").fetchall():
+            core_seq._renumber(conn, sid)
+        headings.recompute(conn)
+    ctx.progress(total_done, total_done, f"{total_done} photo(s) importée(s) de Panoramax", force=True)
+    from . import importer
+
+    importer.start_thumbnails(pid)
+
+
+def picture_bytes(pid: str, path: str, size: str = "sd") -> bytes:
+    """Image of a Panoramax picture (thumb / sd / hd), fetched from the project's instance."""
+    with db.open_project(pid) as conn:
+        inst = db.get_meta(conn, "pnx_instance")
+    data = _load()
+    token = (data.get("accounts", {}).get(inst) or {}).get("token")  # private pictures need the account
+    with client(inst, token) as c:
+        r = c.get(f"/api/pictures/{path[len(PNX_PREFIX):]}/{size}.jpg", follow_redirects=True)
+    if r.status_code >= 400:
+        raise PanoramaxError(f"Image indisponible sur l'instance (erreur {r.status_code})")
+    return r.content

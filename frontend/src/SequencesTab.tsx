@@ -15,6 +15,7 @@ interface Props {
   onRefresh: () => void // reload photos and sequences after an edit that does not return them
   onExported: () => void // an export job was started
   onError: (msg: string) => void
+  pnx?: boolean // Panoramax project: published sequences, their cut and export do not change
 }
 
 function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; props: Props }) {
@@ -63,7 +64,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
         <span className="muted small-text">{s.count} ph.</span>
       </div>
       <div className="small-text">
-        {last ? (
+        {props.pnx ? null : last ? (
           s.needs_export ? (
             <span className="badge warn-text" title={`Modifiée depuis l'export du ${new Date(last.ts * 1000).toLocaleString('fr-FR')}`}>
               à réexporter
@@ -127,22 +128,22 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
           Renommer
         </button>
         <YawRotate projectId={projectId} target={{ sequence_id: s.id }} what="les photos de la séquence" onDone={() => props.onRefresh()} onError={onError} />
-        {inThis && current && current.idx !== s.start_idx && (
+        {!props.pnx && inThis && current && current.idx !== s.start_idx && (
           <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title="Couper avant la photo courante (C)">
             Couper ici
           </button>
         )}
-        {range && (
+        {!props.pnx && range && (
           <button className="small" onClick={() => run(api.setBounds(projectId, s.id, range[0], range[1]))} title="La séquence devient la plage sélectionnée">
             Limites = plage
           </button>
         )}
-        {next && (
+        {!props.pnx && next && (
           <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))}>
             Fusionner avec la suivante
           </button>
         )}
-        {last && (
+        {!props.pnx && last && (
           <button
             className={confirmReexport ? 'small danger' : s.needs_export ? 'small primary' : 'small'}
             onClick={reexport}
@@ -151,9 +152,9 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
             {confirmReexport ? 'Confirmer : modifie les photos sources' : '⟳ Réexporter'}
           </button>
         )}
-        <button className="small danger" onClick={() => run(api.deleteSequence(projectId, s.id))} title="Les photos retournent dans « non classées » (annulable)">
+        {!props.pnx && <button className="small danger" onClick={() => run(api.deleteSequence(projectId, s.id))} title="Les photos retournent dans « non classées » (annulable)">
           Supprimer
-        </button>
+        </button>}
       </div>
     </li>
   )
@@ -188,30 +189,35 @@ export default function SequencesTab(props: Props) {
     <div>
       <div className="range-box">
         <div className="row wrap">
-          <button
+          {!props.pnx && <button
             className="primary small"
             disabled={!range}
             onClick={() => range && api.createSequence(projectId, range[0], range[1]).then(onState, (e) => onError(e.message))}
           >
             Créer une séquence avec la plage (F)
-          </button>
-          <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
+          </button>}
+          {!props.pnx && <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
             Tout en séquences
-          </button>
+          </button>}
           <span className="small-text">
             Orientation de toutes les photos :{' '}
             <YawRotate projectId={projectId} target={{ all: true }} what="toutes les photos du projet" onDone={() => props.onRefresh()} onError={onError} />
           </span>
         </div>
-        <span className="muted small-text">
+        {!props.pnx && <span className="muted small-text">
           {range
             ? `Plage : photos ${range[0] + 1} → ${range[1] + 1} (${range[1] - range[0] + 1}).`
             : 'Créer à la main : « ⏵ Début » (D) sur la première photo, naviguer, puis « ⏹ Fin » (F) sur la dernière.'}{' '}
           Découper en naviguant : C (ou ✂ Couper ici) sur la première photo de chaque nouvelle séquence. X : exclure la photo et passer à la suivante.
-        </span>
+        </span>}
+        {props.pnx && (
+          <span className="muted small-text">
+            Séquences déjà publiées : leur découpage ne change pas. X exclut une photo (supprimée de Panoramax à l'envoi, sur demande).
+          </span>
+        )}
       </div>
 
-      <details className="proposals" open={proposals !== null}>
+      {!props.pnx && <details className="proposals" open={proposals !== null}>
         <summary>Découpage proposé (photos non classées)</summary>
         <div className="row wrap small-text">
           <label>
@@ -259,7 +265,7 @@ export default function SequencesTab(props: Props) {
           ) : (
             <p className="muted small-text">Aucun segment proposé.</p>
           ))}
-      </details>
+      </details>}
 
       <h3>Séquences ({sequences.length})</h3>
       {sequences.length === 0 && <p className="muted small-text">Aucune séquence. Créez-en depuis une plage ou le découpage proposé.</p>}

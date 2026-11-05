@@ -5,6 +5,18 @@ export interface ProjectItem {
   name: string
   created_at: number
   photo_count: number
+  kind: ProjectKind
+}
+
+// ride: photos imported from the disk; panoramax: sequences already published, corrected and sent back
+export type ProjectKind = 'ride' | 'panoramax'
+
+export interface PnxSequence {
+  id: string
+  title: string
+  count: number | null
+  start: string | null
+  created: string | null
 }
 
 export interface Job {
@@ -45,6 +57,8 @@ export interface Summary {
 export interface Project {
   id: string
   name: string
+  kind: ProjectKind
+  pnx_instance: string | null
   created_at: number
   settings: Record<string, number>
   source_dirs: string[]
@@ -382,11 +396,11 @@ export const api = {
   pnxLogin: () => req<PanoramaxStatus>('POST', '/api/panoramax/login'),
   pnxCheck: () => req<PanoramaxStatus>('POST', '/api/panoramax/check'),
   pnxLogout: () => req<PanoramaxStatus>('POST', '/api/panoramax/logout'),
+  pnxMySequences: () => req<PnxSequence[]>('GET', '/api/panoramax/my-sequences'),
+  pnxCreateProject: (name: string, collections: string[]) => req<{ id: string }>('POST', '/api/panoramax/projects', { name, collections }),
   publish: (id: string, sequence_ids: number[], visibility: 'anyone' | 'owner-only', bike: boolean) =>
     req<{ job_id: string }>('POST', `/api/projects/${id}/publish`, { sequence_ids, visibility, bike }),
   // sequences already published: link one published elsewhere, compare, send the corrections, put them back
-  pnxLink: (id: string, sid: number, collection: string) =>
-    req<{ collection_id: string; matched: number; local: number; remote: number }>('POST', `/api/projects/${id}/sequences/${sid}/panoramax/link`, { collection }),
   pnxCompare: (id: string, sid: number) => req<PublishedDiff>('GET', `/api/projects/${id}/sequences/${sid}/panoramax/compare`),
   pnxPush: (id: string, sid: number, delete_excluded: boolean) =>
     req<{ job_id: string }>('POST', `/api/projects/${id}/sequences/${sid}/panoramax/push`, { delete_excluded }),

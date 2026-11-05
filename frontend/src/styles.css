@@ -860,3 +860,21 @@ input.coord {
 .claim-box p {
   margin: 4px 0;
 }
+
+/* Home: new Panoramax project */
+.pnx-new {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 14px;
+}
+.pnx-seq-list {
+  list-style: none;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+.pnx-seq-list li {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}

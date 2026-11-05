@@ -273,27 +273,97 @@ def test_compare_push_and_revert(project, fake_items):
     assert back["orientations"] == d["orientations"] and back["last_edit"] is None
 
 
-def test_link_a_sequence_published_elsewhere(project, fake_items):
-    client, pid, seqs = project
-    connect(client, fake_items)
-    sid = seqs[0]["id"]
-    rows = client.get(f"/api/projects/{pid}/photos").json()
-    f = rows["fields"]
-    mine = [dict(zip(f, r)) for r in rows["rows"] if r[f.index("sequence_id")] == sid]
-    det = [client.get(f"/api/projects/{pid}/photos/{p['id']}").json() for p in mine[:12]]
-    from datetime import datetime, timezone
-    feats = {}
-    for i, d in enumerate(det):
-        pic = str(uuid.uuid4())
-        name = d["filename"] if i < 10 else "renamed.jpg"  # the last two only match by capture time
-        when = datetime.fromtimestamp(d["ts"], timezone.utc).isoformat()
-        feats[pic] = {"id": pic, "geometry": {"type": "Point", "coordinates": [d["lon"] or d["lon_orig"], d["lat"] or d["lat_orig"]]},
-                      "properties": {"original_file:name": name, "datetime": when, "view:azimuth": 0, "pers:yaw": 0}}
-    cid = str(uuid.uuid4())
-    fake_items.items[cid] = feats
-    r = client.post(f"/api/projects/{pid}/sequences/{sid}/panoramax/link", json={"collection": f"https://pnx.test/#focus=map&seq={cid}"}).json()
-    assert r == {"collection_id": cid, "matched": 12, "local": len(mine), "remote": 12}
-    d = client.get(f"/api/projects/{pid}/sequences/{sid}/panoramax/compare").json()
-    assert d["collection_id"] == cid and d["not_published"] == len(mine) - 12 and d["headings"] >= 1
-    bad = client.post(f"/api/projects/{pid}/sequences/{sid}/panoramax/link", json={"collection": "pas un identifiant"})
-    assert bad.status_code == 409
+class FakeAccount(FakeWithItems):
+    """Account with published sequences (users/me/collection), sequence metadata and picture images."""
+
+    def __call__(self, req):
+        p = req.url.path
+        if p == "/api/users/me/collection":
+            return httpx.Response(200, json={"links": [
+                {"rel": "child", "id": cid, "href": f"https://pnx.test/api/collections/{cid}", "title": f"Sortie {cid[:4]}",
+                 "stats:items": {"count": len(items)}, "extent": {"temporal": {"interval": [["2024-05-01T08:00:00Z", None]]}}}
+                for cid, items in self.items.items()]})
+        if p.startswith("/api/collections/") and p.count("/") == 3:
+            cid = p.split("/")[3]
+            return httpx.Response(200, json={"id": cid, "title": f"Sortie {cid[:4]}"}) if cid in self.items else httpx.Response(404, json={})
+        if p.startswith("/api/pictures/"):
+            return httpx.Response(200, content=b"\xff\xd8jpeg-" + p.encode(), headers={"Content-Type": "image/jpeg"})
+        return super().__call__(req)
+
+    def add_sequence(self, n=30, yaw=0.0):
+        from app.core import geo
+        cid = str(uuid.uuid4())
+        lat, lon, feats = 43.6, 3.87, {}
+        for i in range(n):
+            pic = str(uuid.uuid4())
+            feats[pic] = {"id": pic, "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                          "properties": {"datetime": f"2024-05-01T08:{i // 30:02d}:{(2 * i) % 60:02d}Z", "view:azimuth": 90,
+                                         "pers:yaw": yaw, "pers:pitch": 0.01 if yaw else 0, "pers:roll": 0.01 if yaw else 0,
+                                         "pers:interior_orientation": {"field_of_view": 360}, "original_file:name": f"GSAC{i:04d}.JPG"}}
+            lon, lat, _ = geo.GEOD.fwd(lon, lat, 90, 8)
+        self.items[cid] = feats
+        return cid
+
+
+@pytest.fixture()
+def account(monkeypatch):
+    f = FakeAccount()
+    monkeypatch.setattr(panoramax, "TRANSPORT", httpx.MockTransport(f))
+    return f
+
+
+def test_panoramax_project_import_and_corrections(account):
+    with TestClient(main.app) as client:
+        connect(client, account)
+        cid = account.add_sequence(30)
+        account.add_sequence(5, yaw=180.0)
+        mine = client.get("/api/panoramax/my-sequences").json()
+        assert len(mine) == 2 and {m["count"] for m in mine} == {30, 5}
+        pid = client.post("/api/panoramax/projects", json={"name": "Corrections", "collections": [f"https://pnx.test/#seq={cid}"]}).json()["id"]
+        wait_jobs(client, pid)
+        proj = client.get(f"/api/projects/{pid}").json()
+        assert proj["kind"] == "panoramax" and proj["pnx_instance"] == "https://pnx.test" and proj["summary"]["total"] == 30
+        assert next(p for p in client.get("/api/projects").json() if p["id"] == pid)["kind"] == "panoramax"
+        (seq,) = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+        assert seq["name"] == f"Sortie {cid[:4]}" and seq["count"] == 30 and seq["last_publication"]["collection_id"] == cid
+        assert not seq["changed_since_publication"]
+        base = f"/api/projects/{pid}/sequences/{seq['id']}/panoramax"
+        d = client.get(f"{base}/compare").json()
+        assert d["photos_to_update"] == 0 and d["to_delete"] == 0 and d["not_published"] == 0  # Panoramax values kept
+        # thumbnails downloaded, image relayed from the instance
+        rows = client.get(f"/api/projects/{pid}/photos").json()
+        f = rows["fields"]
+        first = rows["rows"][0][0]
+        assert all(r[f.index("thumb")] == 1 for r in rows["rows"])
+        assert client.get(f"/api/projects/{pid}/photos/{first}/thumb").content.endswith(b"/thumb.jpg")
+        assert client.get(f"/api/projects/{pid}/photos/{first}/image").content.endswith(b"/sd.jpg")
+        assert client.get(f"/api/projects/{pid}/photos/{first}/image?hd=1").content.endswith(b"/hd.jpg")
+        # camera badly aligned on the helmet: +20° ; one photo excluded
+        client.post(f"/api/projects/{pid}/headings/yaw", json={"sequence_id": seq["id"], "add": 20})
+        client.post(f"/api/projects/{pid}/photos/exclude", json={"photo_ids": [rows["rows"][3][0]]})
+        d = client.get(f"{base}/compare").json()
+        assert (d["orientations"], d["headings"], d["positions"], d["to_delete"]) == (29, 0, 0, 1)
+        client.post(f"{base}/push", json={"delete_excluded": True})
+        wait_jobs(client, pid)
+        assert len(account.items[cid]) == 29 and all(b["yaw"] == pytest.approx(20.0) for _, b in account.patches)
+        assert client.get(f"{base}/compare").json()["photos_to_update"] == 0
+
+
+def test_panoramax_project_refuses_file_operations(account):
+    with TestClient(main.app) as client:
+        connect(client, account)
+        cid = account.add_sequence(10)
+        pid = client.post("/api/panoramax/projects", json={"name": "P", "collections": [cid]}).json()["id"]
+        wait_jobs(client, pid)
+        (seq,) = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+        for method, url, body in [
+            ("post", f"/api/projects/{pid}/import", {"paths": ["/tmp"]}),
+            ("post", f"/api/projects/{pid}/export", {"out_dir": "/tmp/x"}),
+            ("post", f"/api/projects/{pid}/sequences/cut?photo_id=3", None),
+            ("delete", f"/api/projects/{pid}/sequences/{seq['id']}", None),
+            ("post", f"/api/projects/{pid}/publish", {"sequence_ids": [seq["id"]]}),
+        ]:
+            r = getattr(client, method)(url, **({"json": body} if body is not None else {}))
+            assert r.status_code == 409, (url, r.status_code, r.text)
+        # corrections remain possible
+        assert client.put(f"/api/projects/{pid}/photos/3/position", json={"lat": 43.6001, "lon": 3.8701}).status_code == 200

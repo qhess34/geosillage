@@ -15,15 +15,11 @@ export default function PublishedEdit({
 }) {
   const [diff, setDiff] = useState<PublishedDiff | null>(null)
   const [busy, setBusy] = useState(false)
-  const [linking, setLinking] = useState(false)
-  const [address, setAddress] = useState('')
   const [delExcluded, setDelExcluded] = useState(false)
   const [confirm, setConfirm] = useState(false)
-  const [note, setNote] = useState<string | null>(null)
 
   const compare = () => {
     setBusy(true)
-    setNote(null)
     api.pnxCompare(projectId, s.id).then(
       (d) => {
         setDiff(d)
@@ -41,46 +37,7 @@ export default function PublishedEdit({
     onStarted()
   }
 
-  if (!s.last_publication) {
-    return linking ? (
-      <form
-        className="row wrap small-text"
-        onSubmit={(e) => {
-          e.preventDefault()
-          api.pnxLink(projectId, s.id, address).then(
-            (r) => {
-              setLinking(false)
-              setNote(`Associée : ${r.matched} photo(s) sur ${r.remote} publiée(s) reconnue(s).`)
-              onStarted()
-            },
-            (er) => onError(er.message),
-          )
-        }}
-      >
-        <input
-          className="grow"
-          autoFocus
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Adresse ou identifiant de la séquence sur Panoramax"
-          aria-label="Séquence Panoramax"
-        />
-        <button className="small" type="submit" disabled={address.trim().length < 10}>
-          Associer
-        </button>
-        <button className="small" type="button" onClick={() => setLinking(false)}>
-          Annuler
-        </button>
-      </form>
-    ) : (
-      <div className="small-text">
-        <button className="link" onClick={() => setLinking(true)} title="Pour corriger une séquence publiée sans l'application (photos reconnues par nom de fichier ou heure de prise de vue)">
-          Associer à une séquence déjà publiée…
-        </button>
-        {note && <span className="muted"> {note}</span>}
-      </div>
-    )
-  }
+  if (!s.last_publication) return null // only sequences published by the application (or a Panoramax project)
 
   const nothing = diff && diff.photos_to_update === 0 && diff.to_delete === 0
   return (

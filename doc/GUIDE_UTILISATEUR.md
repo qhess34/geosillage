@@ -406,10 +406,26 @@ et **envoyer seulement les différences**, sans republier :
 3. **Remettre les valeurs d'avant** renvoie les valeurs qu'avait Panoramax avant le dernier envoi (les photos
    supprimées ne reviennent pas).
 
-**Séquence publiée sans l'application** (par exemple vos séquences déjà en ligne) : sur la séquence locale
-correspondante, *Associer à une séquence déjà publiée…*, coller l'adresse de la séquence sur Panoramax (ou son
-identifiant) : les photos sont reconnues par leur nom de fichier, sinon par leur heure de prise de vue. Ensuite,
-*Comparer* et *Envoyer* comme ci-dessus.
+Cette comparaison existe pour les séquences publiées **par l'application**. Pour des séquences déjà en ligne
+(publiées autrement, ou anciennes), créer un **projet Panoramax** (ci-dessous).
+
+### Projet Panoramax : corriger des séquences déjà en ligne
+
+Un projet à part, sans photo sur le disque : les photos restent sur Panoramax et sont affichées depuis l'instance.
+
+1. Page d'accueil : **Corriger des séquences déjà publiées sur Panoramax…**. Se connecter si besoin (même lien de
+   validation que pour publier), cocher ses séquences dans la liste (titre, nombre de photos, date ; filtre par
+   titre), ou coller l'adresse de séquences, puis **Créer le projet Panoramax**. Les photos sont chargées
+   (positions, caps, orientation tels que sur Panoramax), puis leurs miniatures.
+2. Corriger avec les outils habituels : positions (glisser, report →, synchro, recalage OSM, photos sans
+   position), caps (le cap de départ est celui de Panoramax, marqué *Panoramax* ; *Revenir au cap calculé* le
+   recalcule depuis la trace), orientation (*Fixer la direction du vélo*, *Corriger le montage*), exclusion (`X`).
+3. Onglet **Envoyer** (à la place d'*Export*) : pour chaque séquence, *Comparer avec Panoramax*, *Envoyer les
+   corrections* (seules les photos modifiées), *Remettre les valeurs d'avant*. Les photos exclues peuvent être
+   supprimées de Panoramax (sur demande).
+
+Dans un projet Panoramax, le découpage des séquences ne change pas (pas de *Début* / *Fin*, *Couper*, fusion…), et
+il n'y a ni import de photos du disque, ni export. Le projet porte le badge *Panoramax* dans la liste.
 
 Limites (celles de Panoramax) : les corrections sont enregistrées par l'instance (affichage, carte, données servies)
 mais pas dans le fichier d'origine stocké sur Panoramax ; on ne peut ni ajouter de photos à une séquence publiée,

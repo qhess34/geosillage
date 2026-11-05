@@ -28,25 +28,11 @@ export default function PublishPanel({
   onError: (msg: string) => void
 }) {
   const [st, setSt] = useState<PanoramaxStatus | null>(null)
-  const [url, setUrl] = useState('')
   const [visibility, setVisibility] = useState<'anyone' | 'owner-only'>('anyone')
   const [bike, setBike] = useState(true)
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const [confirm, setConfirm] = useState(false)
   const running = jobs.some((j) => j.kind === 'publish' && j.state === 'running')
-
-  const take = (p: Promise<PanoramaxStatus>) =>
-    p.then(
-      (s) => {
-        setSt(s)
-        setUrl(s.instance)
-      },
-      (e) => onError(e.message),
-    )
-  useEffect(() => {
-    take(api.pnxStatus())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const exported = sequences.filter((s) => s.last_export)
   const chosen = exported.filter((s) => picked.has(s.id))
@@ -58,62 +44,12 @@ export default function PublishPanel({
     }, (e) => onError(e.message))
   }
 
-  if (!st) return null
   return (
     <div className="publish small-text">
       <h3>Publier sur Panoramax</h3>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (url.trim() && url.trim() !== st.instance) take(api.pnxInstance(url))
-        }}
-      >
-        <label className="grow">
-          Instance{' '}
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.openstreetmap.fr" aria-label="Instance Panoramax" />
-        </label>
-        <button className="small" type="submit" disabled={url.trim() === st.instance}>
-          Changer
-        </button>
-      </form>
+      <PnxConnection onChange={setSt} onError={onError} />
 
-      {st.connected ? (
-        <p>
-          ✓ Connecté à <strong>{st.instance.replace(/^https?:\/\//, '')}</strong>
-          {st.account ? <> en tant que <strong>{st.account}</strong></> : ''} ·{' '}
-          <button className="link" onClick={() => take(api.pnxLogout())}>
-            Se déconnecter
-          </button>
-        </p>
-      ) : st.claim_url ? (
-        <div className="claim-box">
-          <p>
-            1. Ouvrez ce lien et connectez-vous sur Panoramax pour autoriser l'application :{' '}
-            <a href={st.claim_url} target="_blank" rel="noreferrer">
-              valider la connexion
-            </a>
-          </p>
-          <p>
-            2. Puis :{' '}
-            <button className="small primary" onClick={() => take(api.pnxCheck())}>
-              J'ai validé, vérifier
-            </button>{' '}
-            <button className="small" onClick={() => take(api.pnxLogin())}>
-              Nouveau lien
-            </button>
-          </p>
-        </div>
-      ) : (
-        <p>
-          <button className="small primary" onClick={() => take(api.pnxLogin())}>
-            Se connecter
-          </button>{' '}
-          <span className="muted">Un lien à ouvrir vous est donné ; aucun mot de passe n'est saisi dans l'application.</span>
-        </p>
-      )}
-
-      {st.connected && (
+      {st?.connected && (
         <>
           <p className="muted">
             Chaque séquence est envoyée telle qu'exportée (dossier de son dernier export), comme <strong>une seule</strong> séquence
@@ -174,7 +110,7 @@ export default function PublishPanel({
           </label>
           {confirm ? (
             <div className="confirm-box">
-              Publier {chosen.length} séquence(s) sur {st.instance.replace(/^https?:\/\//, '')}
+              Publier {chosen.length} séquence(s) sur {st!.instance.replace(/^https?:\/\//, '')}
               {visibility === 'anyone' ? ', visibles par tout le monde' : ', visibles par vous seulement'} ?{' '}
               <button className="small primary" onClick={publish}>
                 Publier
@@ -191,5 +127,80 @@ export default function PublishPanel({
         </>
       )}
     </div>
+  )
+}
+
+// Instance address and connection (claim link); the token stays on the server
+export function PnxConnection({ onChange, onError }: { onChange: (s: PanoramaxStatus) => void; onError: (msg: string) => void }) {
+  const [st, setSt] = useState<PanoramaxStatus | null>(null)
+  const [url, setUrl] = useState('')
+  const take = (p: Promise<PanoramaxStatus>) =>
+    p.then(
+      (s) => {
+        setSt(s)
+        setUrl(s.instance)
+        onChange(s)
+      },
+      (e) => onError(e.message),
+    )
+  useEffect(() => {
+    take(api.pnxStatus())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  if (!st) return null
+  return (
+    <>
+      <form
+        className="row"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (url.trim() && url.trim() !== st.instance) take(api.pnxInstance(url))
+        }}
+      >
+        <label className="grow">
+          Instance{' '}
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.openstreetmap.fr" aria-label="Instance Panoramax" />
+        </label>
+        <button className="small" type="submit" disabled={url.trim() === st.instance}>
+          Changer
+        </button>
+      </form>
+
+      {st.connected ? (
+        <p>
+          ✓ Connecté à <strong>{st.instance.replace(/^https?:\/\//, '')}</strong>
+          {st.account ? <> en tant que <strong>{st.account}</strong></> : ''} ·{' '}
+          <button className="link" onClick={() => take(api.pnxLogout())}>
+            Se déconnecter
+          </button>
+        </p>
+      ) : st.claim_url ? (
+        <div className="claim-box">
+          <p>
+            1. Ouvrez ce lien et connectez-vous sur Panoramax pour autoriser l'application :{' '}
+            <a href={st.claim_url} target="_blank" rel="noreferrer">
+              valider la connexion
+            </a>
+          </p>
+          <p>
+            2. Puis :{' '}
+            <button className="small primary" onClick={() => take(api.pnxCheck())}>
+              J'ai validé, vérifier
+            </button>{' '}
+            <button className="small" onClick={() => take(api.pnxLogin())}>
+              Nouveau lien
+            </button>
+          </p>
+        </div>
+      ) : (
+        <p>
+          <button className="small primary" onClick={() => take(api.pnxLogin())}>
+            Se connecter
+          </button>{' '}
+          <span className="muted">Un lien à ouvrir vous est donné ; aucun mot de passe n'est saisi dans l'application.</span>
+        </p>
+      )}
+
+    </>
   )
 }

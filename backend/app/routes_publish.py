@@ -46,6 +46,23 @@ def pnx_logout():
     return panoramax.logout()
 
 
+@router.get("/panoramax/my-sequences")
+def pnx_my_sequences():
+    """Sequences of the connected account, to create a Panoramax project."""
+    return _err(panoramax.my_sequences)
+
+
+class PnxProjectIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    collections: list[str] = Field(min_length=1, max_length=200)  # identifiers or addresses of published sequences
+
+
+@router.post("/panoramax/projects", status_code=201)
+def pnx_project_create(body: PnxProjectIn):
+    """Project of already published sequences: their pictures are imported (no file) and can be corrected."""
+    return {"id": _err(lambda: panoramax.create_panoramax_project(body.name.strip(), body.collections))}
+
+
 class PublishIn(BaseModel):
     sequence_ids: list[int] = Field(min_length=1)
     visibility: str = Field(default="anyone", pattern="^(anyone|owner-only)$")
@@ -55,6 +72,8 @@ class PublishIn(BaseModel):
 @router.post("/projects/{pid}/publish", status_code=202)
 def publish(pid: str, body: PublishIn):
     with db.open_project(pid) as conn:
+        if db.is_panoramax(conn):
+            raise HTTPException(409, "Séquences déjà publiées : utilisez « Envoyer les corrections »")
         known = {r[0] for r in conn.execute("SELECT id FROM sequence")}
         running = any(j["state"] == "running" and j["kind"] in ("publish", "export", "import") for j in jobs.list_jobs(conn, 20))
     if set(body.sequence_ids) - known:
@@ -73,16 +92,6 @@ def publications(pid: str):
 
 
 # ---- Already published sequences ----
-
-
-class LinkIn(BaseModel):
-    collection: str = Field(min_length=10, max_length=500)  # address or identifier of the published sequence
-
-
-@router.post("/projects/{pid}/sequences/{sid}/panoramax/link")
-def pnx_link(pid: str, sid: int, body: LinkIn):
-    """Link a sequence published outside the application (pictures matched by file name, then capture time)."""
-    return _err(lambda: panoramax.link(pid, sid, body.collection))
 
 
 @router.get("/projects/{pid}/sequences/{sid}/panoramax/compare")

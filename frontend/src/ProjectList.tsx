@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api, ProjectItem } from './api'
+import NewPanoramaxProject from './NewPanoramaxProject'
 
 export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }) {
   const [projects, setProjects] = useState<ProjectItem[] | null>(null)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [toDelete, setToDelete] = useState<ProjectItem | null>(null)
+  const [pnx, setPnx] = useState(false)
 
   const load = () => api.projects().then(setProjects, (e) => setError(e.message))
   useEffect(() => {
@@ -43,6 +45,12 @@ export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }
           Créer le projet
         </button>
       </form>
+      <p className="small-text">
+        <button className="link" onClick={() => setPnx(!pnx)}>
+          Corriger des séquences déjà publiées sur Panoramax…
+        </button>
+      </p>
+      {pnx && <NewPanoramaxProject onCreated={onOpen} onCancel={() => setPnx(false)} />}
       {error && <p className="error">{error}</p>}
       <h2>Projets</h2>
       {projects === null ? (
@@ -56,6 +64,7 @@ export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }
               <button className="link project-name" onClick={() => onOpen(p.id)}>
                 {p.name}
               </button>
+              {p.kind === 'panoramax' && <span className="badge" title="Séquences déjà publiées, corrigées puis renvoyées">Panoramax</span>}
               <span className="muted">
                 {p.photo_count} photos · créé le {new Date(p.created_at * 1000).toLocaleDateString('fr-FR')}
               </span>

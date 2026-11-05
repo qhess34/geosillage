@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, FLAG_LABELS, Job, MissingRun, PhotoDetail, PhotoRow, Project, SeqState, Sequence, UndoState } from './api'
+import { api, FLAG_LABELS, FLAGS, Job, MissingRun, PhotoDetail, PhotoRow, Project, SeqState, Sequence, UndoState } from './api'
 import { Basemap, BUILTIN_BASEMAPS, loadCustomBasemaps, saveCustomBasemaps } from './basemaps'
 import ExportTab from './ExportTab'
 import { fmtCoord, fmtDistance, fmtDuration, fmtSize, fmtTime } from './format'
 import HeadingDial from './HeadingDial'
 import ImportDialog from './ImportDialog'
 import PhotoMap from './PhotoMap'
+import SendTab from './SendTab'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
@@ -405,7 +406,12 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
           )}
           <div>
             Final : <strong>{shown != null ? `${shown.toFixed(1)}°` : '—'}</strong>{' '}
-            {photo.heading_manual != null && <span className="badge">manuel</span>}
+            {photo.heading_manual != null &&
+              (photo.path.startsWith('pnx:') && photo.heading_manual === photo.heading_exif ? (
+                <span className="badge" title="Cap de la photo sur Panoramax (point de départ, envoyé seulement s'il change)">Panoramax</span>
+              ) : (
+                <span className="badge">manuel</span>
+              ))}
             {photo.heading_stale ? <span className="badge warn-text">à revoir</span> : null}
           </div>
           <form
@@ -456,7 +462,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
 
       <h3>Position</h3>
       <div className="small-text position-box">
-        {photo.lat == null && (
+        {photo.lat == null && (photo.lat_orig == null || (photo.flags & FLAGS.INVALID_COORD) !== 0) && (
           <div className="warn-text">
             Photo sans position : elle a été prise entre les deux photos entourées en rouge sur la carte. Touche M puis
             cliquez sur la carte pour la placer, ou{' '}
@@ -623,6 +629,7 @@ type Tab = 'photo' | 'sequences' | 'sync' | 'export' | 'summary'
 
 export default function ProjectView({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const [project, setProject] = useState<Project | null>(null)
+  const isPnx = project?.kind === 'panoramax' // sequences already published: corrections only, no cut, no export
   const [photos, setPhotos] = useState<PhotoRow[]>([])
   const [sequences, setSequences] = useState<Sequence[]>([])
   const [undoState, setUndoState] = useState<UndoState>({ undo: null, redo: null })
@@ -954,6 +961,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         const target =
           e.key === 'PageDown' ? sequences.find((s) => s.start_idx > i) : [...sequences].reverse().find((s) => s.start_idx < i && !(current?.sequence_id === s.id && s.start_idx === i))
         if (target) goIdx(target.start_idx)
+      } else if (isPnx && 'dDfFsScC'.includes(e.key)) {
+        return // Panoramax project: the cut of the published sequences cannot change
       } else if (e.key === 'd' || e.key === 'D') {
         markStart()
       } else if (e.key === 'f' || e.key === 'F' || e.key === 's' || e.key === 'S') {
@@ -1000,7 +1009,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx])
 
   const chooseBasemap = (id: string) => {
     if (id === '__add') {
@@ -1044,23 +1053,33 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           ←
         </button>
         <strong className="ellipsis">{project.name}</strong>
-        <button className="primary" onClick={() => setShowImport(true)}>
-          Importer
-        </button>
+        {isPnx ? (
+          <span className="badge" title={`Séquences déjà publiées sur ${project.pnx_instance ?? 'Panoramax'} : corrigées ici, puis envoyées (onglet Envoyer)`}>
+            Panoramax
+          </span>
+        ) : (
+          <button className="primary" onClick={() => setShowImport(true)}>
+            Importer
+          </button>
+        )}
         <button disabled={!undoState.undo} onClick={() => undoRedo('undo')} title={undoState.undo ? `Annuler : ${undoState.undo} (Ctrl+Z)` : 'Rien à annuler'}>
           ↶ Annuler
         </button>
         <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? `Rétablir : ${undoState.redo} (Ctrl+Y)` : 'Rien à rétablir'}>
           ↷ Rétablir
         </button>
-        <button
-          disabled={!current}
-          onClick={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
-          title="Découper la sortie avant la photo courante (C)"
-        >
-          ✂ Couper ici
-        </button>
-        <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} />
+        {!isPnx && (
+          <>
+            <button
+              disabled={!current}
+              onClick={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
+              title="Découper la sortie avant la photo courante (C)"
+            >
+              ✂ Couper ici
+            </button>
+            <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} />
+          </>
+        )}
         <button
           className={editMode ? 'primary' : ''}
           aria-pressed={editMode}
@@ -1167,7 +1186,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 ['photo', 'Photo'],
                 ['sequences', `Séquences (${sequences.length})`],
                 ['sync', 'Synchro'],
-                ['export', 'Export'],
+                ['export', isPnx ? 'Envoyer' : 'Export'],
                 ['summary', 'Bilan'],
               ] as [Tab, string][]
             ).map(([t, label]) => (
@@ -1200,7 +1219,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   count={photos.length}
                   sequences={sequences}
                   range={range}
-                  seqButtons={<SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} big />}
+                  seqButtons={isPnx ? null : <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} big />}
                   onView={setViewYaw}
                   onChanged={afterHeadingChange}
                   onSnap={() => range && setSnapRange(range)}
@@ -1211,6 +1230,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               ))}
             {tab === 'sequences' && (
               <SequencesTab
+                pnx={isPnx}
                 projectId={projectId}
                 sequences={sequences}
                 current={current}
@@ -1221,7 +1241,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 }}
                 onGo={(idx) => goIdx(idx)}
                 onRefresh={() => {
-                  setNotice('Photos tournées de 180°')
+                  setNotice('Orientation corrigée')
                   afterHeadingChange()
                 }}
                 onExported={() => {
@@ -1250,7 +1270,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onError={fail}
               />
             )}
-            {tab === 'export' && (
+            {tab === 'export' && isPnx && (
+              <SendTab projectId={projectId} instance={project.pnx_instance} sequences={sequences} onStarted={refresh} onError={fail} />
+            )}
+            {tab === 'export' && !isPnx && (
               <ExportTab
                 projectId={projectId}
                 sequences={sequences}
@@ -1278,9 +1301,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 />
                 <OverlayUrl overlay={overlay} onSave={setOverlay} />
                 <div className="row wrap">
-                  <button className="small" onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
-                    Vérifier les fichiers
-                  </button>
+                  {!isPnx && (
+                    <button className="small" onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
+                      Vérifier les fichiers
+                    </button>
+                  )}
                   {project.summary.thumbs_failed > 0 && (
                     <button className="small" onClick={() => api.retryThumbs(projectId).then(refresh)}>
                       Relancer les miniatures en échec

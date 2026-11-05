@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config, db, exporter, importer, jobs, routes_edit, routes_publish, undo
+from . import config, db, exporter, importer, jobs, panoramax, routes_edit, routes_publish, undo
 from .core import analysis, headings
 from .exif import reader
 
@@ -72,6 +72,8 @@ def project_get(pid: str):
         return {
             "id": pid,
             "name": db.get_meta(conn, "name"),
+            "kind": db.get_meta(conn, "kind", "ride"),
+            "pnx_instance": db.get_meta(conn, "pnx_instance"),
             "created_at": db.get_meta(conn, "created_at"),
             "settings": db.get_settings(conn),
             "source_dirs": [r[0] for r in conn.execute("SELECT path FROM source_dir ORDER BY added_at")],
@@ -110,6 +112,8 @@ def project_delete(pid: str):
 
 @app.post("/api/projects/{pid}/import", status_code=202)
 def project_import(pid: str, body: ImportIn):
+    with db.open_project(pid) as conn:
+        routes_edit.ride_only(conn)
     for p in body.paths:
         if not os.path.exists(os.path.expanduser(p)):
             raise HTTPException(400, f"Chemin introuvable : {p}")
@@ -120,6 +124,8 @@ def project_import(pid: str, body: ImportIn):
 
 @app.post("/api/projects/{pid}/check-files", status_code=202)
 def project_check_files(pid: str):
+    with db.open_project(pid) as conn:
+        routes_edit.ride_only(conn)
     with db.open_project(pid):
         pass
     return {"job_id": jobs.start(pid, "check_files", importer.check_files)}
@@ -192,9 +198,15 @@ def photo_thumb(pid: str, photo_id: int):
 
 
 @app.get("/api/projects/{pid}/photos/{photo_id}/image")
-def photo_image(pid: str, photo_id: int):
+def photo_image(pid: str, photo_id: int, hd: bool = False):
     with db.open_project(pid) as conn:
         path = _photo(conn, photo_id)["path"]
+    if path.startswith(panoramax.PNX_PREFIX):  # picture of a Panoramax project: relayed from the instance
+        try:
+            data = panoramax.picture_bytes(pid, path, "hd" if hd else "sd")
+        except panoramax.PanoramaxError as e:
+            raise HTTPException(502, str(e))
+        return Response(data, media_type="image/jpeg", headers={"Cache-Control": "max-age=86400"})
     if not os.path.exists(path):
         raise HTTPException(404, "Fichier source introuvable")
     return FileResponse(path, media_type="image/jpeg")
