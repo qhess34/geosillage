@@ -20,7 +20,7 @@ import httpx
 
 from . import config, db, exporter, jobs
 
-USER_AGENT = "PanoramaxSequenceStudio/1.0 (+https://github.com/qhess34/panoramax-preprocess)"
+USER_AGENT = "GeoSillage/1.0 (+https://github.com/qhess34/geosillage)"
 DEFAULT_INSTANCE = "https://panoramax.openstreetmap.fr"
 PARALLEL_UPLOADS = 3
 WAIT_READY_S = 30 * 60
@@ -132,7 +132,7 @@ def login() -> dict:
         inst = data.get("instance") or DEFAULT_INSTANCE
         try:
             with client(inst) as c:
-                r = c.post("/api/auth/tokens/generate", params={"description": "Panoramax Sequence Studio"})
+                r = c.post("/api/auth/tokens/generate", params={"description": "GeoSillage"})
         except httpx.HTTPError as e:
             raise PanoramaxError(f"Instance injoignable ({inst}) : {e}")
         if r.status_code >= 400:

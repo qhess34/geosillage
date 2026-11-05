@@ -1,6 +1,6 @@
-# Guide d'utilisation — Panoramax Sequence Studio
+# Guide d'utilisation — GeoSillage
 
-Panoramax Sequence Studio prépare les photos 360° d'une sortie (vélo — route, gravel, VTT —, à pied, en voiture…) prise avec une GoPro MAX (une photo toutes
+GeoSillage prépare les photos 360° d'une sortie (vélo — route, gravel, VTT —, à pied, en voiture…) prise avec une GoPro MAX (une photo toutes
 les ~2 s, souvent des milliers) avant leur publication sur [Panoramax](https://panoramax.fr) :
 
 - découper la sortie en **séquences** et écarter les photos inutiles (arrêts, doublons, photos ratées) ;
@@ -29,7 +29,7 @@ Sommaire : [1. Installer et lancer](#1-installer-et-lancer) · [2. Projets](#2-p
 ### Avec Docker (recommandé)
 
 ```sh
-git clone https://github.com/qhess34/panoramax-preprocess.git && cd panoramax-preprocess
+git clone https://github.com/qhess34/geosillage.git && cd geosillage
 cp .env.example .env          # indiquer PHOTOS_DIR (vos sorties GoPro) et PUID/PGID (commandes : id -u ; id -g)
 mkdir -p data photos exports  # (ou les dossiers indiqués dans .env) : à créer AVANT le premier lancement
 docker compose up -d --build

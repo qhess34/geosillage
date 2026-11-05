@@ -1,4 +1,4 @@
-# Panoramax Sequence Studio — image autonome (interface + API + ExifTool)
+# GeoSillage — image autonome (interface + API + ExifTool)
 
 # 1. Interface (React + TypeScript), construite une fois
 FROM node:22-bookworm-slim AS frontend

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lance Panoramax Sequence Studio sur http://127.0.0.1:8765
+# Lance GeoSillage sur http://127.0.0.1:8765
 # 1re fois : crée l'environnement Python et construit l'interface.
 set -euo pipefail
 cd "$(dirname "$0")"

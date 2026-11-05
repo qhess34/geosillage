@@ -1,4 +1,4 @@
-# AGENTS.md — Panoramax Sequence Studio
+# AGENTS.md — GeoSillage
 
 Consignes pour les agents IA (et les humains) qui travaillent sur ce dépôt. À lire avant toute modification.
 

@@ -46,4 +46,4 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t panoramax-sequence-studio:ci .
+      - run: docker build -t geosillage:ci .

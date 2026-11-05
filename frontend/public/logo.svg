@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="GeoSillage">
+  <title>GeoSillage</title>
+  <defs>
+    <linearGradient id="gs-ring" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0ea5e9"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <!-- 360° view: an open ring with an arrow head -->
+  <path d="M 52.6 21.5 A 18 18 0 1 0 54 30" fill="none" stroke="url(#gs-ring)" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M 47.5 19.5 L 54.8 15.5 L 56.5 23.6 Z" fill="#1d4ed8"/>
+  <!-- the wake: photos along the track, from far (small) to here (large) -->
+  <circle cx="6" cy="59" r="1.8" fill="#f97316" opacity="0.55"/>
+  <circle cx="12.5" cy="53.5" r="2.3" fill="#f97316" opacity="0.7"/>
+  <circle cx="19.5" cy="47" r="2.8" fill="#f97316" opacity="0.85"/>
+  <circle cx="26.5" cy="40" r="3.3" fill="#ea580c"/>
+  <!-- here: the photo, at the centre of its 360° view -->
+  <circle cx="36" cy="30" r="6" fill="#ea580c" stroke="#ffffff" stroke-width="2.5"/>
+</svg>

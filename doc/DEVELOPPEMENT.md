@@ -1,6 +1,6 @@
 # Guide du développeur
 
-Pour les humains et les agents IA qui modifient Panoramax Sequence Studio. Les règles courtes sont dans
+Pour les humains et les agents IA qui modifient GeoSillage. Les règles courtes sont dans
 [`AGENTS.md`](../AGENTS.md) ; le fonctionnement interne détaillé (modules, données, algorithmes, pièges) dans
 [`GUIDE_CODE.md`](GUIDE_CODE.md) ; l'étude de départ (GoPro MAX, API Panoramax) dans
 [`ETUDE_PHASE1.md`](ETUDE_PHASE1.md) ; l'utilisation dans [`GUIDE_UTILISATEUR.md`](GUIDE_UTILISATEUR.md).

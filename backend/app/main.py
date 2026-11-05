@@ -26,7 +26,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title="Panoramax Sequence Studio", lifespan=lifespan)
+app = FastAPI(title="GeoSillage", lifespan=lifespan)
 app.include_router(routes_edit.router)
 app.include_router(routes_publish.router)
 

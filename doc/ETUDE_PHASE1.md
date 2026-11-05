@@ -1,4 +1,4 @@
-# Panoramax Sequence Studio — Phase 1 : étude technique
+# GeoSillage (alors « Panoramax Sequence Studio ») — Phase 1 : étude technique
 
 Sources étudiées (code source officiel, pas de supposition) :
 

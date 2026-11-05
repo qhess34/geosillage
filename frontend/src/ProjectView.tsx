@@ -1347,8 +1347,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   return (
     <div className="workspace">
       <header className="toolbar">
-        <button onClick={onBack} title="Retour aux projets">
-          ←
+        <button className="brand-back" onClick={onBack} title="GeoSillage — retour aux projets" aria-label="Retour aux projets">
+          ← <img src="/logo.svg" alt="" width="20" height="20" />
         </button>
         <strong className="ellipsis project-title" title={project.name}>
           {project.name}

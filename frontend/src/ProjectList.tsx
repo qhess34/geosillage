@@ -38,7 +38,15 @@ export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }
 
   return (
     <div className="home">
-      <h1>Panoramax Sequence Studio</h1>
+      <header className="brand-head">
+        <img src="/logo.svg" alt="" width="56" height="56" />
+        <div>
+          <h1>
+            Geo<span className="brand-accent">Sillage</span>
+          </h1>
+          <p className="muted">Préparez et corrigez vos relevés photo 360° pour Panoramax</p>
+        </div>
+      </header>
       <form className="row" onSubmit={create}>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du nouveau projet (ex. Sortie 14 juin)" />
         <button className="primary" type="submit" disabled={!name.trim()}>

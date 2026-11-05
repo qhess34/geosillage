@@ -3,7 +3,7 @@
 services:
   studio:
     build: .
-    image: panoramax-sequence-studio
+    image: geosillage
     # Même utilisateur que sur l'hôte : les photos déplacées ou modifiées et les exports gardent leur propriétaire
     user: "${PUID:-1000}:${PGID:-1000}"
     ports:

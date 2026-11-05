@@ -25,7 +25,7 @@ OVERPASS_URL = os.environ.get("PSS_OVERPASS_URL") or "https://overpass-api.de/ap
 NOT_TRAVELLED = "proposed|abandoned|razed|disused|dismantled|platform|elevator|corridor|rest_area|services|bus_stop"
 CACHE_VERSION = "2"  # changes when the query does (cached responses of an older query are fetched again)
 # Overpass refuses anonymous clients (406): identify the application, with a contact link
-USER_AGENT = "PanoramaxSequenceStudio/1.0 (+https://github.com/qhess34/panoramax-preprocess)"
+USER_AGENT = "GeoSillage/1.0 (+https://github.com/qhess34/geosillage)"
 MAX_DIST_M = 15.0
 AMBIGUOUS_M = 3.0  # second-best way within this margin of the best one: ambiguous
 SWITCH_TOUCHING_M = 4.0  # cost of changing way at a shared node (intersection)

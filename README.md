@@ -1,4 +1,10 @@
-# Panoramax Sequence Studio
+<p align="center">
+  <img src="frontend/public/logo.svg" alt="GeoSillage" width="120" />
+</p>
+
+# GeoSillage
+
+**Préparez et corrigez vos relevés photo 360° pour [Panoramax](https://panoramax.fr).**
 
 Application locale de préparation, correction et publication de séquences [Panoramax](https://panoramax.fr)
 à partir de photos 360° GoPro MAX (vélo, à pied, en voiture… ; une photo toutes les ~2 s, des milliers de photos par sortie).
