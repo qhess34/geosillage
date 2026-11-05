@@ -13,7 +13,7 @@ import { positionAt, Track } from './timesync'
 import { AGE_CLASSES, loadOverlay, OverlaySettings, PANORAMAX_PRESETS, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
-import OsmSnapPanel, { SnapPreview } from './OsmSnapPanel'
+import OsmSnapPanel, { SnapPreview, SnapScope } from './OsmSnapPanel'
 import YawRotate from './YawRotate'
 
 const JOB_LABELS: Record<string, string> = {
@@ -298,7 +298,7 @@ interface PhotoTabProps {
   seqButtons: React.ReactNode
   onView: (yawDeg: number) => void
   onChanged: (u?: UndoState) => void
-  onSnap: () => void // open the OSM snapping panel for the range
+  onSnap: (fromRange: boolean) => void // open the OSM snapping panel (on the timeline range, or the photo's sequence)
   onError: (m: string) => void
 }
 
@@ -512,11 +512,20 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
             OK
           </button>
         </form>
-        {photo.pos_method && (
-          <button className="small" onClick={() => setPos(null, null)}>
-            Revenir à la position d'origine
+        <div className="row wrap">
+          {photo.pos_method && (
+            <button className="small" onClick={() => setPos(null, null)}>
+              Revenir à la position d'origine
+            </button>
+          )}
+          <button
+            className="small"
+            onClick={() => onSnap(false)}
+            title="Placer des photos sur les rues / pistes d'OpenStreetMap : séquence de la photo, plage de la timeline ou photos choisies (le découpage des séquences ne change pas)"
+          >
+            Recaler sur OSM…
           </button>
-        )}
+        </div>
       </div>
       {range && (
         <div className="range-heading small-text">
@@ -546,7 +555,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
             </button>
           </div>
           <div className="row wrap">
-            <button className="small" onClick={onSnap} title="Placer les photos de la plage sur les rues / pistes d'OpenStreetMap (choix de la voie si plusieurs sont possibles)">
+            <button className="small" onClick={() => onSnap(true)} title="Placer les photos de la plage sur les rues / pistes d'OpenStreetMap (choix de la voie si plusieurs sont possibles)">
               Recaler sur OSM
             </button>
           </div>
@@ -691,8 +700,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const mapPhotos = useMemo(() => (showExcluded ? photos : photos.filter((p) => !p.excluded)), [photos, showExcluded])
   const [centerTick, setCenterTick] = useState(0)
   // OSM snapping of a range: panel shown above the photo tab, preview on the map
-  const [snapRange, setSnapRange] = useState<[number, number] | null>(null)
+  const [snapOpen, setSnapOpen] = useState<{ scope: SnapScope; sequenceId: number | null } | null>(null)
   const [snapPreview, setSnapPreview] = useState<SnapPreview | null>(null)
+  const [snapHighlight, setSnapHighlight] = useState<[number, number] | null>(null) // photos the snapping panel works on
   const setOverlay = (o: OverlaySettings) => {
     setOverlayState(o)
     saveOverlay(o)
@@ -1122,7 +1132,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             sequences={sequences}
             basemap={basemap}
             selectedId={selected}
-            range={range}
+            range={snapOpen && snapHighlight ? snapHighlight : range}
             editMode={editMode}
             sync={sync}
             overlay={overlay}
@@ -1176,7 +1186,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               <span className="muted">survol : date</span>
             </div>
           )}
-          <Timeline photos={photos} sequences={sequences} selectedIdx={current?.idx ?? null} range={range} onPick={goIdx} />
+          <Timeline photos={photos} sequences={sequences} selectedIdx={current?.idx ?? null} range={snapOpen && snapHighlight ? snapHighlight : range} onPick={goIdx} />
         </div>
         <div className="resizer" onMouseDown={startResize} title="Redimensionner" />
         <aside className="side">
@@ -1196,18 +1206,24 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             ))}
           </nav>
           <div className="tab-body">
-            {tab === 'photo' && snapRange && (
+            {tab === 'photo' && snapOpen && (
               <OsmSnapPanel
+                key={`${snapOpen.scope}-${snapOpen.sequenceId}`}
                 projectId={projectId}
-                range={snapRange}
+                initialScope={snapOpen.scope}
+                sequenceId={snapOpen.sequenceId}
+                timelineRange={seqStart == null ? range : null}
+                current={current}
+                sequences={sequences}
                 photos={photos}
                 onPreview={setSnapPreview}
+                onRange={setSnapHighlight}
                 onDone={(u, moved) => {
-                  setSnapRange(null)
+                  setSnapOpen(null)
                   setNotice(`${moved} photo(s) recalée(s) sur OpenStreetMap — Ctrl+Z pour annuler`)
                   afterHeadingChange(u)
                 }}
-                onClose={() => setSnapRange(null)}
+                onClose={() => setSnapOpen(null)}
                 onError={fail}
               />
             )}
@@ -1222,7 +1238,12 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   seqButtons={isPnx ? null : <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} big />}
                   onView={setViewYaw}
                   onChanged={afterHeadingChange}
-                  onSnap={() => range && setSnapRange(range)}
+                  onSnap={(fromRange) =>
+                    setSnapOpen({
+                      scope: fromRange && range && seqStart == null ? 'timeline' : current?.sequence_id != null ? 'sequence' : 'custom',
+                      sequenceId: current?.sequence_id ?? null,
+                    })
+                  }
                   onError={fail}
                 />
               ) : (
@@ -1231,6 +1252,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'sequences' && (
               <SequencesTab
                 pnx={isPnx}
+                onSnap={(sq) => {
+                  goIdx(sq.start_idx)
+                  setSnapOpen({ scope: 'sequence', sequenceId: sq.id })
+                  setTab('photo')
+                }}
                 projectId={projectId}
                 sequences={sequences}
                 current={current}

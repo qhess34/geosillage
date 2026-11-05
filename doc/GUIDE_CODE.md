@@ -130,8 +130,11 @@ emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de
 `none`. Renvoie aussi, pour chaque photo, sa projection sur chaque voie candidate (aperçu dans l'interface).
 **Routes** : `POST …/osm/snap/propose` (rien n'est modifié ; `manual_ids` : photos placées à la main) et
 `POST …/osm/snap/apply` (segments choisis → projection, `pos_method = 'osm'`, une opération annulable ; photos
-`manual` épargnées si `keep_manual`). **Interface** : `OsmSnapPanel.tsx` (au-dessus de l'onglet Photo, ouvert par
-« Recaler sur OSM » des outils de plage) ; aperçu `snapPreview` de `PhotoMap` (couches `snap-ways`, `snap-hl` =
+`manual` épargnées si `keep_manual`). **Interface** : `OsmSnapPanel.tsx` (au-dessus de l'onglet Photo, amené à
+l'écran à l'ouverture ; ouvert depuis une séquence de l'onglet Séquences, la section Position ou les outils de
+plage). Portée propre au panneau, **indépendante du découpage** (`seqStart` jamais utilisé) : `sequence` (séquence
+de la photo à l'ouverture), `timeline` (plage tracée, seulement si aucun début n'est posé), `custom` (bornes « de
+cette photo / jusqu'à cette photo ») ; la portée est surlignée sur la carte et la timeline (`snapHighlight`) ; aperçu `snapPreview` de `PhotoMap` (couches `snap-ways`, `snap-hl` =
 voie survolée, `snap-moves`, `snap-new`). Tests : `test_osm.py` (voie unique, voies parallèles, carrefour, rien à
 proximité, API avec réponse Overpass simulée, Overpass injoignable → 502).
 

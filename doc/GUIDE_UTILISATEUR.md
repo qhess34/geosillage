@@ -251,8 +251,13 @@ report affiche un message et s'annule avec `Ctrl+Z`. Décocher la case pour corr
 
 ### Recaler sur les voies OpenStreetMap
 
-Sélectionner une plage (timeline, ou `D` puis `→`), puis, onglet *Photo*, outils de la plage : **Recaler sur OSM**.
-L'application récupère les rues, pistes cyclables et chemins d'OpenStreetMap autour de la sélection (connexion
+Le recalage est **indépendant du découpage des séquences** (il n'utilise ni *Début* ni *Fin*). Pour l'ouvrir :
+- onglet *Séquences* : **Recaler sur OSM** sur une séquence (toute la séquence) ;
+- onglet *Photo*, section *Position* : **Recaler sur OSM…** ; le panneau s'ouvre en haut de l'onglet.
+
+Dans le panneau, choisir les photos à recaler : **la séquence** de la photo, **la plage de la timeline** (glisser
+sur la timeline, ou Maj+clic), ou **des photos choisies** : *De cette photo*, avancer avec `→`, puis *Jusqu'à cette
+photo*. Les photos concernées sont surlignées sur la carte et la timeline. L'application récupère les rues, pistes cyclables et chemins d'OpenStreetMap autour de la sélection (connexion
 Internet nécessaire) et la découpe en tronçons :
 - **voie évidente** : cochée d'office (« Rue de la Loge (rue) · 2,8 m en moyenne ») ;
 - **plusieurs voies possibles** (piste cyclable le long d'une route, rues parallèles) : à choisir dans la liste ;

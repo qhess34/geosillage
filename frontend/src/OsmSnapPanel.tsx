@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { api, PhotoRow, SnapProposal, UndoState } from './api'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { api, PhotoRow, Sequence, SnapProposal, UndoState } from './api'
 
 export interface SnapPreview {
   ways: GeoJSON.FeatureCollection // candidate ways (property chosen = 1 for a way that will be used)
@@ -32,19 +32,32 @@ function wayLabel(w: { name: string; highway: string }): string {
 
 // Snapping a selection onto OpenStreetMap ways: segments proposed by the server, the user picks the way of each
 // ambiguous segment, preview on the map, then one undoable operation
+// What is snapped: independent of the cut of the sequences (D / F are never used here)
+export type SnapScope = 'sequence' | 'timeline' | 'custom'
+
 export default function OsmSnapPanel({
   projectId,
-  range,
+  initialScope,
+  sequenceId,
+  timelineRange,
+  current,
+  sequences,
   photos,
   onPreview,
+  onRange,
   onDone,
   onClose,
   onError,
 }: {
   projectId: string
-  range: [number, number]
+  initialScope: SnapScope
+  sequenceId: number | null // sequence of the photo when the panel was opened
+  timelineRange: [number, number] | null // range drawn on the timeline (drag / Shift+click)
+  current: PhotoRow | null
+  sequences: Sequence[]
   photos: PhotoRow[]
   onPreview: (p: SnapPreview | null) => void
+  onRange: (r: [number, number] | null) => void // photos concerned: highlighted on the map and the timeline
   onDone: (u: UndoState, moved: number) => void
   onClose: () => void
   onError: (msg: string) => void
@@ -54,10 +67,37 @@ export default function OsmSnapPanel({
   const [choices, setChoices] = useState<(number | null)[]>([])
   const [hover, setHover] = useState<number | null>(null)
   const [keepManual, setKeepManual] = useState(true)
+  const [scope, setScope] = useState<SnapScope>(initialScope)
+  const box = useRef<HTMLDivElement>(null)
+  // opened from a button further down the panel: bring it into view
+  useEffect(() => {
+    box.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [])
+  const [bounds, setBounds] = useState<[number | null, number | null]>([current?.idx ?? null, null])
+  const seq = sequences.find((x) => x.id === sequenceId) ?? null
+  const range: [number, number] | null =
+    scope === 'sequence'
+      ? seq && [seq.start_idx, seq.end_idx]
+      : scope === 'timeline'
+        ? timelineRange
+        : bounds[0] != null && bounds[1] != null
+          ? [Math.min(bounds[0], bounds[1]), Math.max(bounds[0], bounds[1])]
+          : null
+  const rangeKey = range ? `${range[0]}-${range[1]}` : ''
+  useEffect(() => {
+    onRange(range)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeKey])
+  useEffect(() => () => onRange(null), [onRange])
 
   useEffect(() => {
-    setLoading(true)
     setProp(null)
+    onPreview(null)
+    if (!range) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
     api.snapPropose(projectId, range[0], range[1]).then(
       (p) => {
         setProp(p)
@@ -70,7 +110,7 @@ export default function OsmSnapPanel({
       },
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, range[0], range[1]])
+  }, [projectId, rangeKey])
 
   const manual = useMemo(() => new Set(prop?.manual_ids ?? []), [prop])
   const moving = useMemo(() => {
@@ -116,7 +156,7 @@ export default function OsmSnapPanel({
   useEffect(() => () => onPreview(null), [onPreview])
 
   const apply = () => {
-    if (!prop) return
+    if (!prop || !range) return
     const segments = prop.segments
       .map((s, i) => ({ start_idx: s.start_idx, end_idx: s.end_idx, way_id: choices[i] }))
       .filter((s): s is { start_idx: number; end_idx: number; way_id: number } => s.way_id != null)
@@ -130,15 +170,39 @@ export default function OsmSnapPanel({
   const ambiguousLeft = prop ? prop.segments.filter((s, i) => s.status === 'ambiguous' && choices[i] == null).length : 0
 
   return (
-    <div className="snap-panel small-text">
+    <div className="snap-panel small-text" ref={box}>
       <div className="row between">
-        <h3>
-          Recalage sur OpenStreetMap · photos {range[0] + 1} → {range[1] + 1}
-        </h3>
+        <h3>Recalage sur OpenStreetMap{range ? ` · photos ${range[0] + 1} → ${range[1] + 1}` : ''}</h3>
         <button className="small" onClick={onClose} aria-label="Fermer">
           ✕
         </button>
       </div>
+      <fieldset className="modes">
+        <legend>Photos à recaler (indépendant du découpage des séquences)</legend>
+        <label>
+          <input type="radio" checked={scope === 'sequence'} disabled={!seq} onChange={() => setScope('sequence')} /> Séquence{' '}
+          {seq ? `« ${seq.name} » (${seq.start_idx + 1} → ${seq.end_idx + 1})` : '(photo non classée)'}
+        </label>
+        <label>
+          <input type="radio" checked={scope === 'timeline'} disabled={!timelineRange} onChange={() => setScope('timeline')} /> Plage de la
+          timeline {timelineRange ? `(${timelineRange[0] + 1} → ${timelineRange[1] + 1})` : '(glisser sur la timeline, ou Maj+clic)'}
+        </label>
+        <label>
+          <input type="radio" checked={scope === 'custom'} onChange={() => setScope('custom')} /> Photos{' '}
+          {bounds[0] != null ? bounds[0] + 1 : '…'} → {bounds[1] != null ? bounds[1] + 1 : '…'}
+        </label>
+        {scope === 'custom' && (
+          <div className="row wrap">
+            <button className="small" disabled={!current} onClick={() => current && setBounds([current.idx, bounds[1]])}>
+              De cette photo{current ? ` (${current.idx + 1})` : ''}
+            </button>
+            <button className="small" disabled={!current} onClick={() => current && setBounds([bounds[0], current.idx])}>
+              Jusqu'à cette photo{current ? ` (${current.idx + 1})` : ''}
+            </button>
+            <span className="muted">naviguez avec ← → entre les deux</span>
+          </div>
+        )}
+      </fieldset>
       {loading && <p className="muted">Recherche des voies OpenStreetMap autour de la sélection…</p>}
       {prop && prop.segments.length === 0 && <p className="muted">Aucune photo positionnée dans la sélection.</p>}
       {prop && prop.segments.length > 0 && (

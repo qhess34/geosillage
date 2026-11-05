@@ -45,7 +45,9 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
   // The user's own ticks override that default, and are forgotten when a sequence's export state changes.
   const [overrides, setOverrides] = useState<Map<number, boolean>>(new Map())
   const stateKey = sequences.map((s) => `${s.id}:${s.needs_export ? 1 : 0}`).join(',')
-  useEffect(() => setOverrides(new Map()), [stateKey])
+  useEffect(() => {
+    setOverrides(new Map())
+  }, [stateKey])
   const isTicked = (s: Sequence) => overrides.get(s.id) ?? s.needs_export
   const tickAll = (v: boolean | null) => setOverrides(v == null ? new Map() : new Map(sequences.map((s) => [s.id, v])))
   const [compat, setCompat] = useState(true)
