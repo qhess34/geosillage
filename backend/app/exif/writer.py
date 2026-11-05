@@ -14,7 +14,7 @@ from .. import config
 
 # Tags this application may write; their original values are saved before touching a source photo.
 # XMP-GPano:PoseHeadingDegrees is the yaw for Panoramax (and Photo Sphere Viewer): angle of the image centre
-# relative to GPSImgDirection, right > 0. It is written only when the user fixed the bike direction on a photo
+# relative to GPSImgDirection, right > 0. It is written only when the user fixed the direction of travel on a photo
 # (helmet camera), or to put back the original value (GoPro: 0.0); versions before 2026-11 wrongly wrote the
 # heading there.
 WRITTEN_TAGS = [

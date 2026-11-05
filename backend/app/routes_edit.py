@@ -261,7 +261,7 @@ def _norm180(v: float) -> float:
 
 @router.post("/headings/yaw")
 def heading_yaw(pid: str, body: YawIn):
-    """Angle of the image centre relative to the bike (XMP PoseHeadingDegrees). The JPEG is never rotated.
+    """Angle of the image centre relative to the direction of travel (XMP PoseHeadingDegrees). The JPEG is never rotated.
 
     yaw: set this angle (helmet camera: where the head looks); add: rotate every photo by this angle on top of
     its current value (camera mounted backwards on a whole sequence: 180). Undoable."""
@@ -286,7 +286,7 @@ def heading_yaw(pid: str, body: YawIn):
         else:
             v = None if body.yaw is None else _norm180(body.yaw)
             updates = [(v, i) for i in ids]
-            label = f"Direction du vélo fixée ({v:+g}°) sur {len(ids)} photo(s)" if v is not None else f"Lacet remis à 0 sur {len(ids)} photo(s)"
+            label = f"Sens de déplacement fixé ({v:+g}°) sur {len(ids)} photo(s)" if v is not None else f"Lacet remis à 0 sur {len(ids)} photo(s)"
         with undo.undoable(conn, label):
             conn.executemany("UPDATE photo SET yaw_offset=? WHERE id=?", updates)
         return {"changed": len(ids), "yaw": updates[0][0] if body.add is None else None, "undo": undo.state(conn)}

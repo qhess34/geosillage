@@ -147,6 +147,13 @@ export interface PanoramaxStatus {
   connected: boolean
   account: string | null
   claim_url: string | null // link to open to validate the connection on the instance
+  semantics: Tag[] // attributes of the last publication, proposed again
+}
+
+// Panoramax attribute (semantics): key=value, e.g. transport=bike
+export interface Tag {
+  key: string
+  value: string
 }
 
 export interface RunSide {
@@ -192,7 +199,7 @@ export interface PhotoDetail extends PhotoRow {
   moved_from: string | null
   source_written_at: number | null
   time_offset: number | null
-  yaw_offset: number | null // helmet camera: angle of the image centre relative to the bike (right > 0)
+  yaw_offset: number | null // helmet camera: angle of the image centre relative to the direction of travel (right > 0)
   flag_names: string[]
 }
 
@@ -400,8 +407,8 @@ export const api = {
   pnxLogout: () => req<PanoramaxStatus>('POST', '/api/panoramax/logout'),
   pnxMySequences: () => req<PnxSequence[]>('GET', '/api/panoramax/my-sequences'),
   pnxCreateProject: (name: string, collections: string[]) => req<{ id: string }>('POST', '/api/panoramax/projects', { name, collections }),
-  publish: (id: string, sequence_ids: number[], visibility: 'anyone' | 'owner-only', bike: boolean) =>
-    req<{ job_id: string }>('POST', `/api/projects/${id}/publish`, { sequence_ids, visibility, bike }),
+  publish: (id: string, sequence_ids: number[], visibility: 'anyone' | 'owner-only', semantics: Tag[]) =>
+    req<{ job_id: string }>('POST', `/api/projects/${id}/publish`, { sequence_ids, visibility, semantics }),
   // sequences already published: link one published elsewhere, compare, send the corrections, put them back
   pnxCompare: (id: string, sid: number) => req<PublishedDiff>('GET', `/api/projects/${id}/sequences/${sid}/panoramax/compare`),
   pnxPush: (id: string, sid: number, delete_excluded: boolean) =>

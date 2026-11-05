@@ -993,3 +993,16 @@ input.coord {
 .ctx-menu button:hover:not(:disabled) {
   background: var(--border);
 }
+
+/* Envoi tab: Panoramax attributes (key=value per line) */
+.tags-input {
+  display: block;
+  margin-top: 6px;
+}
+.tags-input textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  font-family: ui-monospace, monospace;
+}

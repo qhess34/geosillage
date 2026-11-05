@@ -39,7 +39,7 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 - **Toute modification passe par `undo.undoable`** ; toute nouvelle colonne éditable va dans `undo.PHOTO_COLS` /
   `SEQ_COLS`. Migrations : uniquement ajoutées à la fin de `db.MIGRATIONS`.
 - **Action en masse = confirmation** (ex. exclusion d'une plage), et message indiquant `Ctrl+Z`.
-- **EXIF et Panoramax** : `GPSImgDirection` = direction du vélo ; `XMP-GPano:PoseHeadingDegrees` = lacet au sens du
+- **EXIF et Panoramax** : `GPSImgDirection` = sens de déplacement ; `XMP-GPano:PoseHeadingDegrees` = lacet au sens du
   viewer Panoramax, avec tangage/roulis à 0,01° quand il est écrit ; jamais de recompression JPEG ; cap 0 écrit
   0,6°. Lire `GUIDE_CODE.md` « Orientation » et « Export » avant d'y toucher.
 - **Jeton Panoramax** : stocké seulement dans `<DATA_DIR>/panoramax.json` (droits 600), jamais renvoyé à

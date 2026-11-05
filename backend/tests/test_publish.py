@@ -88,7 +88,7 @@ def connect(client, fake):
     assert not client.post("/api/panoramax/check").json()["connected"]  # not claimed yet
     fake.claimed = True
     st = client.post("/api/panoramax/check").json()
-    assert st == {"instance": "https://pnx.test", "connected": True, "account": "Quentin", "claim_url": None}
+    assert st == {"instance": "https://pnx.test", "connected": True, "account": "Quentin", "claim_url": None, "semantics": []}
 
 
 def test_connection_token_kept_private(project, fake):
@@ -113,14 +113,15 @@ def test_publish_requires_connection_and_export(project, fake):
 def test_publish_one_upload_set_per_sequence(project, fake):
     client, pid, seqs = project
     connect(client, fake)
-    client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [seqs[0]["id"]], "visibility": "owner-only"})
+    client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [seqs[0]["id"]], "visibility": "owner-only",
+                "semantics": [{"key": " transport", "value": "bike "}, {"key": "hashtag", "value": "gravel"}]})
     wait_jobs(client, pid)
     job = next(j for j in client.get(f"/api/projects/{pid}").json()["jobs"] if j["kind"] == "publish")
     assert job["state"] == "done", job
     (us, info), = fake.upload_sets.items()
     b = info["body"]
     assert b["no_split"] is True and b["no_deduplication"] is True and b["sort_method"] == "time-asc"
-    assert b["visibility"] == "owner-only" and b["semantics"] == [{"key": "transport", "value": "bike"}]
+    assert b["visibility"] == "owner-only" and b["semantics"] == [{"key": "transport", "value": "bike"}, {"key": "hashtag", "value": "gravel"}]
     assert "relative_heading" not in b and b["title"] == seqs[0]["name"]
     n = client.get(f"/api/projects/{pid}/exports").json()[0]["photo_count"]  # GPS jumps are left out by the export
     assert len(fake.files[us]) == n == b["estimated_nb_files"] and n >= seqs[0]["count"] - 2
@@ -383,3 +384,19 @@ def test_panoramax_project_keeps_pitch_and_roll_for_display(account):
         (seq,) = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
         # nothing to send: yaw, pitch and roll are those of Panoramax
         assert client.get(f"/api/projects/{pid}/sequences/{seq['id']}/panoramax/compare").json()["photos_to_update"] == 0
+
+
+def test_publish_semantics_checked_and_remembered(project, fake):
+    client, pid, seqs = project
+    connect(client, fake)
+    r = client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [seqs[0]["id"]], "semantics": [{"key": "transport", "value": ""}]})
+    assert r.status_code == 409 and "clé et une valeur" in r.json()["detail"]
+    assert client.get("/api/panoramax").json()["semantics"] == []
+    client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [seqs[0]["id"]]})  # no attribute: none sent
+    wait_jobs(client, pid)
+    (us, info), = fake.upload_sets.items()
+    assert "semantics" not in info["body"]
+    tags = [{"key": "transport", "value": "walk"}, {"key": "transport", "value": "walk"}]
+    client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [seqs[0]["id"]], "semantics": tags})
+    wait_jobs(client, pid)
+    assert client.get("/api/panoramax").json()["semantics"] == [{"key": "transport", "value": "walk"}]  # proposed next time

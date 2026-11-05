@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, Job, PanoramaxStatus, seqColor, Sequence } from './api'
+import { api, Job, PanoramaxStatus, seqColor, Sequence, Tag } from './api'
 
 export const PUBLICATION_STATES: Record<string, string> = {
   uploading: 'envoi interrompu',
@@ -13,7 +13,7 @@ export function viewerUrl(instance: string, pictureId: string): string {
   return `${instance.replace(/\/+$/, '')}/#focus=pic&pic=${pictureId}`
 }
 
-// Export tab: connection to a Panoramax instance and publication of the selected sequences (from their last export)
+// Envoi tab: connection to a Panoramax instance and publication of the selected sequences (from their last export)
 export default function PublishPanel({
   projectId,
   sequences,
@@ -29,7 +29,18 @@ export default function PublishPanel({
 }) {
   const [st, setSt] = useState<PanoramaxStatus | null>(null)
   const [visibility, setVisibility] = useState<'anyone' | 'owner-only'>('anyone')
-  const [bike, setBike] = useState(true)
+  const [transport, setTransport] = useState('')
+  const [extra, setExtra] = useState('') // other attributes, one key=value per line
+  const [tagsReady, setTagsReady] = useState(false)
+  // attributes of the last publication proposed again
+  useEffect(() => {
+    if (!st || tagsReady) return
+    setTransport(st.semantics.find((t) => t.key === 'transport')?.value ?? '')
+    setExtra(st.semantics.filter((t) => t.key !== 'transport').map((t) => `${t.key}=${t.value}`).join('\n'))
+    setTagsReady(true)
+  }, [st, tagsReady])
+  const parsed = parseTags(extra)
+  const semantics: Tag[] = [...(transport ? [{ key: 'transport', value: transport }] : []), ...parsed.tags]
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const [confirm, setConfirm] = useState(false)
   const running = jobs.some((j) => j.kind === 'publish' && j.state === 'running')
@@ -38,7 +49,7 @@ export default function PublishPanel({
   const chosen = exported.filter((s) => picked.has(s.id))
   const publish = () => {
     setConfirm(false)
-    api.publish(projectId, chosen.map((s) => s.id), visibility, bike).then(() => {
+    api.publish(projectId, chosen.map((s) => s.id), visibility, semantics).then(() => {
       setPicked(new Set())
       onStarted()
     }, (e) => onError(e.message))
@@ -57,7 +68,7 @@ export default function PublishPanel({
             interrompu reprend où il s'était arrêté.
           </p>
           {exported.length === 0 ? (
-            <p className="muted">Aucune séquence exportée : exportez d'abord (ci-dessus).</p>
+            <p className="muted">Aucune séquence exportée : exportez d'abord (onglet Export).</p>
           ) : (
             <ul className="export-list">
               {exported.map((s, i) => {
@@ -104,10 +115,25 @@ export default function PublishPanel({
               modifiable ensuite sur Panoramax)
             </label>
           </fieldset>
-          <label className="option-line">
-            <input type="checkbox" checked={bike} onChange={(e) => setBike(e.target.checked)} /> Indiquer « prise à vélo » (attribut
-            transport=bike de la séquence)
-          </label>
+          <fieldset className="modes">
+            <legend>Attributs de la séquence (sémantique Panoramax)</legend>
+            <div className="row wrap" role="radiogroup" aria-label="Mode de déplacement">
+              {TRANSPORTS.map(([v, label]) => (
+                <label key={v}>
+                  <input type="radio" checked={transport === v} onChange={() => setTransport(v)} /> {label}
+                </label>
+              ))}
+            </div>
+            <label className="tags-input">
+              Autres attributs, un par ligne <span className="muted">(clé=valeur, ex. hashtag=gravel)</span>
+              <textarea rows={3} value={extra} onChange={(e) => setExtra(e.target.value)} spellCheck={false} aria-label="Autres attributs" />
+            </label>
+            {parsed.bad.length > 0 && <p className="warn-text">Ligne(s) sans « clé=valeur » : {parsed.bad.join(', ')}</p>}
+            <p className="muted">
+              {semantics.length ? `Envoyés : ${semantics.map((t) => `${t.key}=${t.value}`).join(', ')}.` : 'Aucun attribut envoyé.'} Ils
+              sont copiés sur la séquence Panoramax et reproposés au prochain envoi.
+            </p>
+          </fieldset>
           {confirm ? (
             <div className="confirm-box">
               Publier {chosen.length} séquence(s) sur {st!.instance.replace(/^https?:\/\//, '')}
@@ -120,7 +146,7 @@ export default function PublishPanel({
               </button>
             </div>
           ) : (
-            <button className="primary" disabled={!chosen.length || running} onClick={() => setConfirm(true)}>
+            <button className="primary" disabled={!chosen.length || running || parsed.bad.length > 0} onClick={() => setConfirm(true)}>
               {running ? 'Publication en cours…' : `Publier ${chosen.length} séquence(s)`}
             </button>
           )}
@@ -128,6 +154,30 @@ export default function PublishPanel({
       )}
     </div>
   )
+}
+
+// Transport modes offered by the Panoramax website (attribute transport); "other": no attribute
+const TRANSPORTS: [string, string][] = [
+  ['walk', 'À pied'],
+  ['bike', 'Vélo'],
+  ['car', 'Voiture'],
+  ['', 'Autre / non précisé'],
+]
+
+// "key=value" lines → attributes; blank lines are ignored, lines without "=" are reported
+export function parseTags(text: string): { tags: Tag[]; bad: string[] } {
+  const tags: Tag[] = []
+  const bad: string[] = []
+  for (const line of text.split('\n')) {
+    const l = line.trim()
+    if (!l) continue
+    const i = l.indexOf('=')
+    const key = i > 0 ? l.slice(0, i).trim() : ''
+    const value = i > 0 ? l.slice(i + 1).trim() : ''
+    if (!key || !value) bad.push(`« ${l.slice(0, 30)} »`)
+    else if (!tags.some((t) => t.key === key && t.value === value)) tags.push({ key, value })
+  }
+  return { tags, bad }
 }
 
 // Instance address and connection (claim link); the token stays on the server

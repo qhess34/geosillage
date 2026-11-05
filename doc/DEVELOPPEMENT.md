@@ -191,7 +191,7 @@ change le comportement des flèches doit perdre le focus après le clic (`e.targ
 
 ## 6. Points délicats
 
-- **Orientation et Panoramax** (`GUIDE_CODE.md` « Orientation ») : `GPSImgDirection` = direction du vélo ;
+- **Orientation et Panoramax** (`GUIDE_CODE.md` « Orientation ») : `GPSImgDirection` = sens de déplacement ;
   `PoseHeadingDegrees` = lacet au sens du `sphereCorrection.pan` du viewer Panoramax ; le viewer n'applique le
   lacet que si tangage **et** roulis ≠ 0, d'où 0,01°. Les flèches de navigation Panoramax sont placées par rapport
   à `view:azimuth` (= `GPSImgDirection`).

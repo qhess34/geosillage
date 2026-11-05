@@ -7,6 +7,7 @@ import HeadingDial from './HeadingDial'
 import ImportDialog from './ImportDialog'
 import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
+import PublishPanel from './PublishPanel'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
@@ -358,7 +359,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
           pitch={photo.pitch_orig}
           roll={photo.roll_orig}
           onView={onView}
-          fixLabel={range ? `Direction du vélo (plage ${range[0] + 1}→${range[1] + 1})` : 'Fixer la direction du vélo'}
+          fixLabel={range ? `Sens de déplacement (plage ${range[0] + 1}→${range[1] + 1})` : 'Fixer le sens de déplacement'}
           onFixYaw={(y) =>
             api
               .setYaw(projectId, range ? { start_idx: range[0], end_idx: range[1] } : { photo_ids: [photo.id] }, y)
@@ -403,7 +404,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
           {photo.yaw_offset != null && photo.yaw_offset !== 0 && (
             <div title="Orientation de l'image (caméra sur casque, ou montée à l'envers) : écrite dans XMP-GPano:PoseHeadingDegrees, le JPEG n'est pas modifié">
               Orientation : {photo.yaw_offset > 0 ? '+' : ''}
-              {photo.yaw_offset}° par rapport au vélo
+              {photo.yaw_offset}° par rapport au sens de déplacement
             </div>
           )}
           <div>
@@ -624,7 +625,7 @@ function JobBar({ jobs, projectId }: { jobs: Job[]; projectId: string }) {
   )
 }
 
-type Tab = 'photo' | 'sequences' | 'sync' | 'export' | 'summary'
+type Tab = 'photo' | 'sequences' | 'sync' | 'export' | 'send' | 'summary'
 
 export default function ProjectView({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const [project, setProject] = useState<Project | null>(null)
@@ -1111,7 +1112,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </button>
         <strong className="ellipsis">{project.name}</strong>
         {isPnx ? (
-          <span className="badge" title={`Séquences déjà publiées sur ${project.pnx_instance ?? 'Panoramax'} : corrigées ici, puis envoyées (onglet Envoyer)`}>
+          <span className="badge" title={`Séquences déjà publiées sur ${project.pnx_instance ?? 'Panoramax'} : corrigées ici, puis envoyées (onglet Envoi)`}>
             Panoramax
           </span>
         ) : (
@@ -1274,10 +1275,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 ['photo', 'Photo'],
                 ['sequences', `Séquences (${sequences.length})`],
                 ['sync', 'Synchro'],
-                ['export', isPnx ? 'Envoyer' : 'Export'],
+                ['export', 'Export'],
+                ['send', 'Envoi'],
                 ['summary', 'Bilan'],
               ] as [Tab, string][]
-            ).map(([t, label]) => (
+            ).filter(([t]) => !(isPnx && t === 'export')).map(([t, label]) => (
               <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'tab active' : 'tab'} onClick={() => setTab(t)}>
                 {label}
               </button>
@@ -1343,8 +1345,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onError={fail}
               />
             )}
-            {tab === 'export' && isPnx && (
+            {tab === 'send' && isPnx && (
               <SendTab projectId={projectId} instance={project.pnx_instance} sequences={sequences} onStarted={refresh} onError={fail} />
+            )}
+            {tab === 'send' && !isPnx && (
+              <PublishPanel projectId={projectId} sequences={sequences} jobs={project.jobs} onStarted={refresh} onError={fail} />
             )}
             {tab === 'export' && !isPnx && (
               <ExportTab

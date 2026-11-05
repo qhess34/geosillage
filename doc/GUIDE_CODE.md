@@ -30,12 +30,12 @@ backend/app/
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
   ProjectList.tsx  création, ouverture, suppression (avec confirmation) des projets
-  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export, Bilan), raccourcis clavier
+  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export, Envoi, Bilan ; projet Panoramax : pas d'Export), raccourcis clavier
   PhotoMap.tsx     MapLibre : une source GeoJSON (points colorés par séquence + trace), flèches de cap (SDF), plage, sélection
   Timeline.tsx     bande chronologique (canvas) : couleur par séquence, anomalies, interruptions, sélection de plage
   HeadingDial.tsx  cadran de cap (glisser, Maj = pas de 5°)
   Viewer360.tsx    visionneuse 360° (Photo Sphere Viewer 5) : miniature puis original, direction de vue conservée
-                   d'une photo à l'autre, bascule « à plat », bouton « Fixer la direction du vélo »
+                   d'une photo à l'autre, bascule « à plat », bouton « Fixer le sens de déplacement »
   SequencesTab.tsx plage, découpage proposé, liste des séquences et actions
   ExportTab.tsx    export par séquence, historique
   FolderPicker.tsx choix d'un dossier local
@@ -120,7 +120,7 @@ avec 20 m mais 16 photos incertaines. À revalider sur de vraies photos.
 ## Recalage sur les voies OpenStreetMap
 
 `core/osm.py`. **Données** : `fetch_ways` interroge Overpass (`PSS_OVERPASS_URL`, défaut overpass-api.de) sur
-l'emprise des photos + 50 m, arrondie vers l'extérieur à 0,002° (`bbox_of`), voies `highway` praticables à vélo
+l'emprise des photos + 50 m, arrondie vers l'extérieur à 0,002° (`bbox_of`), voies `highway` parcourues à pied, à vélo (gravel, VTT : `track`, `path`…) ou en voiture, autoroutes comprises
 (`HIGHWAYS`), géométrie et nœuds (`out geom tags`) ; réponse gardée dans la table `osm_cache` du projet (clé =
 emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de contact et `Accept` obligatoires ;
 3 essais. **Appariement** (`match`, calcul pur sur une projection plane locale) : voies à moins de `max_dist`
@@ -197,7 +197,7 @@ exclues) et `stepIdx` fait sauter les exclues à ← →, Début/Fin et après `
 creux et permet d'y aller). La visionneuse signale sa
 direction (`onView`, événement `position-updated` de Photo Sphere Viewer) : la flèche de la photo sélectionnée sur
 la carte prend l'orientation cap + direction de vue (`viewAzimuth`). Après un glisser, Photo Sphere Viewer continue
-par inertie : « Fixer la direction du vélo » appelle `stopAnimation()` avant de lire la direction. En mode
+par inertie : « Fixer le sens de déplacement » appelle `stopAnimation()` avant de lire la direction. En mode
 Positions ou Synchro, le zoom au double-clic de la carte est désactivé (sélectionner une photo puis saisir son
 marqueur faisait un double-clic) ; la carte ne se recentre que lorsque la photo sélectionnée change.
 
@@ -217,9 +217,9 @@ ces balises ne sont pas touchées (ou reprennent leur valeur d'origine sur une s
 contient `_captured`, la liste des balises sauvegardées, pour ne pas effacer celles que les anciennes versions ne
 sauvegardaient pas).
 
-Visionneuse : `sphereCorrection` = orientation de la photo, pose XMP forcée à 0. « Fixer la direction du vélo » :
+Visionneuse : `sphereCorrection` = orientation de la photo, pose XMP forcée à 0. « Fixer le sens de déplacement » :
 la vue est dans le repère corrigé ; si l'on regarde la route à l'angle `y`, la nouvelle orientation vaut
-`orientation + y`. `GPSImgDirection` reste la direction du vélo (le viewer Panoramax ouvre la photo en comparant
+`orientation + y`. `GPSImgDirection` reste le sens de déplacement (le viewer Panoramax ouvre la photo en comparant
 ce cap à la direction vers la photo précédente). `POST …/headings/yaw` : `yaw` (valeur fixée) ou `add` (ajoutée à
 chaque photo : caméra à l'envers = 180°), sur des photos, une plage, une séquence (`sequence_id`) ou tout le projet
 (`all`). Interface : `YawRotate.tsx` (correction du montage de la caméra sur le casque : angle libre,
@@ -305,7 +305,9 @@ atomique) ; `GET /api/panoramax` ne renvoie jamais le jeton (décision : pas de 
 Docker). **Publication** (tâche `publish`) : par séquence, fichiers du dernier export (`report.items` : photo →
 fichier exporté, écrit par `exporter.run` ; un export plus ancien sans cette liste, ou une séquence « à
 réexporter », est réexporté d'abord avec les mêmes réglages) ; `POST /api/upload_sets` (`title`, `no_split`,
-`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` transport=bike ;
+`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans l'onglet Envoi (`transport` walk / bike / car comme sur le site
+Panoramax, plus attributs libres `clé=valeur` ; validées par `normalize_semantics`, absentes si aucune ; les
+dernières utilisées sont gardées dans `panoramax.json` et renvoyées par `GET /api/panoramax`) ;
 jamais `relative_heading`) ; envoi des fichiers (3 en parallèle, `POST …/files`, 409 `existing_item` = déjà reçu) ;
 `POST …/complete` ; attente de `dispatched` et de photos toutes traitées (`items_status.preparing` /
 `not_processed` à 0, 30 min max) ; vérification : 1 collection de `nb_items` photos. Tables `publication` (un envoi

@@ -267,7 +267,7 @@ def test_helmet_yaw_written_to_xmp(project, tmp_path):
     ph = [x for x in rows(client, pid) if x["sequence_id"] == seqs[0]["id"] and x["heading"] is not None]
     a, b = ph[5], ph[7]
     r = client.post(f"/api/projects/{pid}/headings/yaw", json={"photo_ids": [a["id"], ph[6]["id"], b["id"]], "yaw": -30}).json()
-    assert r["changed"] == 3 and r["undo"]["undo"].startswith("Direction du vélo fixée")
+    assert r["changed"] == 3 and r["undo"]["undo"].startswith("Sens de déplacement fixé")
     d = client.get(f"/api/projects/{pid}/photos/{a['id']}").json()
     assert d["yaw_offset"] == -30 and d["heading_final"] == pytest.approx(a["heading"])  # bike direction unchanged
 

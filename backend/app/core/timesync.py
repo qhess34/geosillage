@@ -1,6 +1,6 @@
 """GPS delay correction by time synchronisation along the track.
 
-The GoPro records positions late: the position stored in a photo is where the bike was `delay` seconds
+The GoPro records positions late: the position stored in a photo is where the camera was `delay` seconds
 earlier. The *track* is the sequence of recorded positions (original GPS, reliable photos only), indexed
 by capture time. Correcting the delay means sliding every photo along this track: the photo taken at time t
 is placed where the track is at time t + offset. The photos stay on the itinerary (interpolation between

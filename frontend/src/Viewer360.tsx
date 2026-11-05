@@ -14,7 +14,7 @@ interface Props {
   yaw?: number | null
   pitch?: number | null // published picture: pers:pitch / pers:roll (display only)
   roll?: number | null
-  onFixYaw?: (yaw: number) => void // "the bike goes where I am looking now"
+  onFixYaw?: (yaw: number) => void // "the direction of travel is where I am looking now"
   onResetYaw?: () => void
   fixLabel?: string
   // view direction relative to the front (degrees, right > 0): lets the map arrow turn with the view
@@ -115,7 +115,7 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
     if (!v || !onFixYaw) return
     // stop the inertia of a mouse drag first, so the direction read is the one on screen
     await v.stopAnimation()
-    // The view is in the corrected frame (front = image at +pose): the bike is where we look now, i.e. at
+    // The view is in the corrected frame (front = image at +pose): the direction of travel is where we look now, i.e. at
     // pose + look from the image centre, which becomes the new orientation
     const look = norm180((v.getPosition().yaw * 180) / Math.PI)
     onFixYaw(Math.round(norm180(pose + look) * 10) / 10)
@@ -129,17 +129,17 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
       <button
         className="small viewer360-reset"
         onClick={() => viewer.current?.animate({ yaw: 0, pitch: 0, zoom: 0, speed: '3rpm' })}
-        title="Recentrer la vue : face à l'avant (le vélo si sa direction est fixée), à l'horizon, sans zoom"
+        title="Recentrer la vue : face à l'avant (le sens de déplacement s'il est fixé), à l'horizon, sans zoom"
       >
         ⟲ Recentrer
       </button>
       {onFixYaw && (
         <div className="viewer360-fix">
-          <button className="small primary" onClick={fix} title="Tournez la vue vers la route devant le vélo, puis cliquez (caméra sur casque)">
-            🚲 {fixLabel ?? 'Fixer la direction du vélo'}
+          <button className="small primary" onClick={fix} title="Tournez la vue vers l'avant, dans le sens de déplacement, puis cliquez (caméra sur casque ou mal orientée)">
+            🧭 {fixLabel ?? 'Fixer le sens de déplacement'}
           </button>
           {yaw != null && yaw !== 0 && onResetYaw && (
-            <button className="small" onClick={onResetYaw} title="Le centre de l'image regarde dans la direction du vélo">
+            <button className="small" onClick={onResetYaw} title="Le centre de l'image regarde dans le sens de déplacement">
               ↻ {yaw > 0 ? '+' : ''}
               {yaw}° ✕
             </button>

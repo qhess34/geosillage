@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
-import PublishPanel from './PublishPanel'
 
 interface Props {
   projectId: string
@@ -256,7 +255,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
         </div>
       )}
 
-      <PublishPanel projectId={projectId} sequences={sequences} jobs={jobs} onStarted={onStarted} onError={onError} />
+      <p className="small-text muted">Publication sur Panoramax des séquences exportées : onglet <strong>Envoi</strong>.</p>
 
       {history.length > 0 && (
         <>

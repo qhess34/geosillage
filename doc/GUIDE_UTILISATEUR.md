@@ -1,12 +1,13 @@
 # Guide d'utilisation — Panoramax Sequence Studio
 
-Panoramax Sequence Studio prépare les photos 360° d'une sortie à vélo prise avec une GoPro MAX (une photo toutes
+Panoramax Sequence Studio prépare les photos 360° d'une sortie (vélo — route, gravel, VTT —, à pied, en voiture…) prise avec une GoPro MAX (une photo toutes
 les ~2 s, souvent des milliers) avant leur publication sur [Panoramax](https://panoramax.fr) :
 
 - découper la sortie en **séquences** et écarter les photos inutiles (arrêts, doublons, photos ratées) ;
 - corriger le **retard du GPS** de la GoPro et les **positions** fausses ;
-- vérifier les **caps** (direction du vélo) et l'**orientation** de la caméra (casque, caméra à l'envers) ;
-- **exporter** un dossier par séquence, avec des EXIF corrigés et lus correctement par Panoramax.
+- vérifier les **caps** (sens de déplacement) et l'**orientation** de la caméra (casque, caméra à l'envers) ;
+- **exporter** un dossier par séquence, avec des EXIF corrigés et lus correctement par Panoramax ;
+- **publier** les séquences sur Panoramax, avec leurs attributs (mode de déplacement…).
 
 La publication sur Panoramax ne se fait pas depuis l'application : on envoie ensuite les dossiers exportés (voir
 [§ 9](#9-publier-sur-panoramax)).
@@ -102,7 +103,7 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
 │   (Centrer · Suivre · Exclues · Reporter…)   │ Photo · Séquences · Synchro  │
-│                                              │ Export · Bilan               │
+│                                              │ Export · Envoi · Bilan       │
 ├──────────────────────────────────────────────┤                              │
 │ timeline (toute la sortie)                   │                              │
 └──────────────────────────────────────────────┴──────────────────────────────┘
@@ -306,10 +307,10 @@ l'est / le nord) ou déplacement le long du trajet.
 
 Deux notions distinctes :
 
-- le **cap** = la direction du **vélo** (EXIF `GPSImgDirection`). Il est calculé automatiquement vers la photo
+- le **cap** = le **sens de déplacement** (EXIF `GPSImgDirection`). Il est calculé automatiquement vers la photo
   suivante ; Panoramax s'en sert pour placer les flèches de navigation ;
-- l'**orientation** = l'angle entre le **centre de l'image** et le vélo (XMP `PoseHeadingDegrees`). Elle vaut 0
-  quand la caméra regarde devant le vélo ; Panoramax s'en sert pour tourner la photo 360°.
+- l'**orientation** = l'angle entre le **centre de l'image** et le sens de déplacement (XMP `PoseHeadingDegrees`).
+  Elle vaut 0 quand la caméra regarde vers l'avant ; Panoramax s'en sert pour tourner la photo 360°.
 
 ### Vérifier les caps
 
@@ -319,13 +320,13 @@ Onglet *Séquences* : *Décalage cap* d'une séquence. Sur une plage : *Décaler
 « à revoir ».
 
 ![Cap et position d'une photo](images/07-cap.webp)
-*Onglet *Photo* : cap calculé avec le décalage de la séquence, orientation de la photo par rapport au vélo, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
+*Onglet *Photo* : cap calculé avec le décalage de la séquence, orientation de la photo par rapport au sens de déplacement, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
 
 ### Caméra sur casque
 
-Le centre de l'image suit la tête, pas le vélo. Dans la visionneuse, tourner la vue vers la route **devant le vélo**,
-puis *🚲 Fixer la direction du vélo* (sur la photo, ou sur toute la plage sélectionnée). L'angle de la tête est
-enregistré comme orientation de la photo ; le cap reste celui du vélo, et la photo s'ouvre face à la route (dans
+Le centre de l'image suit la tête, pas le sens de déplacement. Dans la visionneuse, tourner la vue vers l'avant
+(la route ou le chemin devant soi), puis *🧭 Fixer le sens de déplacement* (sur la photo, ou sur toute la plage
+sélectionnée). L'angle de la tête est enregistré comme orientation de la photo ; le cap reste le sens de déplacement, et la photo s'ouvre face à la route (dans
 l'application comme sur Panoramax).
 
 ### Caméra mal orientée sur le casque, ou à l'envers
@@ -390,7 +391,7 @@ seule séquence avec le dossier, le mode et les options de son dernier export.
 
 ## 9. Publier sur Panoramax
 
-### Depuis l'application (onglet *Export*, section « Publier sur Panoramax »)
+### Depuis l'application (onglet *Envoi*)
 
 1. **Instance** : adresse de l'instance Panoramax (par défaut `https://panoramax.openstreetmap.fr` ; IGN ou autre
    possible), puis *Changer*.
@@ -399,15 +400,18 @@ seule séquence avec le dossier, le mode et les options de son dernier export.
    … ». Aucun mot de passe n'est saisi dans l'application ; l'accès obtenu reste sur votre machine (dans le dossier
    des projets, lisible par vous seul) et n'est jamais affiché. *Se déconnecter* l'efface.
 3. **Cocher les séquences** à publier (seules les séquences déjà exportées sont proposées), choisir la
-   **visibilité** (*Tout le monde*, ou *Moi seulement* pour un essai, modifiable ensuite sur Panoramax) et l'attribut
-   *prise à vélo*, puis *Publier* et confirmer.
+   **visibilité** (*Tout le monde*, ou *Moi seulement* pour un essai, modifiable ensuite sur Panoramax).
+4. **Attributs de la séquence** (facultatifs, « sémantique » Panoramax) : le **mode de déplacement** (*À pied*,
+   *Vélo*, *Voiture* — attribut `transport`, comme sur le site de Panoramax —, ou *Autre / non précisé* : pas
+   d'attribut), et d'autres attributs libres, un par ligne au format `clé=valeur` (ex. `hashtag=gravel`). Ils sont
+   copiés sur la séquence Panoramax et reproposés au prochain envoi. Puis *Publier* et confirmer.
 
 Chaque séquence est envoyée depuis le dossier de son dernier export, comme **une seule séquence Panoramax** (ni
 redécoupée, ni dédoublonnée). Une séquence modifiée depuis son export est d'abord réexportée. L'avancement s'affiche
 en bas de l'écran ; après l'envoi, Panoramax traite les photos (floutage) : la publication est terminée quand la
 séquence est prête. Un envoi interrompu (réseau coupé…) reprend où il s'était arrêté en relançant la publication.
 
-Ensuite, onglets *Séquences* et *Export* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
+Ensuite, onglets *Séquences* et *Envoi* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
 sur le site de l'instance) ; *modifiée depuis la publication* si la séquence a changé depuis (corrections à
 envoyer : voir ci-dessous).
 
@@ -437,8 +441,8 @@ Un projet à part, sans photo sur le disque : les photos restent sur Panoramax e
    photos comme Panoramax : orientation (lacet) et redressement de l'horizon (tangage, roulis) compris.
 2. Corriger avec les outils habituels : positions (glisser, report →, synchro, recalage OSM, photos sans
    position), caps (le cap de départ est celui de Panoramax, marqué *Panoramax* ; *Revenir au cap calculé* le
-   recalcule depuis la trace), orientation (*Fixer la direction du vélo*, *Corriger le montage*), exclusion (`X`).
-3. Onglet **Envoyer** (à la place d'*Export*) : pour chaque séquence, *Comparer avec Panoramax*, *Envoyer les
+   recalcule depuis la trace), orientation (*Fixer le sens de déplacement*, *Corriger le montage*), exclusion (`X`).
+3. Onglet **Envoi** (pas d'onglet *Export*) : pour chaque séquence, *Comparer avec Panoramax*, *Envoyer les
    corrections* (seules les photos modifiées), *Remettre les valeurs d'avant*. Les photos exclues peuvent être
    supprimées de Panoramax (sur demande).
 

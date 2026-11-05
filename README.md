@@ -1,7 +1,7 @@
 # Panoramax Sequence Studio
 
 Application locale de préparation, correction et publication de séquences [Panoramax](https://panoramax.fr)
-à partir de photos 360° GoPro MAX (vélo, une photo toutes les ~2 s, des milliers de photos par sortie).
+à partir de photos 360° GoPro MAX (vélo, à pied, en voiture… ; une photo toutes les ~2 s, des milliers de photos par sortie).
 
 Par défaut les fichiers originaux ne sont **pas modifiés** : les projets ne stockent que des références vers les
 photos, les métadonnées lues et les corrections, et l'export produit des copies. Sur demande explicite (avec
@@ -16,7 +16,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 2a | Projets, import récursif, lecture EXIF par lots, bilan d'import, anomalies, miniatures en tâche de fond, carte | ✅ |
 | 2c | Séquences (plage, découpage proposé, couper, fusionner, limites), timeline, annuler/rétablir, raccourcis | ✅ |
 | 2d (partiel) | Cap : calcul automatique, manuel, par plage, décalage par séquence ; **export d'un dossier par séquence avec EXIF corrigés** | ✅ |
-| 2b | Visionneuse 360° (Photo Sphere Viewer), direction du vélo pour caméra sur casque | ✅ |
+| 2b | Visionneuse 360° (Photo Sphere Viewer), sens de déplacement pour caméra sur casque | ✅ |
 | 2b (reste) | Liste des photos (virtualisée, filtres d'anomalies) | backlog |
 | 2d | Correction GPS : glisser sur la carte, saisie, placer une photo sans GPS, décalage et déplacement le long du trajet sur une plage ; export en copie, en déplaçant les sources, ou sur place ; restauration des sources | ✅ |
 | 2d (reste) | Exports GeoJSON/CSV des positions | backlog |
@@ -25,7 +25,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
 | 3 | Recalage sur les voies OSM d'une sélection (tronçons, choix de la voie si ambiguïté, aperçu) | ✅ |
 | 3 (reste) | Import GPX | à faire |
-| 4 | Publication Panoramax par séquence (connexion par lien de validation, reprise d'un envoi interrompu) | ✅ |
+| 4 | Publication Panoramax par séquence (onglet Envoi, connexion par lien de validation, attributs : mode de déplacement et attributs libres, reprise d'un envoi interrompu) | ✅ |
 | 4 (suite) | Projet Panoramax : corriger des séquences déjà publiées (choisies dans son compte), envoi des seules différences, retour en arrière | ✅ |
 | Qualité | Tests d'interface (Playwright) dans les vérifications automatiques GitHub | backlog |
 
@@ -46,7 +46,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
    `C` couper, `X` exclure ; ou découpage proposé automatiquement.
 3. **Corriger le retard GPS** (*Synchro*) : glisser une photo le long de la trace sur la vue satellite.
 4. **Corriger les positions** (`M`) : glisser le point ; `→` reporte la même correction sur les suivantes.
-5. **Vérifier caps et orientation** : direction du vélo pour une caméra sur casque, correction du montage.
+5. **Vérifier caps et orientation** : sens de déplacement pour une caméra sur casque, correction du montage.
 6. **Exporter** un dossier par séquence (`<projet>_1`, `_2`…) avec EXIF corrigés ; réexporter ce qui a changé.
 7. Publier chaque dossier sur Panoramax comme une seule séquence.
 

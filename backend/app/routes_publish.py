@@ -66,7 +66,7 @@ def pnx_project_create(body: PnxProjectIn):
 class PublishIn(BaseModel):
     sequence_ids: list[int] = Field(min_length=1)
     visibility: str = Field(default="anyone", pattern="^(anyone|owner-only)$")
-    bike: bool = True  # semantics transport=bike
+    semantics: list[dict] = Field(default_factory=list, max_length=100)  # [{key, value}], e.g. transport=bike
 
 
 @router.post("/projects/{pid}/publish", status_code=202)
@@ -80,8 +80,10 @@ def publish(pid: str, body: PublishIn):
         raise HTTPException(404, "Séquence introuvable")
     if running:
         raise HTTPException(409, "Une autre tâche (export, import, publication) est en cours")
+    tags = _err(lambda: panoramax.normalize_semantics(body.semantics))
     _err(panoramax._account)  # connected?
-    return {"job_id": jobs.start(pid, "publish", lambda ctx: panoramax.publish(ctx, pid, body.sequence_ids, body.visibility, body.bike), unique=False)}
+    panoramax.remember_semantics(tags)
+    return {"job_id": jobs.start(pid, "publish", lambda ctx: panoramax.publish(ctx, pid, body.sequence_ids, body.visibility, tags), unique=False)}
 
 
 @router.get("/projects/{pid}/publications")

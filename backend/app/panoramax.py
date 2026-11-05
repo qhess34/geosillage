@@ -75,7 +75,31 @@ def status() -> dict:
         "connected": bool(acc.get("claimed")),
         "account": acc.get("name"),
         "claim_url": acc.get("claim_url") if acc.get("token") and not acc.get("claimed") else None,
+        "semantics": data.get("semantics", []),  # attributes of the last publication, proposed again
     }
+
+
+def normalize_semantics(tags: list[dict]) -> list[dict]:
+    """Sequence attributes (Panoramax semantics: key=value tags, a key may repeat, a pair may not)."""
+    out: list[dict] = []
+    for t in tags:
+        k, v = str(t.get("key", "")).strip(), str(t.get("value", "")).strip()
+        if not k or not v:
+            raise PanoramaxError("Attribut incomplet : il faut une clé et une valeur (clé=valeur)")
+        if len(k) > 256 or len(v) > 2048:
+            raise PanoramaxError(f"Attribut trop long : {k[:40]}")
+        if {"key": k, "value": v} not in out:
+            out.append({"key": k, "value": v})
+    if len(out) > 100:
+        raise PanoramaxError("Trop d'attributs (100 au plus)")
+    return out
+
+
+def remember_semantics(tags: list[dict]) -> None:
+    with _lock:
+        data = _load()
+        data["semantics"] = tags
+        _save(data)
 
 
 def set_instance(url: str) -> dict:
@@ -156,7 +180,7 @@ def _account() -> tuple[str, str]:
     inst = data.get("instance") or DEFAULT_INSTANCE
     acc = data.get("accounts", {}).get(inst) or {}
     if not acc.get("claimed"):
-        raise PanoramaxError("Non connecté à Panoramax : onglet Export, « Se connecter »")
+        raise PanoramaxError("Non connecté à Panoramax : onglet Envoi, « Se connecter »")
     return inst, acc["token"]
 
 
@@ -220,16 +244,16 @@ def _ready(us: dict) -> bool:
     return True
 
 
-def publish(ctx, pid: str, sequence_ids: list[int], visibility: str = "anyone", bike: bool = True) -> None:
+def publish(ctx, pid: str, sequence_ids: list[int], visibility: str = "anyone", semantics: list[dict] | None = None) -> None:
     inst, token = _account()
     for n, sid in enumerate(sequence_ids, 1):
         ctx.check()
         name, items = _export_items(pid, ctx, sid)
         with client(inst, token) as c:
-            _publish_one(ctx, pid, c, inst, sid, name, items, visibility, bike, f"({n}/{len(sequence_ids)}) ")
+            _publish_one(ctx, pid, c, inst, sid, name, items, visibility, semantics or [], f"({n}/{len(sequence_ids)}) ")
 
 
-def _publish_one(ctx, pid, c: httpx.Client, inst, sid, name, items, visibility, bike, prefix) -> None:
+def _publish_one(ctx, pid, c: httpx.Client, inst, sid, name, items, visibility, semantics, prefix) -> None:
     # Resume an interrupted publication of the same sequence on the same instance
     with db.open_project(pid) as conn:
         prev = conn.execute(
@@ -252,8 +276,8 @@ def _publish_one(ctx, pid, c: httpx.Client, inst, sid, name, items, visibility, 
             "no_deduplication": True,
             "visibility": visibility,
         }
-        if bike:
-            body["semantics"] = [{"key": "transport", "value": "bike"}]
+        if semantics:  # copied by Panoramax onto the sequence
+            body["semantics"] = semantics
         r = c.post("/api/upload_sets", json=body)
         if r.status_code >= 400:
             raise _error(r, f"Création de l'envoi de « {name} »")

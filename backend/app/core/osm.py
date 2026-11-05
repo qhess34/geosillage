@@ -20,10 +20,10 @@ from .. import db
 
 # Overpass server (PSS_OVERPASS_URL: another instance or a mirror)
 OVERPASS_URL = os.environ.get("PSS_OVERPASS_URL") or "https://overpass-api.de/api/interpreter"
-# Ways that can be ridden by bike (motorways and the like are left out)
+# Ways travelled on foot, by bike (including gravel / mountain bike tracks and paths) or by car
 HIGHWAYS = (
     "cycleway|path|track|footway|bridleway|steps|pedestrian|living_street|residential|service|unclassified|road|"
-    "tertiary|tertiary_link|secondary|secondary_link|primary|primary_link|trunk|trunk_link"
+    "tertiary|tertiary_link|secondary|secondary_link|primary|primary_link|trunk|trunk_link|motorway|motorway_link"
 )
 # Overpass refuses anonymous clients (406): identify the application, with a contact link
 USER_AGENT = "PanoramaxSequenceStudio/1.0 (+https://github.com/qhess34/panoramax-preprocess)"
