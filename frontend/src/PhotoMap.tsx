@@ -345,7 +345,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       style: rasterStyle(basemap),
       center: [2.5, 46.5],
       zoom: 5,
-      attributionControl: { compact: false },
+      attributionControl: { compact: true }, // ⓘ that opens on hover: never over the timeline
     })
     m.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-left')
     m.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')

@@ -883,14 +883,29 @@ input.coord {
 .timeline-wrap {
   position: relative;
 }
+.timeline-row {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+.timeline-row .timeline {
+  flex: 1;
+  min-width: 0;
+}
+/* zoom controls next to the strip (never over the photos nor under the map attribution) */
 .timeline-zoom {
-  position: absolute;
-  right: 4px;
-  top: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 4px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+.timeline-zoom > span:not(.muted),
+.timeline-zoom .zoom-buttons {
   display: flex;
   gap: 3px;
-  align-items: center;
-  opacity: 0.85;
 }
 .timeline-zoom button.small {
   padding: 0 6px;
@@ -898,9 +913,9 @@ input.coord {
   line-height: 16px;
 }
 .timeline-zoom .muted {
-  background: var(--panel);
-  padding: 0 4px;
-  border-radius: 4px;
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
 }
 .timeline-bar {
   position: relative;

@@ -123,7 +123,8 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 - **Timeline** : toute la sortie, une case par photo, colorée par séquence ; trous = photos exclues, marques rouges
   = anomalies. Clic : aller à la photo ; **glisser** (au moins quelques pixels) ou Maj+clic : sélectionner une
   plage (en jaune). `Échap` efface la plage.
-  **Zoom** : molette sur la timeline (autour du curseur) ou boutons `−` / `+` / *Tout* à droite ; la barre sous la
+  **Désélectionner** : `Échap`. **Zoom** : molette sur la timeline (autour du curseur) ou boutons `−` / `+` /
+  *Tout* à droite de la timeline ; la barre sous la
   timeline (ou Maj+molette, ou un glissement horizontal du pavé tactile) fait défiler ; la photo courante reste
   visible quand on navigue.
 - **Onglet Photo** : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,

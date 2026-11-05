@@ -141,6 +141,7 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
 
   return (
     <div className="timeline-wrap">
+    <div className="timeline-row">
     <canvas
       ref={canvas}
       className="timeline"
@@ -159,6 +160,7 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
       onPointerUp={() => (dragging.current = false)}
     />
       <div className="timeline-zoom small-text">
+        <div className="zoom-buttons">
         <button className="small" onClick={() => zoomAt(1.6, center)} disabled={!zoomed} title="Dézoomer (molette sur la timeline)" aria-label="Dézoomer la timeline">
           −
         </button>
@@ -168,12 +170,14 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
         <button className="small" onClick={setWindowAll} disabled={!zoomed} title="Toute la sortie">
           Tout
         </button>
+        </div>
         {zoomed && (
           <span className="muted">
             {Math.floor(start) + 1}–{Math.min(n, Math.ceil(start + span))} / {n}
           </span>
         )}
       </div>
+    </div>
       {zoomed && (
         <div
           ref={bar}
