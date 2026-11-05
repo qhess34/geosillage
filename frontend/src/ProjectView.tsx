@@ -1186,27 +1186,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               <span className="muted">survol : date</span>
             </div>
           )}
-          <Timeline photos={photos} sequences={sequences} selectedIdx={current?.idx ?? null} range={snapOpen && snapHighlight ? snapHighlight : range} onPick={goIdx} />
-        </div>
-        <div className="resizer" onMouseDown={startResize} title="Redimensionner" />
-        <aside className="side">
-          <nav className="tabs" role="tablist">
-            {(
-              [
-                ['photo', 'Photo'],
-                ['sequences', `Séquences (${sequences.length})`],
-                ['sync', 'Synchro'],
-                ['export', isPnx ? 'Envoyer' : 'Export'],
-                ['summary', 'Bilan'],
-              ] as [Tab, string][]
-            ).map(([t, label]) => (
-              <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'tab active' : 'tab'} onClick={() => setTab(t)}>
-                {label}
-              </button>
-            ))}
-          </nav>
-          <div className="tab-body">
-            {tab === 'photo' && snapOpen && (
+            {snapOpen && (
               <OsmSnapPanel
                 key={`${snapOpen.scope}-${snapOpen.sequenceId}`}
                 projectId={projectId}
@@ -1227,6 +1207,26 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onError={fail}
               />
             )}
+          <Timeline photos={photos} sequences={sequences} selectedIdx={current?.idx ?? null} range={snapOpen && snapHighlight ? snapHighlight : range} onPick={goIdx} />
+        </div>
+        <div className="resizer" onMouseDown={startResize} title="Redimensionner" />
+        <aside className="side">
+          <nav className="tabs" role="tablist">
+            {(
+              [
+                ['photo', 'Photo'],
+                ['sequences', `Séquences (${sequences.length})`],
+                ['sync', 'Synchro'],
+                ['export', isPnx ? 'Envoyer' : 'Export'],
+                ['summary', 'Bilan'],
+              ] as [Tab, string][]
+            ).map(([t, label]) => (
+              <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'tab active' : 'tab'} onClick={() => setTab(t)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="tab-body">
             {tab === 'photo' &&
               (detail ? (
                 <PhotoTab
@@ -1255,7 +1255,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onSnap={(sq) => {
                   goIdx(sq.start_idx)
                   setSnapOpen({ scope: 'sequence', sequenceId: sq.id })
-                  setTab('photo')
                 }}
                 projectId={projectId}
                 sequences={sequences}

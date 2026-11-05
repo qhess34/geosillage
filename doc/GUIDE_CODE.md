@@ -134,7 +134,11 @@ emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de
 l'écran à l'ouverture ; ouvert depuis une séquence de l'onglet Séquences, la section Position ou les outils de
 plage). Portée propre au panneau, **indépendante du découpage** (`seqStart` jamais utilisé) : `sequence` (séquence
 de la photo à l'ouverture), `timeline` (plage tracée, seulement si aucun début n'est posé), `custom` (bornes « de
-cette photo / jusqu'à cette photo ») ; la portée est surlignée sur la carte et la timeline (`snapHighlight`) ; aperçu `snapPreview` de `PhotoMap` (couches `snap-ways`, `snap-hl` =
+cette photo / jusqu'à cette photo ») ; la portée est surlignée sur la carte et la timeline (`snapHighlight`, couches `range` + `range-ring` de la carte). Le panneau est une fenêtre flottante dans la zone
+carte (`.snap-modal`, déplaçable par sa barre de titre, `Échap` la ferme) : la carte et la navigation restent
+utilisables. **Timeline** : fenêtre visible `[start, start + span)` (zoom molette autour du curseur ou − / + / Tout,
+au plus 20 photos ; défilement par la barre, Maj+molette ou glissement horizontal ; la photo courante est ramenée
+dans la fenêtre ; écouteur `wheel` non passif) ; aperçu `snapPreview` de `PhotoMap` (couches `snap-ways`, `snap-hl` =
 voie survolée, `snap-moves`, `snap-new`). Tests : `test_osm.py` (voie unique, voies parallèles, carrefour, rien à
 proximité, API avec réponse Overpass simulée, Overpass injoignable → 502).
 

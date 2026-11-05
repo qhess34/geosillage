@@ -69,10 +69,37 @@ export default function OsmSnapPanel({
   const [keepManual, setKeepManual] = useState(true)
   const [scope, setScope] = useState<SnapScope>(initialScope)
   const box = useRef<HTMLDivElement>(null)
-  // opened from a button further down the panel: bring it into view
+  // the window can be moved by its title bar (kept inside the map area)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  const drag = useRef<{ dx: number; dy: number } | null>(null)
+  const startDrag = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return
+    const el = box.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    drag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top }
+    ;(e.target as Element).setPointerCapture(e.pointerId)
+  }
+  const moveDrag = (e: React.PointerEvent) => {
+    const el = box.current
+    if (!drag.current || !el || !(e.buttons & 1)) return
+    const parent = (el.offsetParent as HTMLElement | null)?.getBoundingClientRect()
+    if (!parent) return
+    const left = Math.max(0, Math.min(parent.width - 80, e.clientX - parent.left - drag.current.dx))
+    const top = Math.max(0, Math.min(parent.height - 40, e.clientY - parent.top - drag.current.dy))
+    setPos({ left, top })
+  }
+  // Escape closes the window (the map stays usable around it: preview, navigation with ← →)
   useEffect(() => {
-    box.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [])
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onClose])
   const [bounds, setBounds] = useState<[number | null, number | null]>([current?.idx ?? null, null])
   const seq = sequences.find((x) => x.id === sequenceId) ?? null
   const range: [number, number] | null =
@@ -170,8 +197,20 @@ export default function OsmSnapPanel({
   const ambiguousLeft = prop ? prop.segments.filter((s, i) => s.status === 'ambiguous' && choices[i] == null).length : 0
 
   return (
-    <div className="snap-panel small-text" ref={box}>
-      <div className="row between">
+    <div
+      className="snap-panel snap-modal small-text"
+      ref={box}
+      role="dialog"
+      aria-label="Recalage sur OpenStreetMap"
+      style={pos ? { left: pos.left, top: pos.top, right: 'auto' } : undefined}
+    >
+      <div
+        className="row between snap-title"
+        title="Faire glisser pour déplacer la fenêtre"
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={() => (drag.current = null)}
+      >
         <h3>Recalage sur OpenStreetMap{range ? ` · photos ${range[0] + 1} → ${range[1] + 1}` : ''}</h3>
         <button className="small" onClick={onClose} aria-label="Fermer">
           ✕

@@ -254,7 +254,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       type: 'circle',
       source: 'photos',
       filter: rangeFilter(range),
-      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 5, 16, 9], 'circle-color': '#facc15', 'circle-opacity': 0.6 },
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 7, 16, 13, 19, 18], 'circle-color': '#facc15', 'circle-opacity': 0.75 },
     })
     m.addLayer({
       id: 'photos',
@@ -267,6 +267,19 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
         // zoom must stay at the top level of the expression
         'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, ['case', ['==', ['get', 'corrected'], 1], 2, 0], 16, ['case', ['==', ['get', 'corrected'], 1], 2, 1]],
         'circle-stroke-color': ['case', ['==', ['get', 'corrected'], 1], '#7c3aed', '#ffffff'],
+      },
+    })
+    // selected photos (range, snapping scope): a ring above the points, visible at any zoom
+    m.addLayer({
+      id: 'range-ring',
+      type: 'circle',
+      source: 'photos',
+      filter: rangeFilter(range),
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 4, 16, 8, 19, 11],
+        'circle-color': 'rgba(0,0,0,0)',
+        'circle-stroke-color': '#d97706',
+        'circle-stroke-width': 2.5,
       },
     })
     m.addLayer({
@@ -484,6 +497,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     const m = map.current
     if (!m || !ready.current || !m.getLayer('range')) return
     m.setFilter('range', rangeFilter(range))
+    if (m.getLayer('range-ring')) m.setFilter('range-ring', rangeFilter(range))
   }, [range])
 
   // Panoramax overlay: shown / hidden, instance changed

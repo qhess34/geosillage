@@ -123,6 +123,9 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 - **Timeline** : toute la sortie, une case par photo, colorée par séquence ; trous = photos exclues, marques rouges
   = anomalies. Clic : aller à la photo ; **glisser** (au moins quelques pixels) ou Maj+clic : sélectionner une
   plage (en jaune). `Échap` efface la plage.
+  **Zoom** : molette sur la timeline (autour du curseur) ou boutons `−` / `+` / *Tout* à droite ; la barre sous la
+  timeline (ou Maj+molette, ou un glissement horizontal du pavé tactile) fait défiler ; la photo courante reste
+  visible quand on navigue.
 - **Onglet Photo** : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,
   *⟲ Recentrer* pour revenir face à l'avant), boutons *⏵ Début* / *⏹ Fin*, cap, position, et outils de la plage
   sélectionnée.
@@ -253,11 +256,14 @@ report affiche un message et s'annule avec `Ctrl+Z`. Décocher la case pour corr
 
 Le recalage est **indépendant du découpage des séquences** (il n'utilise ni *Début* ni *Fin*). Pour l'ouvrir :
 - onglet *Séquences* : **Recaler sur OSM** sur une séquence (toute la séquence) ;
-- onglet *Photo*, section *Position* : **Recaler sur OSM…** ; le panneau s'ouvre en haut de l'onglet.
+- onglet *Photo*, section *Position* : **Recaler sur OSM…**.
+
+Le recalage s'ouvre dans une **fenêtre flottante par-dessus la carte** : la carte reste visible (aperçu) et
+utilisable autour ; la fenêtre se déplace par sa barre de titre et se ferme avec ✕ ou `Échap`.
 
 Dans le panneau, choisir les photos à recaler : **la séquence** de la photo, **la plage de la timeline** (glisser
 sur la timeline, ou Maj+clic), ou **des photos choisies** : *De cette photo*, avancer avec `→`, puis *Jusqu'à cette
-photo*. Les photos concernées sont surlignées sur la carte et la timeline. L'application récupère les rues, pistes cyclables et chemins d'OpenStreetMap autour de la sélection (connexion
+photo*. Les photos concernées sont surlignées sur la carte (halo jaune et anneau orange) et sur la timeline. L'application récupère les rues, pistes cyclables et chemins d'OpenStreetMap autour de la sélection (connexion
 Internet nécessaire) et la découpe en tronçons :
 - **voie évidente** : cochée d'office (« Rue de la Loge (rue) · 2,8 m en moyenne ») ;
 - **plusieurs voies possibles** (piste cyclable le long d'une route, rues parallèles) : à choisir dans la liste ;

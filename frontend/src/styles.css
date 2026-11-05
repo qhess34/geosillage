@@ -356,7 +356,7 @@ select {
 
 .center {
   display: grid;
-  grid-template-rows: 1fr 48px;
+  grid-template-rows: 1fr auto;
   min-height: 0;
   min-width: 0;
 }
@@ -877,4 +877,74 @@ input.coord {
 .pnx-seq-list li {
   padding: 3px 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* Timeline: zoom and scroll */
+.timeline-wrap {
+  position: relative;
+}
+.timeline-zoom {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  opacity: 0.85;
+}
+.timeline-zoom button.small {
+  padding: 0 6px;
+  min-width: 22px;
+  line-height: 16px;
+}
+.timeline-zoom .muted {
+  background: var(--panel);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+.timeline-bar {
+  position: relative;
+  height: 8px;
+  background: var(--border);
+  cursor: pointer;
+  touch-action: none;
+}
+.timeline-thumb {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  background: #6b7280;
+  border-radius: 4px;
+  cursor: grab;
+}
+
+/* OSM snapping: floating window over the map (the map stays visible and usable around it) */
+.snap-modal {
+  position: absolute;
+  left: 52px;
+  top: 10px;
+  width: min(440px, calc(100% - 64px));
+  max-height: calc(100% - 90px);
+  overflow: auto;
+  z-index: 5;
+  background: var(--panel);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .snap-modal {
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
+
+.snap-title {
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+  margin: -8px -10px 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg, transparent);
 }
