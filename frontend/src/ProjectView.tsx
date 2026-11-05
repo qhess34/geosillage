@@ -56,6 +56,7 @@ const SHORTCUTS: [string, string][] = [
   ['Maj+X', 'Réintégrer la photo courante'],
   ['Échap', 'Effacer la plage'],
   ['[ / ]', 'Cap de la photo −1° / +1° (Maj : 5°)'],
+  ['N / Maj+N', 'Point suivant / précédent à vérifier : arrêt, grand écart, précision GPS, cap, saut GPS, photo sans position, photos non classées (les photos concernées sont sélectionnées)'],
   ['M', 'Mode positions : glisser le marqueur violet, ou cliquer la carte pour placer une photo sans GPS'],
   ['Ctrl+Z / Ctrl+Y', 'Annuler / rétablir'],
   ['?', 'Cette aide'],
@@ -134,14 +135,15 @@ function shifted(lat: number, lon: number, east: number, north: number): { lat: 
 }
 
 // Photos without a position, by block, with the positioned photos before / after them (Bilan tab)
-const QUALITY: Record<QualityIssue['kind'], { title: string; help: string }> = {
+const QUALITY: Record<QualityIssue['kind'], { title: string; one: string; help: string }> = {
   stop: {
     title: 'Arrêts',
+    one: 'Arrêt',
     help: "Plusieurs photos au même endroit (feu rouge, pause). Gardez la ou les meilleures — pas forcément la première — et excluez les autres (X).",
   },
-  spacing: { title: 'Grands écarts', help: 'Plus de 25 m entre deux photos qui se suivent : vitesse élevée, photos manquantes ou position à vérifier.' },
-  gps_dop: { title: 'Précision GPS faible', help: 'Le GPS de la caméra signale une position peu précise (DOP > 5) : vérifiez la position sur la carte.' },
-  heading: { title: 'Caps à vérifier', help: 'Cap saisi à la main très différent du cap calculé depuis la trace : erreur de saisie ?' },
+  spacing: { title: 'Grands écarts', one: 'Grand écart', help: 'Plus de 25 m entre deux photos qui se suivent : vitesse élevée, photos manquantes ou position à vérifier.' },
+  gps_dop: { title: 'Précision GPS faible', one: 'Précision GPS faible', help: 'Le GPS de la caméra signale une position peu précise (DOP > 5) : vérifiez la position sur la carte.' },
+  heading: { title: 'Caps à vérifier', one: 'Cap à vérifier', help: 'Cap saisi à la main très différent du cap calculé depuis la trace : erreur de saisie ?' },
 }
 
 // Points to check before publishing, also marked in amber on the timeline. Nothing is changed automatically.
@@ -794,6 +796,36 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     else setQuality([])
   }, [projectId, photos])
   const reloadPhotos = useCallback(async () => setPhotos(await api.photos(projectId)), [projectId])
+  // Everything to check, in the order of the ride (N / Shift+N): points to check, uncorrected GPS jumps, photos
+  // without a position, unclassified photos
+  const checkPoints = useMemo(() => {
+    const out: { start: number; end: number; label: string }[] = quality.map((q) => ({
+      start: q.start_idx,
+      end: q.end_idx,
+      label: `${QUALITY[q.kind].one} : ${q.detail}`,
+    }))
+    const usable = (p: PhotoRow) => !p.excluded && !(p.flags & (FLAGS.DUPLICATE | FLAGS.UNREADABLE | FLAGS.MISSING_FILE))
+    const placed = (p: PhotoRow) => p.lat != null || (p.lat_orig != null && !(p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD)))
+    const runs = (test: (p: PhotoRow) => boolean, label: (n: number) => string) => {
+      let start = -1
+      photos.forEach((p, i) => {
+        const hit = usable(p) && test(p)
+        if (hit && start < 0) start = i
+        const last = i === photos.length - 1
+        if (start >= 0 && (!hit || last)) {
+          const end = hit ? i : i - 1
+          out.push({ start, end, label: label(end - start + 1) })
+          start = -1
+        }
+      })
+    }
+    photos.forEach((p) => {
+      if (usable(p) && p.flags & FLAGS.GPS_JUMP && p.pos_method == null) out.push({ start: p.idx, end: p.idx, label: 'Saut GPS non corrigé' })
+    })
+    runs((p) => !placed(p), (n) => `${n} photo(s) sans position`)
+    if (!isPnx) runs((p) => p.sequence_id == null, (n) => `${n} photo(s) non classée(s)`)
+    return out.sort((a, b) => a.start - b.start || a.end - b.end)
+  }, [quality, photos, isPnx])
 
   const refresh = useCallback(async () => {
     try {
@@ -1064,6 +1096,19 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           }
           goIdx(showExcluded ? current.idx + 1 : stepIdx(current.idx, 1))
         }
+      } else if (e.key === 'n' || e.key === 'N') {
+        const i = current?.idx ?? -1
+        const list = checkPoints
+        const k = e.shiftKey ? list.map((c) => c.start < i).lastIndexOf(true) : list.findIndex((c) => c.start > i)
+        if (k < 0) {
+          setNotice(list.length ? (e.shiftKey ? 'Aucun point à vérifier avant cette photo' : 'Aucun point à vérifier après cette photo') : 'Rien à vérifier')
+        } else {
+          const c = list[k]
+          goIdx(c.start)
+          setSeqStart(null)
+          setRange(c.end > c.start ? [c.start, c.end] : null)
+          setNotice(`${k + 1}/${list.length} · photos ${c.start + 1}${c.end > c.start ? ` → ${c.end + 1}` : ''} · ${c.label}`)
+        }
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)
       } else if (e.key === 'Escape') {
@@ -1079,7 +1124,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
