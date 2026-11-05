@@ -209,7 +209,14 @@ a été prise. On mesure ce retard une fois et on l'applique à toute la sortie.
    orange).
 4. Vérifier sur d'autres photos (`←` `→`). Enregistrer des **points de calage** sur plusieurs repères : la médiane
    est proposée.
-5. *Appliquer* à toute la sortie, à la séquence ou à une plage.
+5. *Appliquer* à toute la sortie (proposé par défaut pour la première synchronisation), à la séquence, à une plage,
+   ou **à partir de la photo courante** jusqu'à la fin de la sortie.
+
+**Retard qui change pendant la sortie** (par exemple 2 s sur les 100 premières photos, puis 1 s) : synchroniser
+d'abord toute la sortie, puis aller là où le retard change et synchroniser à nouveau. Après une première
+synchronisation, la portée proposée devient *À partir de cette photo* : les photos d'avant gardent leur décalage et
+ne sont pas marquées *à réexporter*. La médiane proposée ne tient compte que des points de calage de la portée
+choisie.
 
 
 ![Onglet Synchro](images/05-synchro.webp)

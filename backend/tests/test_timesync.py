@@ -131,3 +131,29 @@ def test_sync_keeps_manual_and_scopes(project):
     assert client.get(f"/api/projects/{pid}/timesync/points").json()["points"] == [{"photo_id": good[6][0], "offset_s": 1.4}]
     t = client.get(f"/api/projects/{pid}/track").json()
     assert len(t["runs"]) == 2 and len(t["runs"][0][0]) == 3  # two runs: cut at the interruption
+
+
+def test_sync_from_photo_leaves_earlier_photos(project, tmp_path):
+    """Offset changing during a ride: a later sync 'from' a photo does not touch (nor mark for re-export) earlier ones."""
+    client, pid = project
+    props = client.get(f"/api/projects/{pid}/sequences/proposals").json()
+    seqs = client.post(f"/api/projects/{pid}/sequences/bulk", json={"segments": [[p["start_idx"], p["end_idx"]] for p in props]}).json()["sequences"]
+    assert len(seqs) == 2
+    client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 2.0, "scope": "all"})
+    client.post(f"/api/projects/{pid}/export", json={"out_dir": str(tmp_path / "out")})
+    wait_jobs(client, pid)
+    assert not any(s["needs_export"] for s in client.get(f"/api/projects/{pid}/sequences").json()["sequences"])
+    before = client.get(f"/api/projects/{pid}/photos").json()
+    start = seqs[1]["start_idx"]
+    r = client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "from", "start_idx": start}).json()
+    assert r["changed"] > 0 and r["undo"]["undo"].startswith("Synchronisation +1.0 s à partir de la photo")
+    after = client.get(f"/api/projects/{pid}/photos").json()
+    f = before["fields"]
+    for b, a in zip(before["rows"], after["rows"]):
+        if b[f.index("idx")] < start:
+            assert a == b
+    states = {s["id"]: s["needs_export"] for s in client.get(f"/api/projects/{pid}/sequences").json()["sequences"]}
+    assert states == {seqs[0]["id"]: False, seqs[1]["id"]: True}
+    d = client.get(f"/api/projects/{pid}/photos/{after['rows'][-2][0]}").json()
+    assert d["time_offset"] == 1.0
+    assert client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "from"}).status_code == 400

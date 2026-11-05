@@ -376,7 +376,8 @@ def positions_batch(pid: str, body: PositionsBatchIn):
 
 class SyncApplyIn(BaseModel):
     offset_s: float = Field(ge=-120, le=120)
-    scope: str = Field(pattern="^(all|sequence|range)$")
+    # from: photo start_idx to the end of the ride (offset changing during a ride: later syncs leave earlier photos alone)
+    scope: str = Field(pattern="^(all|sequence|range|from)$")
     sequence_id: int | None = None
     start_idx: int | None = None
     end_idx: int | None = None
@@ -424,12 +425,19 @@ def sync_apply(pid: str, body: SyncApplyIn):
                 raise HTTPException(400, "Séquence manquante")
             ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE sequence_id=?", (body.sequence_id,))]
             where = "une séquence"
+        elif body.scope == "from":
+            if body.start_idx is None:
+                raise HTTPException(400, "Photo de départ manquante")
+            ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE idx >= ?", (body.start_idx,))]
+            where = f"à partir de la photo {body.start_idx + 1}"
         else:
             if body.start_idx is None or body.end_idx is None:
                 raise HTTPException(400, "Plage manquante")
             ids = positions.ids_in_range(conn, body.start_idx, body.end_idx)
             where = "une plage"
-        with undo.undoable(conn, f"Synchronisation {body.offset_s:+.1f} s sur {where}"):
+        if not ids:
+            raise HTTPException(400, "Aucune photo")
+        with undo.undoable(conn, f"Synchronisation {body.offset_s:+.1f} s " + (where if body.scope == "from" else f"sur {where}")):
             res = _sync_errors(lambda: timesync.apply(conn, body.offset_s, ids, body.keep_manual))
         headings.recompute(conn, mark_stale_ids=set(ids))
         db.set_meta(conn, "last_time_offset", body.offset_s)

@@ -17,6 +17,8 @@ interface Props {
   onError: (m: string) => void
 }
 
+type Scope = 'all' | 'sequence' | 'range' | 'from'
+
 function median(v: number[]): number {
   const s = [...v].sort((a, b) => a - b)
   const m = s.length >> 1
@@ -27,7 +29,14 @@ const fmt = (o: number) => `${o >= 0 ? '+' : ''}${o.toFixed(1)} s`
 
 export default function SyncTab({ projectId, photo, photos, sequences, range, offset, dragged, onOffset, onGo, onApplied, onNotice, onError }: Props) {
   const [points, setPoints] = useState<SyncPoint[]>([])
-  const [scope, setScope] = useState<'all' | 'sequence' | 'range'>('all')
+  // First sync: the whole ride; later ones: from the current photo on (the GPS delay can change during a ride,
+  // and earlier photos must not be moved again nor marked for re-export). The user's choice wins.
+  const [scope, setScopeState] = useState<Scope>('all')
+  const [scopeChosen, setScopeChosen] = useState(false)
+  const setScope = (s: Scope) => {
+    setScopeState(s)
+    setScopeChosen(true)
+  }
   const [keepManual, setKeepManual] = useState(true)
   const [lastApplied, setLastApplied] = useState<number | null>(null)
 
@@ -35,6 +44,7 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
     api.syncPoints(projectId).then((r) => {
       setPoints(r.points)
       setLastApplied(r.last_offset_s)
+      if (r.last_offset_s != null) setScopeState((s) => (s === 'all' ? 'from' : s))
       if (offset == null && r.last_offset_s != null) onOffset(r.last_offset_s)
     }, () => undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -46,7 +56,17 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
   }
   const seq = sequences.find((s) => s.id === photo?.sequence_id)
   const idxOf = (id: number) => photos.find((p) => p.id === id)?.idx
-  const med = points.length ? median(points.map((p) => p.offset_s)) : null
+  // Calibration points within the scope (offsets measured elsewhere in the ride do not apply here)
+  const inScope = (p: SyncPoint) => {
+    const i = idxOf(p.photo_id)
+    if (i == null) return false
+    if (scope === 'from') return photo != null && i >= photo.idx
+    if (scope === 'sequence') return photos[i]?.sequence_id != null && photos[i]?.sequence_id === seq?.id
+    if (scope === 'range') return range != null && i >= range[0] && i <= range[1]
+    return true
+  }
+  const scoped = points.filter(inScope)
+  const med = scoped.length ? median(scoped.map((p) => p.offset_s)) : null
   const spread = points.length > 1 ? Math.max(...points.map((p) => p.offset_s)) - Math.min(...points.map((p) => p.offset_s)) : 0
 
   const apply = () => {
@@ -56,12 +76,13 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
         offset_s: offset,
         scope,
         sequence_id: scope === 'sequence' ? seq?.id : undefined,
-        start_idx: scope === 'range' ? range?.[0] : undefined,
+        start_idx: scope === 'range' ? range?.[0] : scope === 'from' ? photo?.idx : undefined,
         end_idx: scope === 'range' ? range?.[1] : undefined,
         keep_manual: keepManual,
       })
       .then((r) => {
         setLastApplied(offset)
+        if (!scopeChosen && scope === 'all') setScopeState('from')
         onApplied()
         onNotice(
           `Synchronisation ${fmt(offset)} : ${r.changed} photo(s)` +
@@ -128,7 +149,7 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
         </button>
         {med != null && (
           <button className="small" onClick={() => onOffset(Math.round(med * 10) / 10)}>
-            Utiliser la médiane ({fmt(med)})
+            Utiliser la médiane ({fmt(med)}{scoped.length < points.length ? `, ${scoped.length} point(s) de la portée` : ''})
           </button>
         )}
       </div>
@@ -137,7 +158,7 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
           <h3>Points de calage ({points.length})</h3>
           {points.length > 1 && (
             <p className={`small-text ${spread > 1 ? 'warn-text' : 'muted'}`}>
-              Écart entre points : {spread.toFixed(1)} s{spread > 1 ? ' — retard variable : appliquez plutôt par séquence ou par plage' : ''}
+              Écart entre points : {spread.toFixed(1)} s{spread > 1 ? ' — retard variable : appliquez par tronçons (« À partir de cette photo »), par séquence ou par plage' : ''}
             </p>
           )}
           <ul className="sync-points small-text">
@@ -161,6 +182,10 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
         <label>
           <input type="radio" checked={scope === 'all'} onChange={() => setScope('all')} /> Toute la sortie
         </label>
+        <label title="Le retard GPS peut changer pendant une sortie : les photos d'avant gardent leur décalage et ne sont pas à réexporter">
+          <input type="radio" checked={scope === 'from'} disabled={!photo} onChange={() => setScope('from')} /> À partir de cette photo
+          {photo ? ` (${photo.idx + 1} → ${photos.length})` : ''}
+        </label>
         <label>
           <input type="radio" checked={scope === 'sequence'} disabled={!seq} onChange={() => setScope('sequence')} /> Séquence de la photo
           {seq ? ` (${seq.name})` : ' (photo non classée)'}
@@ -174,12 +199,13 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
         </label>
       </fieldset>
       <div className="actions">
-        <button className="primary" disabled={offset == null || (scope === 'sequence' && !seq) || (scope === 'range' && !range)} onClick={apply}>
+        <button className="primary" disabled={offset == null || (scope === 'sequence' && !seq) || (scope === 'range' && !range) || (scope === 'from' && !photo)} onClick={apply}>
           Appliquer {offset == null ? '' : fmt(offset)}
         </button>
       </div>
       <p className="small-text muted">
-        Les photos sont placées sur la trace GPS à l'instant de prise de vue + décalage (sans traverser une interruption).
+        Retard variable : synchronisez d'abord toute la sortie, puis, plus loin, à partir de la photo où le retard change
+        (proposé par défaut après une première synchronisation). Les photos sont placées sur la trace GPS à l'instant de prise de vue + décalage (sans traverser une interruption).
         Les sauts GPS et photos sans GPS reçoivent aussi une position sur la trace. Annulable (Ctrl+Z).
       </p>
     </div>

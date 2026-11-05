@@ -275,7 +275,7 @@ export const api = {
     req<{ offset_s: number; lat: number; lon: number }>('GET', `/api/projects/${id}/timesync/offset?photo_id=${photo}&lat=${lat}&lon=${lon}`),
   syncApply: (
     id: string,
-    body: { offset_s: number; scope: 'all' | 'sequence' | 'range'; sequence_id?: number; start_idx?: number; end_idx?: number; keep_manual: boolean },
+    body: { offset_s: number; scope: 'all' | 'sequence' | 'range' | 'from'; sequence_id?: number; start_idx?: number; end_idx?: number; keep_manual: boolean },
   ) => req<{ changed: number; kept_manual: number; uncovered: number; undo: UndoState }>('POST', `/api/projects/${id}/timesync/apply`, body),
   syncPoints: (id: string) => req<{ points: SyncPoint[]; last_offset_s: number | null }>('GET', `/api/projects/${id}/timesync/points`),
   saveSyncPoints: (id: string, points: SyncPoint[]) => req<{ points: SyncPoint[] }>('PUT', `/api/projects/${id}/timesync/points`, points),

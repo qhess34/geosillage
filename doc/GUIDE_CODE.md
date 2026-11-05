@@ -201,7 +201,10 @@ de la photo (pour ne pas s'accrocher à un autre passage dans la même rue) ; d�
 instant de la photo. Le navigateur fait la même projection (`timesync.ts`, projection plane locale) pour l'aperçu
 pendant le glisser, puis demande la valeur au backend au relâchement.
 
-Application (`apply`) : `lat/lon` = position de la trace à `ts + décalage`, `pos_method = 'time'`,
+Portées de `POST …/timesync/apply` : `all`, `sequence`, `range`, `from` (photos `idx >= start_idx` : retard
+variable au cours d'une sortie, les photos d'avant ne sont pas touchées donc pas marquées « à réexporter »).
+`SyncTab` propose `all` tant qu'aucune synchro n'a été appliquée (`last_time_offset`), puis `from` ; la médiane
+des points de calage est calculée sur les points de la portée. Application (`apply`) : `lat/lon` = position de la trace à `ts + décalage`, `pos_method = 'time'`,
 `photo.time_offset` = décalage. Les positions `manual` / `offset` / `along` sont gardées si `keep_manual`.
 `time_offset` fait partie des colonnes annulables (`undo.PHOTO_COLS`). Points de calage et dernier décalage
 appliqué : `meta.sync_points`, `meta.last_time_offset`.
