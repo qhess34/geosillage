@@ -20,6 +20,7 @@ const JOB_LABELS: Record<string, string> = {
   thumbnails: 'Miniatures',
   check_files: 'Vérification des fichiers',
   export: 'Export',
+  publish: 'Publication Panoramax',
 }
 
 const POS_LABELS: Record<string, string> = {

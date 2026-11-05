@@ -373,6 +373,29 @@ seule séquence avec le dossier, le mode et les options de son dernier export.
 
 ## 9. Publier sur Panoramax
 
+### Depuis l'application (onglet *Export*, section « Publier sur Panoramax »)
+
+1. **Instance** : adresse de l'instance Panoramax (par défaut `https://panoramax.openstreetmap.fr` ; IGN ou autre
+   possible), puis *Changer*.
+2. **Se connecter** : l'application affiche un lien *valider la connexion* ; l'ouvrir, se connecter sur le site de
+   l'instance avec son compte habituel, puis revenir et cliquer *J'ai validé, vérifier* : « ✓ Connecté … en tant que
+   … ». Aucun mot de passe n'est saisi dans l'application ; l'accès obtenu reste sur votre machine (dans le dossier
+   des projets, lisible par vous seul) et n'est jamais affiché. *Se déconnecter* l'efface.
+3. **Cocher les séquences** à publier (seules les séquences déjà exportées sont proposées), choisir la
+   **visibilité** (*Tout le monde*, ou *Moi seulement* pour un essai, modifiable ensuite sur Panoramax) et l'attribut
+   *prise à vélo*, puis *Publier* et confirmer.
+
+Chaque séquence est envoyée depuis le dossier de son dernier export, comme **une seule séquence Panoramax** (ni
+redécoupée, ni dédoublonnée). Une séquence modifiée depuis son export est d'abord réexportée. L'avancement s'affiche
+en bas de l'écran ; après l'envoi, Panoramax traite les photos (floutage) : la publication est terminée quand la
+séquence est prête. Un envoi interrompu (réseau coupé…) reprend où il s'était arrêté en relançant la publication.
+
+Ensuite, onglets *Séquences* et *Export* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
+sur le site de l'instance) ; *modifiée depuis la publication* si la séquence a changé depuis (corrections à
+envoyer : voir § 9 bis, à venir).
+
+### Avec d'autres outils
+
 Envoyer chaque dossier exporté comme **une seule séquence**, sans que le serveur la redécoupe ni la dédoublonne :
 
 - interface web de Panoramax : envoyer le contenu d'un dossier à la fois ;

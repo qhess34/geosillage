@@ -287,6 +287,8 @@ def run(
             "exclude_gps_jumps": exclude_jumps,
             "out_dir": str(out) if out is not None else None,
             "mode": mode,
+            # exported file of each photo (publication on Panoramax)
+            "items": [{"photo_id": it["id"], "file": it["dest"]} for it in items],
         }
         if d is not None:
             files = [it["name"] for it in items] + ["photos.csv"]

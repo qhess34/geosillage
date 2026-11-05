@@ -843,3 +843,20 @@ input.coord {
   gap: 2px;
   margin-top: 2px;
 }
+
+/* Export tab: Panoramax publication */
+.publish {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+  padding-top: 6px;
+}
+.claim-box,
+.confirm-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 6px 0;
+}
+.claim-box p {
+  margin: 4px 0;
+}

@@ -25,7 +25,8 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
 | 3 | Recalage sur les voies OSM d'une sélection (tronçons, choix de la voie si ambiguïté, aperçu) | ✅ |
 | 3 (reste) | Import GPX | à faire |
-| 4 | Publication Panoramax par séquence, puis modification des séquences déjà publiées | à faire |
+| 4 | Publication Panoramax par séquence (connexion par lien de validation, reprise d'un envoi interrompu) | ✅ |
+| 4 (suite) | Modification des séquences déjà publiées (positions, caps, orientation, suppressions) | à faire |
 
 ## Documentation
 

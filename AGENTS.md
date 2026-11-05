@@ -6,8 +6,8 @@ Consignes pour les agents IA (et les humains) qui travaillent sur ce dépôt. À
 
 Application **locale** (FastAPI + React) qui prépare des sorties de photos 360° GoPro MAX avant publication sur
 Panoramax : import, découpe en séquences, retard GPS, positions, caps et orientation, export d'un dossier par
-séquence avec EXIF corrigés (ExifTool). Pas de publication sur Panoramax depuis l'application (décision du
-propriétaire).
+séquence avec EXIF corrigés (ExifTool), publication sur une instance Panoramax (une séquence = un envoi, depuis son
+dernier export).
 
 | Document | Contenu |
 |---|---|
@@ -25,6 +25,7 @@ propriétaire).
 | `backend/app/core/` | calculs purs : géodésie, analyse, caps, séquences, positions, synchro, recalage OSM (`osm.py`, Overpass) |
 | `backend/app/db.py`, `undo.py`, `jobs.py` | SQLite par projet + migrations, journal annuler/rétablir, tâches de fond |
 | `backend/app/exporter.py`, `exif/` | export, modification/restauration des sources, lecture/écriture ExifTool |
+| `backend/app/panoramax.py`, `routes_publish.py` | connexion à une instance Panoramax (lien de validation), publication par séquence |
 | `backend/tests/` | pytest (photos simulées par `tools/make_samples.py`) |
 | `frontend/src/ProjectView.tsx` | écran principal : état, barre d'outils, onglets, raccourcis clavier |
 | `frontend/src/*.tsx`, `*.ts` | carte (`PhotoMap`), timeline, visionneuse 360°, onglets, surcouche Panoramax, API (`api.ts`) |
@@ -40,6 +41,8 @@ propriétaire).
 - **EXIF et Panoramax** : `GPSImgDirection` = direction du vélo ; `XMP-GPano:PoseHeadingDegrees` = lacet au sens du
   viewer Panoramax, avec tangage/roulis à 0,01° quand il est écrit ; jamais de recompression JPEG ; cap 0 écrit
   0,6°. Lire `GUIDE_CODE.md` « Orientation » et « Export » avant d'y toucher.
+- **Jeton Panoramax** : stocké seulement dans `<DATA_DIR>/panoramax.json` (droits 600), jamais renvoyé à
+  l'interface ni écrit dans un journal ; jamais `relative_heading` dans un envoi (il écraserait les caps).
 - **Sécurité** : l'API ne doit écouter que sur `127.0.0.1` ; texte venant des photos ou de Panoramax jamais inséré
   comme HTML.
 - **Langue** : interface, erreurs, documentation et commits en **français** ; code et commentaires en anglais,

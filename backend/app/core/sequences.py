@@ -309,9 +309,11 @@ def create_many(conn, segments: list[tuple[int, int]]) -> list[dict]:
 
 def list_with_stats(conn) -> list[dict]:
     from ..exporter import last_exports  # (exporter imports core modules)
+    from ..panoramax import last_publications
 
     seqs = conn.execute("SELECT * FROM sequence").fetchall()
     exports = last_exports(conn)
+    pubs = last_publications(conn)
     out = []
     for s in seqs:
         pts = conn.execute(
@@ -346,6 +348,9 @@ def list_with_stats(conn) -> list[dict]:
                 "modified_at": s["modified_at"],
                 "last_export": exports.get(s["id"]),
                 # never exported, or changed since the last export (or exported with problems)
+                "last_publication": pubs.get(s["id"]),
+                # published, then changed (positions, headings… : to be sent again, see étape 5)
+                "changed_since_publication": s["id"] in pubs and (s["modified_at"] or 0) > pubs[s["id"]]["ts"],
                 "needs_export": s["id"] not in exports
                 or (s["modified_at"] or 0) > exports[s["id"]]["ts"]
                 or exports[s["id"]]["problems"] > 0,

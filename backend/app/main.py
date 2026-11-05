@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config, db, exporter, importer, jobs, routes_edit, undo
+from . import config, db, exporter, importer, jobs, routes_edit, routes_publish, undo
 from .core import analysis, headings
 from .exif import reader
 
@@ -28,6 +28,7 @@ async def lifespan(app):
 
 app = FastAPI(title="Panoramax Sequence Studio", lifespan=lifespan)
 app.include_router(routes_edit.router)
+app.include_router(routes_publish.router)
 
 
 @app.exception_handler(db.ProjectNotFound)

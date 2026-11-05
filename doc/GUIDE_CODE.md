@@ -286,6 +286,26 @@ Carte : `follow` (« Suivre », défaut) centre la carte sur la photo sélection
 (`stop()` puis `easeTo` 180 ms, pour enchaîner les touches) ; jamais lors d'une modification de point.
 `centerTick` : recentrage ponctuel (« ◎ Centrer »).
 
+## Publication Panoramax
+
+`panoramax.py` + `routes_publish.py`. **Connexion** : `POST {instance}/api/auth/tokens/generate` → jeton + lien
+`claim` ; l'utilisateur ouvre le lien et se connecte sur l'instance ; `GET /api/users/me` avec le jeton répond 200
+une fois le jeton réclamé (`check`). Réglages et jetons dans `<DATA_DIR>/panoramax.json` (droits 600, écriture
+atomique) ; `GET /api/panoramax` ne renvoie jamais le jeton (décision : pas de trousseau système, absent sous
+Docker). **Publication** (tâche `publish`) : par séquence, fichiers du dernier export (`report.items` : photo →
+fichier exporté, écrit par `exporter.run` ; un export plus ancien sans cette liste, ou une séquence « à
+réexporter », est réexporté d'abord avec les mêmes réglages) ; `POST /api/upload_sets` (`title`, `no_split`,
+`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` transport=bike ;
+jamais `relative_heading`) ; envoi des fichiers (3 en parallèle, `POST …/files`, 409 `existing_item` = déjà reçu) ;
+`POST …/complete` ; attente de `dispatched` et de photos toutes traitées (`items_status.preparing` /
+`not_processed` à 0, 30 min max) ; vérification : 1 collection de `nb_items` photos. Tables `publication` (un envoi
+= une ligne : état `uploading` → `processing` → `ready` / `error`) et `published_photo` (photo → `picture_id`,
+pour le lien vers le viewer `#focus=pic&pic=…` et pour l'étape « modifier une séquence publiée »). Reprise : une
+publication restée `uploading` reprend dans le même upload set (`GET …/files`). `list_with_stats` :
+`last_publication`, `changed_since_publication`. Tests : `test_publish.py` (faux serveur `httpx.MockTransport` :
+connexion, jeton privé, paramètres de l'envoi, reprise, réexport préalable). Un envoi réel n'a pas été testé :
+à faire avec le compte de l'utilisateur, en visibilité « moi seulement ».
+
 ## Réexport
 
 `sequence.modified_at` : posé par `undo.undoable` (et par annuler / rétablir) sur les séquences dont le contenu

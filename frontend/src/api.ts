@@ -105,6 +105,24 @@ export interface SnapProposal {
   manual_ids: number[]
 }
 
+export interface Publication {
+  instance: string
+  upload_set_id: string
+  collection_id: string | null
+  first_picture_id: string | null // to open the sequence in the instance's viewer
+  ts: number
+  photo_count: number
+  state: 'uploading' | 'processing' | 'ready' | 'error'
+  message: string | null
+}
+
+export interface PanoramaxStatus {
+  instance: string
+  connected: boolean
+  account: string | null
+  claim_url: string | null // link to open to validate the connection on the instance
+}
+
 export interface RunSide {
   id: number
   idx: number
@@ -178,6 +196,8 @@ export interface Sequence {
   modified_at: number | null
   last_export: { ts: number; path: string; mode: ExportMode; out_dir: string | null; problems: number } | null
   needs_export: boolean // never exported, or changed since the last export
+  last_publication: Publication | null // last publication on Panoramax
+  changed_since_publication: boolean
   rotated: number // photos with an orientation angle (yaw)
   headings: HeadingStats
 }
@@ -344,6 +364,14 @@ export const api = {
       meters?: number
     },
   ) => req<{ changed: number; skipped: number; attached: number; undo: UndoState }>('POST', `/api/projects/${id}/positions/batch`, body),
+  // Panoramax: connection (the token stays on the server) and publication
+  pnxStatus: () => req<PanoramaxStatus>('GET', '/api/panoramax'),
+  pnxInstance: (url: string) => req<PanoramaxStatus>('PUT', '/api/panoramax/instance', { url }),
+  pnxLogin: () => req<PanoramaxStatus>('POST', '/api/panoramax/login'),
+  pnxCheck: () => req<PanoramaxStatus>('POST', '/api/panoramax/check'),
+  pnxLogout: () => req<PanoramaxStatus>('POST', '/api/panoramax/logout'),
+  publish: (id: string, sequence_ids: number[], visibility: 'anyone' | 'owner-only', bike: boolean) =>
+    req<{ job_id: string }>('POST', `/api/projects/${id}/publish`, { sequence_ids, visibility, bike }),
   // snapping a selection onto OpenStreetMap ways
   snapPropose: (id: string, start_idx: number, end_idx: number) =>
     req<SnapProposal>('POST', `/api/projects/${id}/osm/snap/propose`, { start_idx, end_idx }),

@@ -137,6 +137,30 @@ MIGRATIONS = [
     -- OpenStreetMap ways downloaded for snapping (Overpass), by bounding box (rounded outwards)
     CREATE TABLE IF NOT EXISTS osm_cache(bbox TEXT PRIMARY KEY, fetched_at REAL NOT NULL, data TEXT NOT NULL);
     """,
+    """
+    -- Publications on a Panoramax instance (one upload set per sequence), and the published picture of each photo
+    CREATE TABLE IF NOT EXISTS publication(
+        id INTEGER PRIMARY KEY,
+        sequence_id INTEGER NOT NULL,
+        instance TEXT NOT NULL,
+        upload_set_id TEXT NOT NULL,
+        collection_id TEXT,
+        ts REAL NOT NULL,
+        photo_count INTEGER NOT NULL,
+        state TEXT NOT NULL,          -- uploading, processing, ready, error
+        message TEXT
+    );
+    CREATE TABLE IF NOT EXISTS published_photo(
+        photo_id INTEGER NOT NULL,
+        instance TEXT NOT NULL,
+        sequence_id INTEGER NOT NULL,
+        upload_set_id TEXT NOT NULL,
+        picture_id TEXT,
+        file_name TEXT NOT NULL,
+        sent_at REAL NOT NULL,
+        PRIMARY KEY (photo_id, instance)
+    );
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

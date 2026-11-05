@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
+import { PUBLICATION_STATES, viewerUrl } from './PublishPanel'
 import YawRotate from './YawRotate'
 
 interface Props {
@@ -73,6 +74,25 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
           )
         ) : (
           <span className="muted">jamais exportée</span>
+        )}
+        {s.last_publication && (
+          <>
+            {' '}
+            <span
+              className={`badge ${s.last_publication.state === 'ready' && !s.changed_since_publication ? '' : 'warn-text'}`}
+              title={s.last_publication.message ?? s.last_publication.instance}
+            >
+              {s.changed_since_publication ? 'modifiée depuis la publication' : `${PUBLICATION_STATES[s.last_publication.state]} sur Panoramax`}
+            </span>
+            {s.last_publication.first_picture_id && (
+              <>
+                {' '}
+                <a href={viewerUrl(s.last_publication.instance, s.last_publication.first_picture_id)} target="_blank" rel="noreferrer">
+                  voir
+                </a>
+              </>
+            )}
+          </>
         )}
       </div>
       <div className="muted small-text">

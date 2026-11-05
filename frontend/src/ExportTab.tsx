@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
+import PublishPanel from './PublishPanel'
 
 interface Props {
   projectId: string
@@ -252,6 +253,8 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           </div>
         </div>
       )}
+
+      <PublishPanel projectId={projectId} sequences={sequences} jobs={jobs} onStarted={onStarted} onError={onError} />
 
       {history.length > 0 && (
         <>
