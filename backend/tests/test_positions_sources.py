@@ -356,7 +356,7 @@ def test_yaw_sign_migration(project):
         flip = next(i for i, m in enumerate(db.MIGRATIONS) if "yaw_offset = CASE" in m)
         conn.execute(f"PRAGMA user_version={flip}")
         # later migrations are replayed too: the columns they add are dropped first
-        conn.executescript("ALTER TABLE sequence DROP COLUMN modified_at; ALTER TABLE photo DROP COLUMN pitch_orig; ALTER TABLE photo DROP COLUMN roll_orig")
+        conn.executescript("ALTER TABLE sequence DROP COLUMN modified_at; ALTER TABLE photo DROP COLUMN pitch_orig; ALTER TABLE photo DROP COLUMN roll_orig; ALTER TABLE photo DROP COLUMN heading_offset")
         db.migrate(conn)
         got = [conn.execute("SELECT yaw_offset FROM photo WHERE id=?", (ph[i]["id"],)).fetchone()[0] for i in range(3)]
     assert got == [-30, -180, 170]
@@ -422,3 +422,38 @@ def test_gap_at_the_start_cannot_be_interpolated(project):
     assert first["prev"] is None  # the simulated ride starts without a GPS fix
     r = client.post(f"/api/projects/{pid}/positions/batch", json={"photo_ids": first["ids"], "mode": "interpolate"}).json()
     assert r["changed"] == 0 and r["skipped"] == len(first["ids"])
+
+
+def test_heading_offset_on_ride_or_series_not_sequences(project):
+    """Heading offset: whole ride or a series of photos, independent of the sequence cut; manual headings kept."""
+    client, pid, _, seqs = project
+    ph = [x for x in rows(client, pid) if x["heading"] is not None and x["heading_manual"] is None]
+    a, b = ph[3], ph[10]
+    auto = {x["id"]: x["heading"] for x in ph}
+    r = client.post(f"/api/projects/{pid}/headings/offset", json={"start_idx": a["idx"], "end_idx": a["idx"] + 2, "value": 10}).json()
+    assert r["changed"] == 3 and r["undo"]["undo"].startswith("Décalage du cap +10°")
+    got = {x["id"]: x["heading"] for x in rows(client, pid)}
+    assert got[a["id"]] == pytest.approx((auto[a["id"]] + 10) % 360, abs=0.01) and got[b["id"]] == pytest.approx(auto[b["id"]])
+    client.put(f"/api/projects/{pid}/photos/{b['id']}/heading", json={"value": 42})
+    client.post(f"/api/projects/{pid}/headings/offset", json={"all": True, "value": -5})
+    got = {x["id"]: x["heading"] for x in rows(client, pid)}
+    assert got[a["id"]] == pytest.approx((auto[a["id"]] - 5) % 360, abs=0.01)  # the whole ride: replaces the series offset
+    assert got[b["id"]] == 42  # manual heading unchanged
+    client.post(f"/api/projects/{pid}/undo")
+    got = {x["id"]: x["heading"] for x in rows(client, pid)}
+    assert got[a["id"]] == pytest.approx((auto[a["id"]] + 10) % 360, abs=0.01)
+
+
+def test_sequence_offsets_move_to_their_photos(project):
+    """Migration: an offset formerly set on a sequence is carried by its photos, the sequence offset is cleared."""
+    client, pid, _, seqs = project
+    with db.open_project(pid) as conn:
+        conn.execute("UPDATE sequence SET heading_offset=7 WHERE id=?", (seqs[0]["id"],))
+        last = len(db.MIGRATIONS) - 1
+        conn.execute(f"PRAGMA user_version={last}")
+        conn.executescript("ALTER TABLE photo DROP COLUMN heading_offset")
+        db.migrate(conn)
+        offs = {r[0] for r in conn.execute("SELECT heading_offset FROM photo WHERE sequence_id=?", (seqs[0]["id"],))}
+        others = {r[0] for r in conn.execute("SELECT heading_offset FROM photo WHERE sequence_id IS NOT ? ", (seqs[0]["id"],))}
+        assert offs == {7} and others == {None}
+        assert conn.execute("SELECT heading_offset FROM sequence WHERE id=?", (seqs[0]["id"],)).fetchone()[0] == 0

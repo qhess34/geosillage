@@ -131,7 +131,7 @@ def test_publish_one_upload_set_per_sequence(project, fake):
     with db.open_project(pid) as conn:
         assert conn.execute("SELECT COUNT(*) FROM published_photo WHERE picture_id IS NOT NULL").fetchone()[0] == n
     # a later change of the sequence is reported
-    client.patch(f"/api/projects/{pid}/sequences/{seqs[0]['id']}", json={"heading_offset": 3})
+    client.post(f"/api/projects/{pid}/headings/offset", json={"start_idx": seqs[0]["start_idx"], "end_idx": seqs[0]["end_idx"], "value": 3})
     s = next(x for x in client.get(f"/api/projects/{pid}/sequences").json()["sequences"] if x["id"] == seqs[0]["id"])
     assert s["changed_since_publication"]
 
@@ -156,7 +156,7 @@ def test_interrupted_upload_resumes_in_the_same_upload_set(project, fake):
 def test_changed_sequence_is_exported_again_before_publishing(project, fake):
     client, pid, seqs = project
     connect(client, fake)
-    client.patch(f"/api/projects/{pid}/sequences/{seqs[0]['id']}", json={"heading_offset": 5})
+    client.post(f"/api/projects/{pid}/headings/offset", json={"start_idx": seqs[0]["start_idx"], "end_idx": seqs[0]["end_idx"], "value": 5})
     before = len(client.get(f"/api/projects/{pid}/exports").json())
     client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [seqs[0]["id"]]})
     wait_jobs(client, pid)

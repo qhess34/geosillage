@@ -40,7 +40,6 @@ class RangeIn(BaseModel):
 
 class SeqPatch(BaseModel):
     name: str | None = Field(default=None, max_length=200)
-    heading_offset: float | None = Field(default=None, ge=-360, le=360)
 
 
 class BulkIn(BaseModel):
@@ -84,9 +83,8 @@ def seq_proposals(pid: str, gap_s: float | None = None, max_dist_m: float = 100.
 @router.patch("/sequences/{sid}")
 def seq_update(pid: str, sid: int, body: SeqPatch):
     with db.open_project(pid) as conn:
-        label = "Décalage de cap de séquence" if body.heading_offset is not None else "Renommage de séquence"
-        with undo.undoable(conn, label):
-            _seq_errors(lambda: sequences.update(conn, sid, body.name, body.heading_offset))
+        with undo.undoable(conn, "Renommage de séquence"):
+            _seq_errors(lambda: sequences.update(conn, sid, body.name))
         return _state(conn)
 
 
@@ -299,8 +297,7 @@ def heading_range(pid: str, body: HeadingRangeIn):
     a, b = sorted((body.start_idx, body.end_idx))
     with db.open_project(pid) as conn:
         rows = conn.execute(
-            f"""SELECT p.id, {headings.FINAL_SQL} AS h FROM photo p LEFT JOIN sequence s ON s.id = p.sequence_id
-                WHERE p.idx BETWEEN ? AND ?""",
+            f"""SELECT p.id, {headings.FINAL_SQL} AS h FROM photo p WHERE p.idx BETWEEN ? AND ?""",
             (a, b),
         ).fetchall()
         labels = {"offset": f"Décalage de cap {body.value:+g}° sur une plage", "set": f"Cap {body.value:g}° sur une plage", "clear": "Retour au cap calculé sur une plage"}
@@ -318,6 +315,32 @@ def heading_range(pid: str, body: HeadingRangeIn):
                     v = round((r["h"] + body.value) % 360, 2)
                 conn.execute("UPDATE photo SET heading_manual=?, heading_stale=0 WHERE id=?", (v, r["id"]))
         return {"changed": len(rows) - skipped, "skipped": skipped, "undo": undo.state(conn)}
+
+
+class HeadingOffsetIn(BaseModel):
+    value: float = Field(ge=-360, le=360)  # degrees added to the computed headings (0: none)
+    all: bool = False  # the whole ride, otherwise the photos start_idx..end_idx
+    start_idx: int | None = None
+    end_idx: int | None = None
+
+
+@router.post("/headings/offset")
+def heading_offset(pid: str, body: HeadingOffsetIn):
+    """Offset of the computed headings, on the whole ride or a series of photos (not tied to the sequences);
+    manual headings are kept as they are."""
+    v = round(((body.value + 180) % 360) - 180, 2) or None
+    with db.open_project(pid) as conn:
+        if body.all:
+            where, args, what = "", (), "toute la sortie"
+        elif body.start_idx is not None and body.end_idx is not None:
+            a, b = sorted((body.start_idx, body.end_idx))
+            where, args, what = "WHERE idx BETWEEN ? AND ?", (a, b), f"photos {a + 1} → {b + 1}"
+        else:
+            raise HTTPException(400, "Indiquez la plage de photos ou toute la sortie")
+        label = f"Décalage du cap {v:+g}° ({what})" if v else f"Décalage du cap retiré ({what})"
+        with undo.undoable(conn, label):
+            n = conn.execute(f"UPDATE photo SET heading_offset=? {where}", (v, *args)).rowcount
+        return {"changed": n, "undo": undo.state(conn)}
 
 
 # ---- Positions ----

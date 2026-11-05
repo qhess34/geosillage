@@ -15,7 +15,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 1 | Étude GoPro MAX / API Panoramax, architecture ([doc/ETUDE_PHASE1.md](doc/ETUDE_PHASE1.md)) | ✅ |
 | 2a | Projets, import récursif, lecture EXIF par lots, bilan d'import, anomalies, miniatures en tâche de fond, carte | ✅ |
 | 2c | Séquences (plage, découpage proposé, couper, fusionner, limites), timeline, annuler/rétablir, raccourcis | ✅ |
-| 2d (partiel) | Cap : calcul automatique, manuel, par plage, décalage par séquence ; **export d'un dossier par séquence avec EXIF corrigés** | ✅ |
+| 2d (partiel) | Cap : calcul automatique, manuel, par plage, décalage sur toute la sortie ou une série de photos ; **export d'un dossier par séquence avec EXIF corrigés** | ✅ |
 | 2b | Visionneuse 360° (Photo Sphere Viewer), sens de déplacement pour caméra sur casque | ✅ |
 | 2b (reste) | Liste des photos (virtualisée, filtres d'anomalies) | backlog |
 | 2d | Correction GPS : glisser sur la carte, saisie, placer une photo sans GPS, décalage et déplacement le long du trajet sur une plage ; export en copie, en déplaçant les sources, ou sur place ; restauration des sources | ✅ |

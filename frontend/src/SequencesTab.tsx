@@ -3,7 +3,6 @@ import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
 import { PUBLICATION_STATES, viewerUrl } from './PublishPanel'
 import PublishedEdit from './PublishedEdit'
-import YawRotate from './YawRotate'
 
 interface Props {
   projectId: string
@@ -23,7 +22,6 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
   const { projectId, current, range, onState, onGo, onError } = props
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(s.name)
-  const [offset, setOffset] = useState(String(s.heading_offset))
   const [confirmReexport, setConfirmReexport] = useState(false)
   const last = s.last_export
   const reexport = () => {
@@ -37,7 +35,6 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
   const run = (p: Promise<SeqState>) => p.then(onState, (e) => onError(e.message))
   const i = sequences.findIndex((x) => x.id === s.id)
   const next = sequences[i + 1]
-  const h = s.headings
   const inThis = current?.sequence_id === s.id
 
   return (
@@ -113,35 +110,6 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
       <PublishedEdit projectId={projectId} s={s} onStarted={props.onExported} onError={onError} />
       <div className="muted small-text">
         {fmtTime(s.start)} → {fmtTime(s.end, false)} · {fmtDuration(s.duration_s)} · {fmtDistance(s.distance_m)}
-      </div>
-      <div className="small-text">
-        Cap : {h.with_heading_pct}% · {h.computed} calculés · {h.manual} manuels
-        {h.uncertain > 0 && <span className="warn-text"> · {h.uncertain} incertains</span>}
-        {h.missing > 0 && <span className="warn-text"> · {h.missing} manquants</span>}
-        {h.stale > 0 && <span className="warn-text"> · {h.stale} à revoir</span>}
-        {s.anomalies > 0 && <span className="warn-text"> · {s.anomalies} anomalies GPS</span>}
-        {s.backwards > 0 && <span> · ↻ {s.backwards === s.count ? 'tournée de 180°' : `${s.backwards} photos tournées de 180°`}</span>}
-        {s.rotated > s.backwards && <span> · ↻ {s.rotated - s.backwards} photos réorientées</span>}
-      </div>
-      <div className="form-row small-text">
-        <span title="Décalage angulaire appliqué à tous les caps calculés de la séquence">Décalage cap</span>
-        <span>
-          <input
-            className="num"
-            type="number"
-            step="0.5"
-            value={offset}
-            onChange={(e) => setOffset(e.target.value)}
-            onBlur={() => Number(offset) !== s.heading_offset && run(api.updateSequence(projectId, s.id, { heading_offset: Number(offset) || 0 }))}
-            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-            aria-label="Décalage cap (°)"
-          />
-          °
-        </span>
-      </div>
-      <div className="form-row small-text">
-        <span>Orientation</span>
-        <YawRotate projectId={projectId} target={{ sequence_id: s.id }} what="les photos de la séquence" onDone={() => props.onRefresh()} onError={onError} />
       </div>
       {!props.pnx && (
         <div className="seq-actions">
@@ -221,10 +189,6 @@ export default function SequencesTab(props: Props) {
             </button>
           </div>
         )}
-        <div className="form-row wide small-text">
-          <span>Orientation de toutes les photos</span>
-          <YawRotate projectId={projectId} target={{ all: true }} what="toutes les photos du projet" onDone={() => props.onRefresh()} onError={onError} />
-        </div>
         {!props.pnx && <span className="muted small-text">
           {range
             ? `Plage : photos ${range[0] + 1} → ${range[1] + 1} (${range[1] - range[0] + 1}).`
@@ -293,7 +257,7 @@ export default function SequencesTab(props: Props) {
       {sequences.length === 0 && <p className="muted small-text">Aucune séquence. Créez-en depuis une plage ou le découpage proposé.</p>}
       <ul className="seq-list">
         {sequences.map((s) => (
-          <SeqItem key={`${s.id}-${s.name}-${s.heading_offset}`} s={s} sequences={sequences} props={props} />
+          <SeqItem key={`${s.id}-${s.name}`} s={s} sequences={sequences} props={props} />
         ))}
       </ul>
     </div>

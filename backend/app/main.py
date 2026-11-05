@@ -183,9 +183,8 @@ def _photo(conn, photo_id: int):
 def photo_get(pid: str, photo_id: int):
     with db.open_project(pid) as conn:
         d = dict(_photo(conn, photo_id))
-        off = conn.execute("SELECT heading_offset FROM sequence WHERE id=?", (d["sequence_id"],)).fetchone()
-    d["sequence_offset"] = off[0] if off else 0.0
-    d["heading_final"] = headings.final_heading(d["heading_manual"], d["heading_auto"], d["sequence_offset"])
+    d["heading_offset"] = d.get("heading_offset") or 0.0  # offset of the photo (whole ride or a series)
+    d["heading_final"] = headings.final_heading(d["heading_manual"], d["heading_auto"], d["heading_offset"])
     d["flag_names"] = [n for f, n in db.FLAG_NAMES.items() if d["flags"] & f]
     return d
 

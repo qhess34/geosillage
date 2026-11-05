@@ -335,12 +335,15 @@ Deux notions distinctes :
 ### Vérifier les caps
 
 Flèches sur la carte (zoom ≥ 15). Onglet *Photo* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
-Onglet *Séquences* : *Décalage cap* d'une séquence. Sur une plage : *Décaler*, *Fixer* (même cap pour toutes),
-*Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
+**Décalage du cap** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Bilan*, *Caps et orientation de
+toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du cap…*, ou
+*Décaler* dans les outils de la plage de l'onglet *Photo*). La valeur remplace le décalage déjà posé sur ces
+photos ; 0 le retire. Ce réglage ne dépend pas des séquences, qui ne sont qu'un découpage. Sur une plage, aussi
+*Fixer* (même cap manuel pour toutes) et *Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
 « à revoir ».
 
 ![Cap et position d'une photo](images/07-cap.webp)
-*Onglet *Photo* : cap calculé avec le décalage de la séquence, orientation de la photo par rapport au sens de déplacement, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
+*Onglet *Photo* : cap calculé (avec son décalage éventuel), orientation de la photo par rapport au sens de déplacement, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
 
 ### Caméra sur casque
 
@@ -352,9 +355,10 @@ l'application comme sur Panoramax).
 ### Caméra mal orientée sur le casque, ou à l'envers
 
 Champ d'angle et bouton **↻ Corriger le montage** :
-- sur une séquence (onglet *Séquences*) ;
-- sur toutes les photos du projet (*Orientation de toutes les photos*, onglet *Séquences*) ;
-- sur la plage sélectionnée (onglet *Photo*).
+- sur toutes les photos de la sortie (onglet *Bilan*, *Caps et orientation de toute la sortie*) ;
+- sur une série de photos sélectionnée : clic droit *Orientation…*, ou outils de la plage de l'onglet *Photo*.
+
+Comme le décalage du cap, l'orientation ne dépend pas des séquences.
 
 L'angle est **ajouté** à l'orientation de chaque photo : les angles de tête déjà fixés sont gardés. 180 = caméra
 montée à l'envers. L'angle opposé revient en arrière, `Ctrl+Z` aussi. Vérifier le sens dans la visionneuse après

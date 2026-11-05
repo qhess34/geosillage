@@ -205,7 +205,7 @@ export interface PhotoDetail extends PhotoRow {
   heading_auto: number | null
   heading_auto_state: string | null
   heading_stale: number
-  sequence_offset: number
+  heading_offset: number // offset of the computed heading (whole ride or a series of photos)
   heading_final: number | null
   moved_from: string | null
   source_written_at: number | null
@@ -339,7 +339,7 @@ export const api = {
     req<SeqState>('POST', `/api/projects/${id}/sequences/bulk`, { segments }),
   proposals: (id: string, gap_s: number, max_dist_m: number, min_photos: number) =>
     req<Proposal[]>('GET', `/api/projects/${id}/sequences/proposals?gap_s=${gap_s}&max_dist_m=${max_dist_m}&min_photos=${min_photos}`),
-  updateSequence: (id: string, sid: number, body: { name?: string; heading_offset?: number }) =>
+  updateSequence: (id: string, sid: number, body: { name?: string }) =>
     req<SeqState>('PATCH', `/api/projects/${id}/sequences/${sid}`, body),
   setBounds: (id: string, sid: number, start_idx: number, end_idx: number) =>
     req<SeqState>('PUT', `/api/projects/${id}/sequences/${sid}/bounds`, { start_idx, end_idx }),
@@ -352,6 +352,9 @@ export const api = {
   redo: (id: string) => req<SeqState & { done: string }>('POST', `/api/projects/${id}/redo`),
   setHeading: (id: string, photo: number, value: number | null) =>
     req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/heading`, { value }),
+  // offset of the computed headings (replaces the previous one, 0 removes it): whole ride or photos start..end
+  headingOffset: (id: string, target: { all: true } | { start_idx: number; end_idx: number }, value: number) =>
+    req<{ changed: number; undo: UndoState }>('POST', `/api/projects/${id}/headings/offset`, { ...target, value }),
   headingRange: (id: string, start_idx: number, end_idx: number, mode: 'offset' | 'set' | 'clear', value = 0) =>
     req<{ changed: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/headings/range`, {
       start_idx,

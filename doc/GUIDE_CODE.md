@@ -106,7 +106,10 @@ défaut), cherché dans `heading_window_s` (12 s), sans traverser une interrupti
 d'arrivée. Points inutilisables (saut GPS, sans GPS, doublon…) : `missing` ; arrêt (aucun point assez loin) :
 `uncertain` — jamais de valeur inventée.
 
-Cap final = `heading_manual` s'il existe, sinon `(heading_auto + sequence.heading_offset) mod 360`
+Cap final = `heading_manual` s'il existe, sinon `(heading_auto + photo.heading_offset) mod 360`. Le décalage est
+porté par chaque photo (`POST …/headings/offset` : toute la sortie ou une plage d'index), jamais par une séquence
+(simple découpage) ; la migration a reporté les anciens décalages de séquence sur leurs photos (`sequence.heading_offset`
+reste à 0, inutilisé)
 (`headings.FINAL_SQL`, `final_heading`). Attention : le `%` de SQLite travaille sur des entiers, d'où la
 normalisation explicite dans `FINAL_SQL`.
 

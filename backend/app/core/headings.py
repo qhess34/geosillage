@@ -80,7 +80,7 @@ def final_heading(manual, auto, offset) -> float | None:
 
 
 # SQLite's % works on integers: normalise explicitly (auto in [0, 360), offset in [-180, 180))
-_SUM = "(p.heading_auto + COALESCE(s.heading_offset, 0))"
+_SUM = "(p.heading_auto + COALESCE(p.heading_offset, 0))"  # offset of the photo (whole ride or a series)
 FINAL_SQL = f"""CASE WHEN p.heading_manual IS NOT NULL THEN p.heading_manual
     WHEN p.heading_auto IS NOT NULL THEN ROUND(CASE WHEN {_SUM} < 0 THEN {_SUM} + 360
         WHEN {_SUM} >= 360 THEN {_SUM} - 360 ELSE {_SUM} END, 2)

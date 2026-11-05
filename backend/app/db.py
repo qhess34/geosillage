@@ -179,6 +179,14 @@ MIGRATIONS = [
     ALTER TABLE photo ADD COLUMN pitch_orig REAL;
     ALTER TABLE photo ADD COLUMN roll_orig REAL;
     """,
+    """
+    -- Heading offset added to the computed heading of a photo: set on the whole ride or on a series of photos,
+    -- independent of the sequences (logical cuts only). Offsets formerly set on sequences move to their photos.
+    ALTER TABLE photo ADD COLUMN heading_offset REAL;
+    UPDATE photo SET heading_offset = (SELECT NULLIF(s.heading_offset, 0) FROM sequence s WHERE s.id = photo.sequence_id)
+        WHERE sequence_id IS NOT NULL;
+    UPDATE sequence SET heading_offset = 0;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

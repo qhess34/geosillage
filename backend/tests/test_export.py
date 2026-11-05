@@ -79,7 +79,7 @@ def test_headings_manual_range_and_offset(project):
     row = next(r for r in photos["rows"] if r[f.index("sequence_id")] == seqs[0]["id"] and r[f.index("heading")] is not None)
     pid_photo, auto = row[0], row[f.index("heading")]
 
-    client.patch(f"/api/projects/{pid}/sequences/{seqs[0]['id']}", json={"heading_offset": 12})
+    client.post(f"/api/projects/{pid}/headings/offset", json={"start_idx": seqs[0]["start_idx"], "end_idx": seqs[0]["end_idx"], "value": 12})
     d = client.get(f"/api/projects/{pid}/photos/{pid_photo}").json()
     assert d["heading_final"] == pytest.approx((auto + 12) % 360, abs=0.01)
 
@@ -107,7 +107,7 @@ def test_export_folders_and_exif(project, samples, tmp_path):
     props = client.get(f"/api/projects/{pid}/sequences/proposals").json()
     seqs = client.post(f"/api/projects/{pid}/sequences/bulk", json={"segments": [[p["start_idx"], p["end_idx"]] for p in props]}).json()["sequences"]
     client.patch(f"/api/projects/{pid}/sequences/{seqs[0]['id']}", json={"name": "Matin à vélo"})
-    client.patch(f"/api/projects/{pid}/sequences/{seqs[1]['id']}", json={"heading_offset": -8})
+    client.post(f"/api/projects/{pid}/headings/offset", json={"start_idx": seqs[1]["start_idx"], "end_idx": seqs[1]["end_idx"], "value": -8})
 
     # Manual heading 0.2° and a corrected position on one photo
     photos = client.get(f"/api/projects/{pid}/photos").json()

@@ -11,7 +11,7 @@ import PublishPanel from './PublishPanel'
 import StepBar from './StepBar'
 import StopCompare from './StopCompare'
 import MapLegend from './MapLegend'
-import { AddBasemap, Confirm } from './Dialogs'
+import { AddBasemap, Confirm, ValueDialog } from './Dialogs'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
@@ -64,6 +64,35 @@ const SHORTCUTS: [string, string][] = [
   ['?', 'Cette aide'],
 ]
 
+// Whole ride: offset of the computed headings and camera orientation (not tied to the sequences, which are only a
+// logical cut); series of photos: context menu or range tools of the Photo tab
+function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDone: (u?: UndoState) => void; onError: (m: string) => void }) {
+  const [value, setValue] = useState('0')
+  return (
+    <div className="small-text ride-headings">
+      <h3>Caps et orientation de toute la sortie</h3>
+      <p className="muted">
+        Pour une série de photos : sélectionnez-la (timeline, Maj+clic) puis clic droit, ou les outils de la plage de l'onglet Photo.
+      </p>
+      <div className="form-row">
+        <span title="Ajouté aux caps calculés de toutes les photos (remplace les décalages déjà posés ; 0 les retire) ; les caps manuels ne changent pas">
+          Décalage du cap
+        </span>
+        <span>
+          <input className="num" type="number" step="0.5" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Décalage du cap (°)" />°
+          <button className="small" onClick={() => api.headingOffset(projectId, { all: true }, Number(value) || 0).then((r) => onDone(r.undo), (e) => onError(e.message))}>
+            Appliquer à toute la sortie
+          </button>
+        </span>
+      </div>
+      <div className="form-row">
+        <span title="Caméra mal alignée sur le casque, ou à l'envers (180°) : angle ajouté à l'orientation de chaque photo">Orientation</span>
+        <YawRotate projectId={projectId} target={{ all: true }} what="toutes les photos du projet" onDone={onDone} onError={onError} />
+      </div>
+    </div>
+  )
+}
+
 function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => void; onError: (m: string) => void }) {
   const [minM, setMinM] = useState(String(p.settings.heading_min_m))
   const [win, setWin] = useState(String(p.settings.heading_window_s))
@@ -73,7 +102,7 @@ function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => v
       .then(onSaved, (e) => onError(e.message))
   return (
     <div className="small-text">
-      <h3>Calcul du cap</h3>
+      <h4>Calcul du cap</h4>
       <p className="muted">
         Le cap d'une photo est la direction vers le premier point suivant situé à au moins cette distance (cherché dans la
         fenêtre de temps). Les caps manuels ne sont jamais recalculés.
@@ -377,7 +406,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
     setTyped(photo.heading_final != null ? String(photo.heading_final) : '')
   }, [photo.id, photo.heading_final])
   const seq = sequences.find((s) => s.id === photo.sequence_id)
-  const computedWithOffset = photo.heading_auto != null ? (photo.heading_auto + (photo.sequence_offset || 0) + 360) % 360 : null
+  const computedWithOffset = photo.heading_auto != null ? (photo.heading_auto + (photo.heading_offset || 0) + 360) % 360 : null
   const shown = draft ?? photo.heading_final
   const set = (v: number | null) =>
     api.setHeading(projectId, photo.id, v == null ? null : Math.round((((v % 360) + 360) % 360) * 100) / 100).then((r) => onChanged(r.undo), (e) => onError(e.message))
@@ -464,7 +493,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
         <div className="heading-info small-text">
           <div>
             Calculé : {photo.heading_auto != null ? `${photo.heading_auto.toFixed(1)}°` : photo.heading_auto_state === 'uncertain' ? 'incertain (arrêt)' : 'impossible'}
-            {photo.sequence_offset ? ` ${photo.sequence_offset > 0 ? '+' : ''}${photo.sequence_offset}° (séquence)` : ''}
+            {photo.heading_offset ? ` ${photo.heading_offset > 0 ? '+' : ''}${photo.heading_offset}° (décalage)` : ''}
           </div>
           {photo.yaw_offset != null && photo.yaw_offset !== 0 && (
             <div title="Orientation de l'image (caméra sur casque, ou montée à l'envers) : écrite dans XMP-GPano:PoseHeadingDegrees, le JPEG n'est pas modifié">
@@ -519,7 +548,13 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
             <span>
               <input className="num" type="number" step="0.5" value={rangeValue} onChange={(e) => setRangeValue(e.target.value)} aria-label="Angle (°)" />°
               <span className="btn-group">
-                <button className="small" onClick={() => rangeOp('offset')} title="Ajoute la valeur au cap final de chaque photo">
+                <button
+                  className="small"
+                  onClick={() =>
+                    api.headingOffset(projectId, { start_idx: range[0], end_idx: range[1] }, Number(rangeValue) || 0).then((r) => onChanged(r.undo), (e) => onError(e.message))
+                  }
+                  title="Décalage des caps calculés des photos de la plage (remplace le décalage précédent ; 0 le retire ; les caps manuels ne changent pas)"
+                >
                   Décaler
                 </button>
                 <button className="small" onClick={() => rangeOp('set')} title="Même cap pour toutes les photos">
@@ -837,6 +872,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [showHelp, setShowHelp] = useState(false)
   const [confirmExclude, setConfirmExclude] = useState<{ range: [number, number]; n: number } | null>(null)
   const [addingBasemap, setAddingBasemap] = useState(false)
+  // heading offset / orientation of a series of photos (context menu)
+  const [valueDlg, setValueDlg] = useState<{ kind: 'offset' | 'yaw'; range: [number, number] } | null>(null)
   const [stopCompare, setStopCompare] = useState<[number, number] | null>(null) // photos of a stop side by side
   const [editMode, setEditMode] = useState(false)
   const [track, setTrack] = useState<Track | null>(null)
@@ -1138,7 +1175,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare) return
+      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl && e.key.toLowerCase() === 'z') {
         undoRedo(e.shiftKey ? 'redo' : 'undo')
@@ -1219,7 +1256,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, excludeRange, confirmExclude, addingBasemap, stopCompare])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
@@ -1252,11 +1289,14 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     const inSeq = photos[r[0]]?.sequence_id ?? null
     const sameSeq = inSeq != null && photos.slice(r[0], r[1] + 1).every((p) => p.sequence_id === inSeq)
     const sq = sameSeq ? sequences.find((x) => x.id === inSeq) : undefined
+    const these = r[0] === r[1] ? 'de cette photo' : `de ces ${r[1] - r[0] + 1} photos`
     const items: MenuItem[] = [
       {
         label: r[0] === r[1] ? 'Recaler cette photo sur OpenStreetMap…' : `Recaler ces ${r[1] - r[0] + 1} photos sur OpenStreetMap…`,
         onClick: () => setSnapOpen({ scope: 'custom', sequenceId: inSeq, bounds: r }),
       },
+      { label: `Décalage du cap ${these}…`, onClick: () => setValueDlg({ kind: 'offset', range: r }) },
+      { label: `Orientation ${these}…`, onClick: () => setValueDlg({ kind: 'yaw', range: r }) },
     ]
     if (!isPnx && photos.slice(r[0], r[1] + 1).every((p) => p.sequence_id == null))
       items.push({
@@ -1660,6 +1700,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                     </button>
                   )}
                 </div>
+                <RideHeadings projectId={projectId} onDone={(u) => afterHeadingChange(u)} onError={fail} />
                 <HeadingSettings
                   key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`}
                   p={project}
@@ -1705,6 +1746,33 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             exportées ; Ctrl+Z annule.
           </p>
         </Confirm>
+      )}
+      {valueDlg && (
+        <ValueDialog
+          title={`${valueDlg.kind === 'offset' ? 'Décalage du cap' : 'Orientation'} : photos ${valueDlg.range[0] + 1} → ${valueDlg.range[1] + 1}`}
+          label={valueDlg.kind === 'offset' ? 'Décalage ajouté aux caps calculés' : 'Angle ajouté à l\'orientation de chaque photo'}
+          initial={valueDlg.kind === 'offset' ? '0' : '180'}
+          unit="°"
+          applyLabel="Appliquer"
+          help={
+            valueDlg.kind === 'offset'
+              ? 'Remplace le décalage déjà posé sur ces photos ; 0 le retire. Les caps manuels ne changent pas. Ctrl+Z annule.'
+              : 'Caméra mal alignée sur le casque, ou à l\'envers (180°). Le fichier JPEG n\'est pas tourné. Ctrl+Z annule.'
+          }
+          onCancel={() => setValueDlg(null)}
+          onApply={(v) => {
+            const r = valueDlg.range
+            const target = { start_idx: r[0], end_idx: r[1] }
+            setValueDlg(null)
+            ;(valueDlg.kind === 'offset' ? api.headingOffset(projectId, target, v) : api.rotateYaw(projectId, target, v)).then(
+              (res) => {
+                afterHeadingChange(res.undo)
+                setNotice(`${valueDlg.kind === 'offset' ? 'Décalage du cap' : 'Orientation'} ${v > 0 ? '+' : ''}${v}° : photos ${r[0] + 1} → ${r[1] + 1}`)
+              },
+              (er) => setError(er.message),
+            )
+          }}
+        />
       )}
       {addingBasemap && (
         <AddBasemap

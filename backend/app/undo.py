@@ -12,7 +12,8 @@ from contextlib import contextmanager
 
 from . import db
 
-PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset"]
+# new columns go at the end: operations journaled before they existed only restore the columns they knew
+PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset", "heading_offset"]
 SEQ_COLS = ["id", "name", "heading_offset", "created_at", "modified_at"]
 MAX_OPS = 200
 
@@ -75,8 +76,9 @@ def touch_all(conn) -> None:
 
 def _apply(conn, data: dict, side: str) -> None:
     k = 1 if side == "before" else 2
-    sets = ", ".join(f"{c}=?" for c in PHOTO_COLS)
-    conn.executemany(f"UPDATE photo SET {sets} WHERE id=?", [(*row[k], row[0]) for row in data["photos"]])
+    for row in data["photos"]:
+        cols = PHOTO_COLS[: len(row[k])]
+        conn.execute(f"UPDATE photo SET {', '.join(f'{c}=?' for c in cols)} WHERE id=?", (*row[k], row[0]))
     seqs = data["seq_before" if side == "before" else "seq_after"]
     conn.execute("DELETE FROM sequence")
     conn.executemany(f"INSERT INTO sequence({', '.join(SEQ_COLS)}) VALUES({', '.join('?' * len(SEQ_COLS))})", [(*s, None)[: len(SEQ_COLS)] for s in seqs])
