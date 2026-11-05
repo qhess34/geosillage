@@ -744,7 +744,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [centerTick, setCenterTick] = useState(0)
   // OSM snapping of a range: panel shown above the photo tab, preview on the map
   const [snapOpen, setSnapOpen] = useState<{ scope: SnapScope; sequenceId: number | null; bounds?: [number, number] } | null>(null)
-  // context menu (right click / long press) on the map, the timeline or a sequence
+  // context menu (right click) on the map, the timeline or a sequence
   const [ctx, setCtx] = useState<{ x: number; y: number; kind: 'photos' | 'sequence'; range?: [number, number]; sequenceId?: number | null } | null>(null)
   const [snapPreview, setSnapPreview] = useState<SnapPreview | null>(null)
   const [snapHighlight, setSnapHighlight] = useState<[number, number] | null>(null) // photos the snapping panel works on

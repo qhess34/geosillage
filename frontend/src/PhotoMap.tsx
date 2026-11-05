@@ -21,7 +21,7 @@ interface Props {
   centerTick: number // incremented to center the map on the selected photo once
   snapPreview?: SnapPreview | null // OSM snapping preview: candidate ways and moves
   onSelect: (id: number, extend: boolean) => void
-  onContextMenu?: (photoId: number | null, x: number, y: number) => void // right click / long press
+  onContextMenu?: (photoId: number | null, x: number, y: number) => void // right click
   onMove: (id: number, lat: number, lon: number) => void
   onSyncOffset: (offset: number, final: boolean) => void
 }

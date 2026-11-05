@@ -565,27 +565,6 @@ kbd {
   fill: var(--accent);
 }
 
-/* Narrow screens: map on top, panel below */
-@media (max-width: 800px) {
-  .toolbar {
-    flex-wrap: wrap;
-  }
-  .main {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: 55vh auto;
-    overflow: auto;
-  }
-  .resizer {
-    display: none;
-  }
-  .side {
-    overflow: visible;
-  }
-  .heading-box {
-    flex-wrap: wrap;
-  }
-}
-
 .modes {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -957,13 +936,6 @@ input.coord {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
   margin: 0;
 }
-@media (max-width: 700px) {
-  .snap-modal {
-    left: 8px;
-    right: 8px;
-    width: auto;
-  }
-}
 
 .snap-title {
   cursor: move;
@@ -975,7 +947,7 @@ input.coord {
   background: var(--bg, transparent);
 }
 
-/* Context menu (right click / long press) */
+/* Context menu (right click) */
 .ctx-menu {
   position: fixed;
   z-index: 50;

@@ -7,7 +7,7 @@ interface Props {
   selectedIdx: number | null
   range: [number, number] | null
   onPick: (idx: number, extend: boolean) => void
-  onContextMenu?: (idx: number, x: number, y: number) => void // right click / long press
+  onContextMenu?: (idx: number, x: number, y: number) => void // right click
   warnings?: QualityIssue[] // points to check (stops, spacing…): amber marks above the strip
 }
 

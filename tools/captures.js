@@ -73,8 +73,5 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   await shot('10-panoramax');
   await p.mouse.move(5, 300); await p.click('button:has-text("Panoramax")'); await wait();
 
-  // phone width
-  await p.setViewportSize({ width: 390, height: 844 }); await go(40); await tiles();
-  await shot('12-mobile');
   console.log('errors', JSON.stringify(errors)); await b.close();
 })();

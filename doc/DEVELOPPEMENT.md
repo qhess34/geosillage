@@ -67,7 +67,7 @@ main.
 |---|---|---|
 | Tests backend | `cd backend && ../.venv/bin/python -m pytest -q` | tous verts (~1 min) |
 | Types + construction de l'interface | `cd frontend && npm run build` | `✓ built`, aucune erreur `tsc` |
-| Comportement dans le navigateur | Playwright (ci-dessous) | aucune erreur JavaScript ; affichage à 1280 et 1024 px (pas d'exigence sur téléphone) |
+| Comportement dans le navigateur | Playwright (ci-dessous) | aucune erreur JavaScript ; affichage à 1280 et 1024 px (pas d'affichage pour téléphone) |
 | Image Docker (si `Dockerfile`, dépendances) | `docker compose build` | construction OK |
 
 ### Test de bout en bout (Playwright)
@@ -109,7 +109,7 @@ Panoramax. Pour la surcouche Panoramax, un faux serveur de tuiles (`mapbox-vecto
 
 `tools/captures.sh` régénère `doc/images/*.webp` : sortie simulée près de Montpellier (400 photos), projet de
 démonstration créé par l'API (séquences, exclusion, synchro, orientation, exports), puis `tools/captures.js`
-(Playwright) prend les captures à 1280 × 760 px et à 390 px de large, en thème clair. Il faut le réseau vers
+(Playwright) prend les captures à 1280 × 760 px, en thème clair. Il faut le réseau vers
 `tile.openstreetmap.org`, `data.geopf.fr` et `api.panoramax.xyz` (vraies tuiles et vraie surcouche Panoramax), un
 `.venv` avec les dépendances de développement, et l'interface construite. Les photos et exports vont dans `/photos`
 et `/exports` (comme sous Docker, pour qu'aucun chemin local n'apparaisse) ; sinon `PHOTOS_DIR` / `EXPORTS_DIR`.

@@ -7,7 +7,7 @@ export interface MenuItem {
   title?: string
 }
 
-// Context menu at the pointer (right click / long press on the map, the timeline or a sequence)
+// Context menu at the pointer (right click on the map, the timeline or a sequence)
 export default function ContextMenu({ x, y, title, items, onClose }: { x: number; y: number; title?: string; items: MenuItem[]; onClose: () => void }) {
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
