@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from . import db, exporter, jobs, undo
-from .core import headings, positions, sequences, timesync
+from .core import headings, osm, positions, sequences, timesync
 
 router = APIRouter(prefix="/api/projects/{pid}")
 
@@ -381,6 +381,89 @@ def positions_missing(pid: str):
     """Blocks of photos without a position, with the positioned photos before / after them."""
     with db.open_project(pid) as conn:
         return positions.missing_runs(conn)
+
+
+# ---- Snapping onto OpenStreetMap ways ----
+
+
+class SnapProposeIn(BaseModel):
+    start_idx: int
+    end_idx: int
+    max_dist: float = Field(default=osm.MAX_DIST_M, ge=2, le=50)
+
+
+class SnapSegment(BaseModel):
+    start_idx: int
+    end_idx: int
+    way_id: int
+
+
+class SnapApplyIn(BaseModel):
+    start_idx: int
+    end_idx: int
+    segments: list[SnapSegment] = Field(min_length=1)
+    max_dist: float = Field(default=osm.MAX_DIST_M, ge=2, le=50)
+    keep_manual: bool = True  # photos placed by hand are not snapped
+
+
+def _snap_photos(conn, start_idx: int, end_idx: int) -> list[dict]:
+    """Photos of the range with a usable position (effective), in ride order."""
+    a, b = sorted((start_idx, end_idx))
+    rows = conn.execute(
+        f"""SELECT p.id, p.idx, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon, p.pos_method
+            FROM photo p WHERE p.idx BETWEEN ? AND ? AND p.excluded = 0 AND p.flags & ? = 0
+              AND {positions._positioned_sql()} ORDER BY p.idx""",
+        (a, b, positions.UNUSABLE),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _snap_match(conn, photos: list[dict], max_dist: float, fetch=None) -> dict:
+    if not photos:
+        raise HTTPException(400, "Aucune photo positionnée dans la sélection")
+    try:
+        ways = osm.fetch_ways(conn, osm.bbox_of([(p["lat"], p["lon"]) for p in photos]), fetch)
+    except osm.OsmError as e:
+        raise HTTPException(502, str(e))
+    return osm.match(photos, ways, max_dist)
+
+
+@router.post("/osm/snap/propose")
+def snap_propose(pid: str, body: SnapProposeIn):
+    """Segments of the selection with their candidate OSM ways; nothing is modified."""
+    with db.open_project(pid) as conn:
+        photos = _snap_photos(conn, body.start_idx, body.end_idx)
+        res = _snap_match(conn, photos, body.max_dist)
+        manual = [p["id"] for p in photos if p["pos_method"] == "manual"]
+        return {**res, "manual_ids": manual}
+
+
+@router.post("/osm/snap/apply")
+def snap_apply(pid: str, body: SnapApplyIn):
+    """Photos of each segment are moved onto the chosen way (one undoable operation)."""
+    with db.open_project(pid) as conn:
+        photos = _snap_photos(conn, body.start_idx, body.end_idx)
+        res = _snap_match(conn, photos, body.max_dist)
+        proj = res["projections"]
+        moved = skipped = 0
+        ids = []
+        with undo.undoable(conn, f"Recalage sur OpenStreetMap ({len(body.segments)} tronçon(s))"):
+            for seg in body.segments:
+                for p in photos:
+                    if not seg.start_idx <= p["idx"] <= seg.end_idx:
+                        continue
+                    if body.keep_manual and p["pos_method"] == "manual":
+                        skipped += 1
+                        continue
+                    c = proj.get(p["id"], {}).get(seg.way_id)
+                    if c is None:  # this photo is too far from the chosen way
+                        skipped += 1
+                        continue
+                    conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='osm', time_offset=NULL WHERE id=?", (c[0], c[1], p["id"]))
+                    ids.append(p["id"])
+                    moved += 1
+        headings.recompute(conn, mark_stale_ids=set(ids))
+        return {"moved": moved, "skipped": skipped, "undo": undo.state(conn)}
 
 
 # ---- Time synchronisation (GPS delay) ----

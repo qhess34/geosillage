@@ -46,7 +46,8 @@ cd frontend && npm run dev                                              # interf
 ```
 
 Variables : `PSS_DATA_DIR` (projets ; défaut `~/.local/share/panoramax-studio`), `PSS_DEFAULT_DIR` (dossier ouvert
-par les sélecteurs), `PSS_EXIFTOOL` (chemin d'ExifTool), `PORT` (`run.sh`, Docker).
+par les sélecteurs), `PSS_EXIFTOOL` (chemin d'ExifTool), `PSS_OVERPASS_URL` (serveur Overpass pour le recalage OSM ; défaut
+`https://overpass-api.de/api/interpreter`), `PORT` (`run.sh`, Docker).
 
 Jeu de photos simulées (format GoPro MAX, retard GPS, bruit, sauts, interruption, doublon, fichier corrompu, vérité
 terrain en CSV) :

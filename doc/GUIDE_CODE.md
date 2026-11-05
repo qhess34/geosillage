@@ -23,7 +23,9 @@ backend/app/
   core/analysis.py ordre chronologique, détection d'anomalies, bilan d'import
   core/headings.py calcul du cap, cap final, statistiques
   core/sequences.py création, limites, division, fusion, retrait, découpage proposé, statistiques
-  core/positions.py corrections de position : saisie, décalage, le long du trajet, retour à l'original
+  core/positions.py corrections de position : saisie, décalage, le long du trajet, retour à l'original,
+                   photos sans position (blocs, interpolation, rattachement à la séquence)
+  core/osm.py      recalage sur les voies OpenStreetMap : Overpass (cache), appariement, tronçons
   core/timesync.py  retard GPS : trace, position à un instant, projection d'un point sur la trace, application
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
@@ -114,6 +116,24 @@ points quasi confondus (arrêt). Un seuil de 15 m avait été retenu d'après un
 photos plus loin et les flèches coupaient les virages. Mesures sur la sortie simulée : erreur médiane
 7,2° / 90e centile 29° avec 5 m, 3,9° / 15,8° avec 15 m, 3,4° / 14,5°
 avec 20 m mais 16 photos incertaines. À revalider sur de vraies photos.
+
+## Recalage sur les voies OpenStreetMap
+
+`core/osm.py`. **Données** : `fetch_ways` interroge Overpass (`PSS_OVERPASS_URL`, défaut overpass-api.de) sur
+l'emprise des photos + 50 m, arrondie vers l'extérieur à 0,002° (`bbox_of`), voies `highway` praticables à vélo
+(`HIGHWAYS`), géométrie et nœuds (`out geom tags`) ; réponse gardée dans la table `osm_cache` du projet (clé =
+emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de contact et `Accept` obligatoires ;
+3 essais. **Appariement** (`match`, calcul pur sur une projection plane locale) : voies à moins de `max_dist`
+(15 m) de chaque photo ; suite de voies la plus probable par Viterbi (coût = distance + changement de voie :
+4 m si les deux voies ont un nœud commun, 25 m sinon) ; tronçons de photos consécutives sur la même voie, statut
+`clear`, `ambiguous` (autre voie à moins de 3 m en distance moyenne sur le tronçon : liste des candidates) ou
+`none`. Renvoie aussi, pour chaque photo, sa projection sur chaque voie candidate (aperçu dans l'interface).
+**Routes** : `POST …/osm/snap/propose` (rien n'est modifié ; `manual_ids` : photos placées à la main) et
+`POST …/osm/snap/apply` (segments choisis → projection, `pos_method = 'osm'`, une opération annulable ; photos
+`manual` épargnées si `keep_manual`). **Interface** : `OsmSnapPanel.tsx` (au-dessus de l'onglet Photo, ouvert par
+« Recaler sur OSM » des outils de plage) ; aperçu `snapPreview` de `PhotoMap` (couches `snap-ways`, `snap-hl` =
+voie survolée, `snap-moves`, `snap-new`). Tests : `test_osm.py` (voie unique, voies parallèles, carrefour, rien à
+proximité, API avec réponse Overpass simulée, Overpass injoignable → 502).
 
 ## Positions
 

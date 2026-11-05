@@ -133,6 +133,10 @@ MIGRATIONS = [
     -- Last change of a sequence's content (photos, positions, headings, orientation, name…): re-export needed?
     ALTER TABLE sequence ADD COLUMN modified_at REAL;
     """,
+    """
+    -- OpenStreetMap ways downloaded for snapping (Overpass), by bounding box (rounded outwards)
+    CREATE TABLE IF NOT EXISTS osm_cache(bbox TEXT PRIMARY KEY, fetched_at REAL NOT NULL, data TEXT NOT NULL);
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

@@ -22,7 +22,7 @@ propriétaire).
 |---|---|
 | `backend/app/main.py` | API projets, photos, import, fichiers ; sert l'interface construite |
 | `backend/app/routes_edit.py` | API séquences, annuler/rétablir, caps, orientation, positions, synchro, export |
-| `backend/app/core/` | calculs purs : géodésie, analyse, caps, séquences, positions, synchro |
+| `backend/app/core/` | calculs purs : géodésie, analyse, caps, séquences, positions, synchro, recalage OSM (`osm.py`, Overpass) |
 | `backend/app/db.py`, `undo.py`, `jobs.py` | SQLite par projet + migrations, journal annuler/rétablir, tâches de fond |
 | `backend/app/exporter.py`, `exif/` | export, modification/restauration des sources, lecture/écriture ExifTool |
 | `backend/tests/` | pytest (photos simulées par `tools/make_samples.py`) |

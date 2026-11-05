@@ -3,6 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
 import { FLAGS, PhotoRow, seqColor, Sequence } from './api'
 import { Basemap } from './basemaps'
+import type { SnapPreview } from './OsmSnapPanel'
 import { addOverlay, bindOverlayTooltip, OverlaySettings, updateOverlay } from './panoramaxLayer'
 import { positionAt, snap, Track } from './timesync'
 
@@ -18,6 +19,7 @@ interface Props {
   overlay: OverlaySettings // photos already published on Panoramax
   follow: boolean // move the map to keep the selected photo visible while navigating
   centerTick: number // incremented to center the map on the selected photo once
+  snapPreview?: SnapPreview | null // OSM snapping preview: candidate ways and moves
   onSelect: (id: number, extend: boolean) => void
   onMove: (id: number, lat: number, lon: number) => void
   onSyncOffset: (offset: number, final: boolean) => void
@@ -97,6 +99,8 @@ function gapGeoJSON(photos: PhotoRow[], selectedId: number | null): GeoJSON.Feat
   return { type: 'FeatureCollection', features }
 }
 
+const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+
 function lineGeoJSON(photos: PhotoRow[]): GeoJSON.Feature {
   const coords = photos
     .filter((p) => p.lat != null && p.lon != null && !(p.flags & (ANOMALY | FLAGS.DUPLICATE)))
@@ -146,7 +150,7 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, overlay, follow, centerTick, onSelect, onMove, onSyncOffset }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, overlay, follow, centerTick, snapPreview, onSelect, onMove, onSyncOffset }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
@@ -154,8 +158,8 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
   const dragging = useRef(false)
   const ready = useRef(false)
   const fitted = useRef(false)
-  const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset })
-  latest.current = { photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset }
+  const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview })
+  latest.current = { photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview }
 
   const rangeFilter = (r: [number, number] | null): maplibregl.FilterSpecification =>
     r ? ['all', ['>=', ['get', 'idx'], r[0]], ['<=', ['get', 'idx'], r[1]]] : ['==', ['get', 'idx'], -1]
@@ -169,6 +173,9 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     m.addSource('photos', { type: 'geojson', data: toGeoJSON(photos, sequences) })
     m.addSource('moves', { type: 'geojson', data: movesGeoJSON(photos) })
     m.addSource('gap', { type: 'geojson', data: gapGeoJSON(photos, selectedId) })
+    const sn = latest.current.snapPreview
+    m.addSource('snap-ways', { type: 'geojson', data: sn?.ways ?? EMPTY })
+    m.addSource('snap-moves', { type: 'geojson', data: sn?.moves ?? EMPTY })
     const s = latest.current.sync
     m.addSource('sync-track', { type: 'geojson', data: syncTrackGeoJSON(s?.track) })
     m.addSource('ghosts', { type: 'geojson', data: ghostsGeoJSON(photos, s?.track, s?.offset ?? null) })
@@ -187,6 +194,39 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       source: 'moves',
       filter: ['==', ['geometry-type'], 'Point'],
       paint: { 'circle-radius': 3, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#7c3aed', 'circle-stroke-width': 1.5 },
+    })
+    m.addLayer({
+      id: 'snap-ways',
+      type: 'line',
+      source: 'snap-ways',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': ['case', ['==', ['get', 'chosen'], 1], '#0369a1', '#38bdf8'],
+        'line-width': ['case', ['==', ['get', 'chosen'], 1], 6, 3],
+        'line-opacity': 0.75,
+      },
+    })
+    m.addLayer({
+      id: 'snap-hl',
+      type: 'line',
+      source: 'snap-ways',
+      filter: ['==', ['get', 'id'], -1],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#facc15', 'line-width': 9, 'line-opacity': 0.9 },
+    })
+    m.addLayer({
+      id: 'snap-moves',
+      type: 'line',
+      source: 'snap-moves',
+      filter: ['==', ['geometry-type'], 'LineString'],
+      paint: { 'line-color': '#0369a1', 'line-width': 1.5, 'line-dasharray': [2, 1.5] },
+    })
+    m.addLayer({
+      id: 'snap-new',
+      type: 'circle',
+      source: 'snap-moves',
+      filter: ['==', ['geometry-type'], 'Point'],
+      paint: { 'circle-radius': 3.5, 'circle-color': '#0369a1', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1 },
     })
     m.addLayer({
       id: 'gap-line',
@@ -346,6 +386,15 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     if (!m || !ready.current) return
     ;(m.getSource('gap') as GeoJSONSource | undefined)?.setData(gapGeoJSON(photos, selectedId))
   }, [photos, selectedId])
+
+  // OSM snapping preview
+  useEffect(() => {
+    const m = map.current
+    if (!m || !ready.current) return
+    ;(m.getSource('snap-ways') as GeoJSONSource | undefined)?.setData(snapPreview?.ways ?? EMPTY)
+    ;(m.getSource('snap-moves') as GeoJSONSource | undefined)?.setData(snapPreview?.moves ?? EMPTY)
+    if (m.getLayer('snap-hl')) m.setFilter('snap-hl', ['==', ['get', 'id'], snapPreview?.highlight ?? -1])
+  }, [snapPreview])
 
   // Sync mode: track and preview of all photos shifted by the offset (one update per animation frame)
   const syncTrack = sync?.track

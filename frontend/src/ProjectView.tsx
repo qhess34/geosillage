@@ -12,6 +12,7 @@ import { positionAt, Track } from './timesync'
 import { AGE_CLASSES, loadOverlay, OverlaySettings, PANORAMAX_PRESETS, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
+import OsmSnapPanel, { SnapPreview } from './OsmSnapPanel'
 import YawRotate from './YawRotate'
 
 const JOB_LABELS: Record<string, string> = {
@@ -294,10 +295,11 @@ interface PhotoTabProps {
   seqButtons: React.ReactNode
   onView: (yawDeg: number) => void
   onChanged: (u?: UndoState) => void
+  onSnap: () => void // open the OSM snapping panel for the range
   onError: (m: string) => void
 }
 
-function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onView, onChanged, onError }: PhotoTabProps) {
+function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onView, onChanged, onSnap, onError }: PhotoTabProps) {
   const [draft, setDraft] = useState<number | null>(null)
   const [typed, setTyped] = useState('')
   const [rangeValue, setRangeValue] = useState('15')
@@ -535,6 +537,11 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
               Positions d'origine
             </button>
           </div>
+          <div className="row wrap">
+            <button className="small" onClick={onSnap} title="Placer les photos de la plage sur les rues / pistes d'OpenStreetMap (choix de la voie si plusieurs sont possibles)">
+              Recaler sur OSM
+            </button>
+          </div>
         </div>
       )}
 
@@ -674,6 +681,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   }
   const mapPhotos = useMemo(() => (showExcluded ? photos : photos.filter((p) => !p.excluded)), [photos, showExcluded])
   const [centerTick, setCenterTick] = useState(0)
+  // OSM snapping of a range: panel shown above the photo tab, preview on the map
+  const [snapRange, setSnapRange] = useState<[number, number] | null>(null)
+  const [snapPreview, setSnapPreview] = useState<SnapPreview | null>(null)
   const setOverlay = (o: OverlaySettings) => {
     setOverlayState(o)
     saveOverlay(o)
@@ -1097,6 +1107,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             overlay={overlay}
             follow={follow}
             centerTick={centerTick}
+            snapPreview={snapPreview}
             viewAzimuth={tab === 'photo' && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
             onSyncOffset={onSyncOffset}
             onSelect={(id, extend) => {
@@ -1164,6 +1175,21 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             ))}
           </nav>
           <div className="tab-body">
+            {tab === 'photo' && snapRange && (
+              <OsmSnapPanel
+                projectId={projectId}
+                range={snapRange}
+                photos={photos}
+                onPreview={setSnapPreview}
+                onDone={(u, moved) => {
+                  setSnapRange(null)
+                  setNotice(`${moved} photo(s) recalée(s) sur OpenStreetMap — Ctrl+Z pour annuler`)
+                  afterHeadingChange(u)
+                }}
+                onClose={() => setSnapRange(null)}
+                onError={fail}
+              />
+            )}
             {tab === 'photo' &&
               (detail ? (
                 <PhotoTab
@@ -1175,6 +1201,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   seqButtons={<SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} big />}
                   onView={setViewYaw}
                   onChanged={afterHeadingChange}
+                  onSnap={() => range && setSnapRange(range)}
                   onError={fail}
                 />
               ) : (

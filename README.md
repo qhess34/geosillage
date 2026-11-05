@@ -23,7 +23,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 2e | Photos sans position : liste par trou, voisines sur la carte, interpolation, rattachement à la séquence | ✅ |
 | 3 (complément) | Synchro par tronçons (« à partir de cette photo ») ; vérifications automatiques GitHub | ✅ |
 | 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
-| 3 (reste) | Recalage sur les voies OSM d'une sélection (choix de la voie si ambiguïté) | en cours |
+| 3 | Recalage sur les voies OSM d'une sélection (tronçons, choix de la voie si ambiguïté, aperçu) | ✅ |
 | 3 (reste) | Import GPX | à faire |
 | 4 | Publication Panoramax par séquence, puis modification des séquences déjà publiées | à faire |
 

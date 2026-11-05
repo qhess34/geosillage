@@ -84,6 +84,27 @@ export interface PhotoRow {
   excluded: number // 1 = excluded by the user (out of sequences, never exported)
 }
 
+export interface SnapCandidate {
+  id: number
+  name: string
+  highway: string
+  mean_dist: number
+}
+
+export interface SnapProposal {
+  segments: {
+    start_idx: number
+    end_idx: number
+    count: number
+    status: 'clear' | 'ambiguous' | 'none'
+    way_id: number | null
+    candidates: SnapCandidate[]
+  }[]
+  projections: Record<string, Record<string, [number, number, number]>> // photo id → way id → [lat, lon, dist]
+  ways: { id: number; name: string; highway: string; coords: [number, number][] }[]
+  manual_ids: number[]
+}
+
 export interface RunSide {
   id: number
   idx: number
@@ -323,6 +344,13 @@ export const api = {
       meters?: number
     },
   ) => req<{ changed: number; skipped: number; attached: number; undo: UndoState }>('POST', `/api/projects/${id}/positions/batch`, body),
+  // snapping a selection onto OpenStreetMap ways
+  snapPropose: (id: string, start_idx: number, end_idx: number) =>
+    req<SnapProposal>('POST', `/api/projects/${id}/osm/snap/propose`, { start_idx, end_idx }),
+  snapApply: (
+    id: string,
+    body: { start_idx: number; end_idx: number; segments: { start_idx: number; end_idx: number; way_id: number }[]; keep_manual: boolean },
+  ) => req<{ moved: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/osm/snap/apply`, body),
   // blocks of photos without a position, with the positioned photos before / after them
   missingPositions: (id: string) => req<MissingRun[]>('GET', `/api/projects/${id}/positions/missing`),
   exports: (id: string) => req<ExportRecord[]>('GET', `/api/projects/${id}/exports`),

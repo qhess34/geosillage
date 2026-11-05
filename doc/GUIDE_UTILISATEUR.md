@@ -249,6 +249,20 @@ photos décalées du même écart : on corrige la première, puis on avance. Le 
 synchronisées, mais jamais à une photo corrigée à la main. `←`, `Maj+→` et les clics ne reportent rien. Chaque
 report affiche un message et s'annule avec `Ctrl+Z`. Décocher la case pour corriger les photos une à une.
 
+### Recaler sur les voies OpenStreetMap
+
+Sélectionner une plage (timeline, ou `D` puis `→`), puis, onglet *Photo*, outils de la plage : **Recaler sur OSM**.
+L'application récupère les rues, pistes cyclables et chemins d'OpenStreetMap autour de la sélection (connexion
+Internet nécessaire) et la découpe en tronçons :
+- **voie évidente** : cochée d'office (« Rue de la Loge (rue) · 2,8 m en moyenne ») ;
+- **plusieurs voies possibles** (piste cyclable le long d'une route, rues parallèles) : à choisir dans la liste ;
+  survoler un choix surligne la voie en jaune sur la carte ; « Ne pas recaler ce tronçon » le laisse tel quel ;
+- **aucune voie à moins de 15 m** : laissé tel quel.
+
+L'aperçu montre les voies retenues en bleu foncé et le déplacement de chaque photo en pointillés. *Recaler N photos*
+place chaque photo sur la voie choisie (position la plus proche) ; les photos placées à la main ne bougent pas
+(case à décocher pour les inclure). Une seule opération, annulable avec `Ctrl+Z`.
+
 ### Photos sans position
 
 Photos sans GPS (début de sortie, tunnel, perte du signal) : onglet *Bilan*, section **Photos sans position**, un
