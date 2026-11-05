@@ -44,8 +44,9 @@ propriétaire).
   comme HTML.
 - **Langue** : interface, erreurs, documentation et commits en **français** ; code et commentaires en anglais,
   courts.
-- **Documentation dans le même commit** : `GUIDE_UTILISATEUR.md` pour tout changement visible,
-  `GUIDE_CODE.md` pour le fonctionnement, ce fichier si une règle ou l'organisation change.
+- **Documentation dans le même commit** : `GUIDE_UTILISATEUR.md` pour tout changement visible (et ses captures,
+  `tools/captures.sh`, si un écran montré change), `GUIDE_CODE.md` pour le fonctionnement, ce fichier si une règle
+  ou l'organisation change.
 - **Ne pas prétendre avoir vérifié** ce qui ne peut pas l'être hors ligne (tuiles réelles, site Panoramax) : le
   dire.
 

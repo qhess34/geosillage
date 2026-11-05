@@ -101,6 +101,16 @@ gèrent avec `p.once('dialog', d => d.accept())`. Après une action, attendre ~0
 Ce qui ne peut pas être testé hors ligne : les vraies tuiles (IGN, Esri, Panoramax), le comportement du site
 Panoramax. Pour la surcouche Panoramax, un faux serveur de tuiles (`mapbox-vector-tile`) suffit.
 
+### Captures d'écran du guide d'utilisation
+
+`tools/captures.sh` régénère `doc/images/*.webp` : sortie simulée près de Montpellier (400 photos), projet de
+démonstration créé par l'API (séquences, exclusion, synchro, orientation, exports), puis `tools/captures.js`
+(Playwright) prend les captures à 1280 × 760 px et à 390 px de large, en thème clair. Il faut le réseau vers
+`tile.openstreetmap.org`, `data.geopf.fr` et `api.panoramax.xyz` (vraies tuiles et vraie surcouche Panoramax), un
+`.venv` avec les dépendances de développement, et l'interface construite. Les photos et exports vont dans `/photos`
+et `/exports` (comme sous Docker, pour qu'aucun chemin local n'apparaisse) ; sinon `PHOTOS_DIR` / `EXPORTS_DIR`.
+À relancer quand un écran montré dans le guide change, puis regarder les images avant de committer.
+
 ## 4. Recettes
 
 ### Ajouter une route qui modifie le projet

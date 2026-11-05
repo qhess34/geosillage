@@ -782,3 +782,15 @@ input.coord {
   border-radius: 8px;
   padding: 3px 6px;
 }
+
+/* checkbox + long text: one option per line, text aligned after the box */
+.option-line {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 4px 0;
+}
+.option-line input {
+  margin-top: 2px;
+  flex: none;
+}

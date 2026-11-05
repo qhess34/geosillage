@@ -11,6 +11,9 @@ les ~2 s, souvent des milliers) avant leur publication sur [Panoramax](https://p
 La publication sur Panoramax ne se fait pas depuis l'application : on envoie ensuite les dossiers exportés (voir
 [§ 9](#9-publier-sur-panoramax)).
 
+Les captures d'écran de ce guide ont été faites avec une sortie simulée près de Montpellier : les photos sont des
+images de test (bandes de couleur), pas de vraies vues.
+
 Sommaire : [1. Installer et lancer](#1-installer-et-lancer) · [2. Projets](#2-projets) ·
 [3. L'écran](#3-lécran) · [4. Découper en séquences](#4-découper-en-séquences) ·
 [5. Corriger le retard GPS](#5-corriger-le-retard-gps-onglet-synchro) ·
@@ -62,6 +65,9 @@ Un **projet** = une sortie (ou plusieurs). Page d'accueil : saisir un nom puis *
 (avec confirmation).
 Le nom du projet sert à nommer les dossiers exportés (`<nom>_1`, `<nom>_2`…).
 
+![Page d'accueil : liste des projets](images/01-projets.webp)
+*Page d'accueil : création et liste des projets.*
+
 **Les photos ne sont pas copiées** : le projet garde le chemin de chaque photo, les métadonnées lues et vos
 corrections. Supprimer un projet ne touche pas aux photos.
 
@@ -78,6 +84,10 @@ Onglet **Bilan** : nombre de photos, période, anomalies détectées :
 | doublon | même photo importée deux fois (même contenu) |
 | interruption | trou de plus de 10 s dans la prise de vue (pause, changement de batterie) |
 | illisible / introuvable | fichier abîmé, ou déplacé depuis l'import (*Vérifier les fichiers*) |
+
+
+![Onglet Bilan](images/09-bilan.webp)
+*Onglet *Bilan* : anomalies de la sortie (surlignées), réglage de la surcouche Panoramax, vérification des fichiers.*
 
 Les photos sans GPS, sans date, en doublon, illisibles ou introuvables ne peuvent pas entrer dans une séquence.
 L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#surcouche-panoramax)),
@@ -97,6 +107,10 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 │ timeline (toute la sortie)                   │                              │
 └──────────────────────────────────────────────┴──────────────────────────────┘
 ```
+
+
+![Écran principal](images/02-ecran.webp)
+*Écran principal : carte (pastilles colorées par séquence, flèches de cap, photo courante en jaune), timeline en bas (une couleur par séquence, gris = non classées), visionneuse 360° et cap à droite.*
 
 - **Carte** : une pastille par photo, colorée selon sa séquence (gris = non classée). À partir du zoom 15, une
   flèche montre le cap de chaque photo ; la photo courante est en jaune, et sa flèche tourne avec la direction
@@ -122,6 +136,16 @@ zoom 7, photos à partir du zoom 15. Au survol : date, appareil, **auteur**.
 Source (onglet *Bilan*) : **toutes les instances** (par défaut, méta-catalogue de panoramax.fr), OpenStreetMap
 France, IGN, ou l'adresse d'une autre instance.
 
+![Surcouche Panoramax](images/10-panoramax.webp)
+*Surcouche Panoramax (données réelles) : rouge = photos de plus de 3 ans, orange = 1 à 3 ans ; au survol, date, appareil et auteur.*
+
+### Sur téléphone
+
+L'écran s'empile : barre d'outils, carte, timeline, puis les onglets.
+
+![Affichage sur téléphone](images/12-mobile.webp)
+*Affichage à 390 px de large.*
+
 ---
 
 ## 4. Découper en séquences
@@ -135,6 +159,10 @@ Une séquence = un passage continu que l'on publiera d'un bloc. On parcourt la s
 3. Sur la dernière photo : `F` (*⏹ Fin*) → la séquence est créée.
 4. La photo suivante devient **aussitôt le début de la séquence suivante** : on continue d'avancer et on refait `F`
    à la fin de chaque séquence. `Échap` annule le début en cours.
+
+
+![Début et Fin en cours](images/03-debut-fin.webp)
+**Début* posé sur la photo 341 : la plage suit la navigation (en jaune sur la timeline), le bouton *Fin* indique le nombre de photos de la future séquence.*
 
 **Couper** : `C` (*✂ Couper ici*) sur la première photo de chaque nouvelle séquence. Sur une photo non classée, la
 séquence est d'abord créée autour d'elle, puis coupée : il suffit d'appuyer sur `C` à chaque coupure.
@@ -160,6 +188,10 @@ confirmation** (le nombre de photos est indiqué). Les photos exclues :
 *Supprimer* (les photos redeviennent non classées). Les séquences au nom par défaut sont renumérotées dans l'ordre
 de la sortie.
 
+
+![Onglet Séquences](images/04-sequences.webp)
+*Onglet *Séquences* : création, correction du montage de la caméra, découpage proposé, et pour chaque séquence son état d'export (*exportée*, *à réexporter*), sa durée, sa longueur, ses caps et ses actions.*
+
 `Page ↑` / `Page ↓` passent d'une séquence à l'autre. **Tout est annulable** : `Ctrl+Z` / `Ctrl+Y`.
 
 ---
@@ -179,6 +211,10 @@ a été prise. On mesure ce retard une fois et on l'applique à toute la sortie.
    est proposée.
 5. *Appliquer* à toute la sortie, à la séquence ou à une plage.
 
+
+![Onglet Synchro](images/05-synchro.webp)
+*Onglet *Synchro* sur le fond *Satellite IGN Ortho* : marqueur orange de la photo courante, positions décalées en aperçu (points orange) le long de la trace ; décalage en secondes à droite.*
+
 Chaque photo est alors placée sur la trace à l'instant de prise de vue + décalage ; les photos en saut GPS ou sans
 GPS reçoivent aussi une position. Les positions corrigées à la main sont gardées (option). Annulable.
 
@@ -192,6 +228,10 @@ la projection sur la trace donne un décalage faux.
 `M` (ou *✥ Positions*) active le mode Positions :
 - **glisser le marqueur violet** de la photo courante à sa vraie place ;
 - photo sans GPS : cliquer sur la carte pour la placer.
+
+
+![Mode Positions](images/06-positions.webp)
+*Mode Positions : marqueur violet de la photo courante déplacé ; les pointillés relient chaque photo à sa position d'origine (petits cercles). Case *Reporter la correction (→)* en haut.*
 
 La position d'origine reste visible (cercle violet et pointillés). Une photo en saut GPS corrigée redevient
 utilisable (cap, séquences, export).
@@ -222,6 +262,9 @@ Flèches sur la carte (zoom ≥ 15). Onglet *Photo* : cadran, `[` / `]` (±1°, 
 Onglet *Séquences* : *Décalage cap* d'une séquence. Sur une plage : *Décaler*, *Fixer* (même cap pour toutes),
 *Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
 « à revoir ».
+
+![Cap et position d'une photo](images/07-cap.webp)
+*Onglet *Photo* : cap calculé avec le décalage de la séquence, orientation de la photo par rapport au vélo, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
 
 ### Caméra sur casque
 
@@ -265,6 +308,10 @@ Onglet **Export** :
    fausse).
 5. *Exporter*. La tâche s'affiche en bas de l'écran.
 
+
+![Onglet Export](images/08-export.webp)
+*Onglet *Export* : mode, dossier, séquences à exporter (la séquence 1, déjà exportée et inchangée, est décochée) et options.*
+
 Résultat : un dossier par séquence, `<nom du projet>_1`, `_2`… dans l'ordre de la sortie, avec les photos renommées
 `0001_GSAC….JPG`, `0002_…`. Chaque photo reçoit :
 - la position corrigée (si elle l'a été), le cap (`GPSImgDirection`), la vitesse ;
@@ -306,6 +353,10 @@ fichiers.
 
 `?` affiche cette liste dans l'application. Les raccourcis ne fonctionnent pas quand un champ de saisie a le focus
 (cliquer à côté).
+
+
+![Aide des raccourcis](images/11-raccourcis.webp)
+*Aide affichée par `?`.*
 
 | Touche | Action |
 |---|---|

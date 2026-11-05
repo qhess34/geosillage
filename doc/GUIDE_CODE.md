@@ -246,9 +246,10 @@ avec `textContent`) : date, appareil et auteur. Les tuiles ne donnent que des id
 `first_sequence` / `sequences`) : `authorOf` cherche le nom au survol, dans l'ordre, dans le fournisseur
 « producer » de la séquence (`GET /api/collections/{id}`, `providers`), dans la photo
 (`GET /api/search?ids=…`, `geovisio:producer`), puis le compte (`GET /api/users/{account_id}`, `name`) ; résultat
-mis en cache par session (« inconnu » si rien ne répond). Réglages (affichage, instance) dans le stockage local du navigateur. Testé avec un faux
-serveur de tuiles (`mapbox-vector-tile`), l'accès aux instances n'étant pas possible depuis l'environnement de
-développement.
+mis en cache par session (« inconnu » si rien ne répond). Réglages (affichage, instance) dans le stockage local du navigateur. Vérifié sur le
+méta-catalogue réel (`api.panoramax.xyz`, novembre 2026) : tuiles servies jusqu'au zoom 15 (au-delà : erreur 400,
+d'où `maxzoom: 15` de la source, MapLibre agrandit les tuiles 15), mêmes couches et propriétés qu'une instance,
+`GET /api/collections/{id}` renvoie le fournisseur (`providers`), CORS autorisé.
 
 Carte : `follow` (« Suivre », défaut) centre la carte sur la photo sélectionnée à chaque changement de sélection
 (`stop()` puis `easeTo` 180 ms, pour enchaîner les touches) ; jamais lors d'une modification de point.

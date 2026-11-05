@@ -150,11 +150,11 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           ))}
         </ul>
       )}
-      <label className="small-text">
+      <label className="small-text option-line">
         <input type="checkbox" checked={compat} onChange={(e) => setCompat(e.target.checked)} /> Compatibilité Panoramax : un cap
         arrondi à 0° est écrit 0,6° (Panoramax considère 0 comme « absent » et le recalculerait)
       </label>
-      <label className="small-text">
+      <label className="small-text option-line">
         <input type="checkbox" checked={excludeJumps} onChange={(e) => setExcludeJumps(e.target.checked)} /> Exclure les photos en
         saut GPS non corrigées{jumps > 0 ? ` (${jumps})` : ''} : leur position est fausse
       </label>
