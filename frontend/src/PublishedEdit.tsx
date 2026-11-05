@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { api, PublishedDiff, Sequence } from './api'
+import { Confirm } from './Dialogs'
 
 // Séquences tab: corrections of a sequence already on Panoramax (published by the application, or linked)
+
 export default function PublishedEdit({
   projectId,
   s,
@@ -74,20 +76,22 @@ export default function PublishedEdit({
               <div className="muted">
                 Les corrections sont enregistrées par l'instance (affichage, carte), pas dans le fichier d'origine stocké sur Panoramax.
               </div>
-              {confirm ? (
-                <div className="row wrap">
-                  <span>Envoyer ces corrections sur {diff.instance.replace(/^https?:\/\//, '')} ?</span>
-                  <button className="small primary" onClick={() => api.pnxPush(projectId, s.id, delExcluded).then(started, (e) => onError(e.message))}>
-                    Envoyer
-                  </button>
-                  <button className="small" onClick={() => setConfirm(false)}>
-                    Annuler
-                  </button>
-                </div>
-              ) : (
-                <button className="small primary" onClick={() => setConfirm(true)}>
-                  Envoyer les corrections
-                </button>
+              <button className="small primary" onClick={() => setConfirm(true)}>
+                Envoyer les corrections
+              </button>
+              {confirm && (
+                <Confirm
+                  title="Envoyer les corrections ?"
+                  confirmLabel="Envoyer"
+                  danger={delExcluded && diff.to_delete > 0}
+                  onCancel={() => setConfirm(false)}
+                  onConfirm={() => api.pnxPush(projectId, s.id, delExcluded).then(started, (e) => onError(e.message))}
+                >
+                  <p>
+                    {diff.photos_to_update} photo(s) corrigée(s) sur <strong>{diff.instance.replace(/^https?:\/\//, '')}</strong>
+                    {delExcluded && diff.to_delete > 0 ? <>, et {diff.to_delete} photo(s) supprimée(s) définitivement</> : ''}.
+                  </p>
+                </Confirm>
               )}
             </>
           )}

@@ -11,6 +11,7 @@ interface Props {
   onContextMenu?: (idx: number, x: number, y: number) => void // right click
   warnings?: QualityIssue[] // points to check (stops, spacing…): amber marks above the strip
   thumbUrl?: (photoId: number) => string // hover bubble: thumbnail of the photo under the pointer
+  storageKey?: string // zoom / scroll remembered under this key (reopening the project)
 }
 
 // Chronological strip: one column per photo (x = index), coloured by sequence.
@@ -19,7 +20,7 @@ interface Props {
 const DRAG_PX = 8 // minimal horizontal movement for a drag to select a range
 const MIN_SPAN = 20 // photos visible at the maximal zoom
 
-export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu, warnings, thumbUrl }: Props) {
+export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu, warnings, thumbUrl, storageKey }: Props) {
   const [hover, setHover] = useState<{ idx: number; x: number } | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const dragging = useRef(false)
@@ -40,8 +41,24 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
     const ratio = (centerIdx - start) / span
     setWindow(centerIdx - ratio * s2, s2)
   }
-  // a new project / an import: everything visible again
-  useEffect(() => setWindowAll(), [n]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a new project / an import: everything visible again, unless this ride was left zoomed (same number of photos)
+  useEffect(() => {
+    try {
+      const v = storageKey && JSON.parse(localStorage.getItem(storageKey) || 'null')
+      if (v && v.n === n && n > 0) return setView({ start: v.start, span: v.span })
+    } catch {
+      /* ignore */
+    }
+    setWindowAll()
+  }, [n]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!storageKey || !n) return
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ n, start: view.start, span: view.span }))
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey, n, view])
   function setWindowAll() {
     setView({ start: 0, span: Math.max(1, n) })
   }

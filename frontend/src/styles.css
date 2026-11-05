@@ -1201,3 +1201,11 @@ input.coord {
   padding: 4px 6px 4px 12px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
 }
+
+/* Form inside a dialog: one field per line, label above */
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+}

@@ -11,6 +11,7 @@ import PublishPanel from './PublishPanel'
 import StepBar from './StepBar'
 import StopCompare from './StopCompare'
 import MapLegend from './MapLegend'
+import { AddBasemap, Confirm } from './Dialogs'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
@@ -660,29 +661,70 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
   )
 }
 
-function JobBar({ jobs, projectId }: { jobs: Job[]; projectId: string }) {
+const fmtLeft = (s: number) => (s < 60 ? `${Math.max(5, Math.round(s / 5) * 5)} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min`)
+const JOB_STATES: Record<Job['state'], string> = { done: 'terminée', error: 'erreur', cancelled: 'annulée', interrupted: 'interrompue', running: 'en cours' }
+
+// Status bar: running jobs (progress, time left from the speed seen here), last job; a system notification when a
+// long job ends while the window is in the background (if the user allowed it)
+function JobBar({ jobs, projectId, projectName }: { jobs: Job[]; projectId: string; projectName: string }) {
   const running = jobs.filter((j) => j.state === 'running')
   const last = jobs[0]
+  const seen = useRef(new Map<string, { t: number; done: number }>()) // first observation of each job
+  const wasRunning = useRef(new Set<string>())
+  const canNotify = typeof Notification !== 'undefined'
+  const [perm, setPerm] = useState(canNotify ? Notification.permission : 'denied')
+  useEffect(() => {
+    for (const j of jobs) {
+      if (j.state === 'running') {
+        if (!seen.current.has(j.id)) seen.current.set(j.id, { t: Date.now(), done: j.done })
+        wasRunning.current.add(j.id)
+      } else if (wasRunning.current.has(j.id)) {
+        wasRunning.current.delete(j.id)
+        const long = Date.now() - (seen.current.get(j.id)?.t ?? Date.now()) > 10000
+        if (canNotify && Notification.permission === 'granted' && long && document.hidden)
+          new Notification(`${JOB_LABELS[j.kind] ?? j.kind} ${JOB_STATES[j.state]}`, { body: `${projectName}${j.message ? ` — ${j.message}` : ''}` })
+      }
+    }
+  }, [jobs, projectName, canNotify])
+  const left = (j: Job) => {
+    const s = seen.current.get(j.id)
+    if (!s || !j.total || j.done <= s.done) return null
+    const elapsed = (Date.now() - s.t) / 1000
+    if (elapsed < 3) return null
+    return ((j.total - j.done) * elapsed) / (j.done - s.done)
+  }
   return (
     <footer className="statusbar">
       {running.length ? (
-        running.map((j) => (
-          <span key={j.id} className="job">
-            {JOB_LABELS[j.kind] ?? j.kind} : {j.message ?? ''} {j.total ? `${j.done}/${j.total}` : ''}
-            {j.total > 0 && <progress value={j.done} max={j.total} />}
-            <button className="small" onClick={() => api.cancelJob(projectId, j.id)}>
-              Annuler
-            </button>
-          </span>
-        ))
+        running.map((j) => {
+          const eta = left(j)
+          return (
+            <span key={j.id} className="job">
+              {JOB_LABELS[j.kind] ?? j.kind} : {j.message ?? ''} {j.total ? `${j.done}/${j.total}` : ''}
+              {j.total > 0 && <progress value={j.done} max={j.total} />}
+              {eta != null && <span className="muted">≈ {fmtLeft(eta)} restantes</span>}
+              <button className="small" onClick={() => api.cancelJob(projectId, j.id)}>
+                Annuler
+              </button>
+            </span>
+          )
+        })
       ) : last ? (
         <span className={last.state === 'error' ? 'error' : 'muted'}>
-          Dernière tâche : {JOB_LABELS[last.kind] ?? last.kind} —{' '}
-          {{ done: 'terminée', error: 'erreur', cancelled: 'annulée', interrupted: 'interrompue', running: 'en cours' }[last.state]}
+          Dernière tâche : {JOB_LABELS[last.kind] ?? last.kind} — {JOB_STATES[last.state]}
           {last.message ? ` (${last.message})` : ''}
         </span>
       ) : (
         <span className="muted">Prêt</span>
+      )}
+      {canNotify && perm === 'default' && (
+        <button
+          className="link small-text"
+          title="Notification du système quand un export, une publication ou un import se termine pendant que vous êtes dans une autre fenêtre"
+          onClick={() => Notification.requestPermission().then(setPerm)}
+        >
+          🔔 Me prévenir à la fin des tâches
+        </button>
       )}
     </footer>
   )
@@ -765,9 +807,20 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     saveOverlay(o)
   }
   const anchor = useRef<number | null>(null)
-  const [tab, setTab] = useState<Tab>('photo')
+  // Reopening a project: back to the same photo, tab (and timeline zoom, see Timeline) as when it was left
+  const viewKey = `pss-view-${projectId}`
+  const savedView = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem(viewKey) || '{}') as { photo?: number; tab?: Tab }
+    } catch {
+      return {}
+    }
+  }, [viewKey])
+  const [tab, setTab] = useState<Tab>(savedView.tab ?? 'photo')
   const [showImport, setShowImport] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [confirmExclude, setConfirmExclude] = useState<{ range: [number, number]; n: number } | null>(null)
+  const [addingBasemap, setAddingBasemap] = useState(false)
   const [stopCompare, setStopCompare] = useState<[number, number] | null>(null) // photos of a stop side by side
   const [editMode, setEditMode] = useState(false)
   const [track, setTrack] = useState<Track | null>(null)
@@ -789,6 +842,28 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const lastPhotosKey = useRef('')
 
   const byIdx = photos
+  const restored = useRef(false)
+  useEffect(() => {
+    if (restored.current || !photos.length) return
+    restored.current = true
+    const p = photos.find((x) => x.id === savedView.photo)
+    if (p) {
+      setSelected(p.id)
+      anchor.current = p.idx
+    }
+  }, [photos, savedView])
+  useEffect(() => {
+    if (!restored.current) return
+    try {
+      localStorage.setItem(viewKey, JSON.stringify({ photo: selected ?? undefined, tab }))
+    } catch {
+      /* ignore */
+    }
+  }, [viewKey, selected, tab])
+  // a Panoramax project has no Export tab
+  useEffect(() => {
+    if (isPnx && tab === 'export') setTab('send')
+  }, [isPnx, tab])
   const current = useMemo(() => photos.find((p) => p.id === selected) ?? null, [photos, selected])
 
   // points to check, recomputed whenever the photos change (positions, exclusions, headings)
@@ -1034,11 +1109,20 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     [projectId, afterHeadingChange],
   )
 
+  const excludeRange = useCallback(
+    (r: [number, number], n: number) =>
+      api.excludePhotos(projectId, { start_idx: r[0], end_idx: r[1] }).then((s) => {
+        applyState({ ...s, done: `${n} photo(s) exclue(s) — Ctrl+Z pour annuler` })
+        setRange(null)
+      }, (er) => setError(er.message)),
+    [projectId, applyState],
+  )
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || showImport) return
+      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl && e.key.toLowerCase() === 'z') {
         undoRedo(e.shiftKey ? 'redo' : 'undo')
@@ -1078,14 +1162,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         if (range && seqStart == null && range[1] > range[0]) {
           // a range drawn on the timeline: exclude it all, after confirmation
           const n = photos.slice(range[0], range[1] + 1).filter((p) => !p.excluded).length
-          if (n > 1 && !window.confirm(`Exclure les ${n} photos de la plage ${range[0] + 1} → ${range[1] + 1} ?\n(Échap désélectionne la plage ; Ctrl+Z annule une exclusion)`)) {
-            e.preventDefault()
-            return
-          }
-          api.excludePhotos(projectId, { start_idx: range[0], end_idx: range[1] }).then((s) => {
-            applyState({ ...s, done: `${n} photo(s) exclue(s) — Ctrl+Z pour annuler` })
-            setRange(null)
-          }, (er) => setError(er.message))
+          if (n > 1) setConfirmExclude({ range, n })
+          else excludeRange(range, n)
         } else if (current) {
           // exclude and move on: pressing the key repeatedly removes a series of photos
           if (!current.excluded) api.excludePhotos(projectId, { photo_ids: [current.id] }).then(applyState, (er) => setError(er.message))
@@ -1125,7 +1203,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, excludeRange, confirmExclude, addingBasemap, stopCompare])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
@@ -1184,15 +1262,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
 
   const chooseBasemap = (id: string) => {
     if (id === '__add') {
-      const name = prompt('Nom du fond de carte')
-      const url = name && prompt('URL XYZ (avec {z}, {x}, {y})', 'https://…/{z}/{x}/{y}.png')
-      if (!name || !url || !url.includes('{z}')) return
-      const attribution = prompt('Attribution (obligatoire selon le fournisseur)') || ''
-      const b: Basemap = { id: `custom-${Date.now()}`, name, url, attribution, maxzoom: 19, custom: true }
-      const list = [...custom, b]
-      setCustom(list)
-      saveCustomBasemaps(list)
-      id = b.id
+      setAddingBasemap(true)
+      return
     }
     setBasemapId(id)
     try {
@@ -1426,6 +1497,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             onContextMenu={photosContext}
             warnings={quality}
             thumbUrl={(id) => api.thumbUrl(projectId, id)}
+            storageKey={`pss-timeline-${projectId}`}
           />
           {ctx && <ContextMenu x={ctx.x} y={ctx.y} {...ctxItems()} onClose={() => setCtx(null)} />}
         </div>
@@ -1588,8 +1660,38 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           </div>
         </aside>
       </main>
-      <JobBar jobs={project.jobs} projectId={projectId} />
+      <JobBar jobs={project.jobs} projectId={projectId} projectName={project.name} />
       {showImport && <ImportDialog projectId={projectId} onClose={() => setShowImport(false)} onStarted={refresh} />}
+      {confirmExclude && (
+        <Confirm
+          title={`Exclure ${confirmExclude.n} photos ?`}
+          confirmLabel={`Exclure ${confirmExclude.n} photos`}
+          danger
+          onCancel={() => setConfirmExclude(null)}
+          onConfirm={() => {
+            excludeRange(confirmExclude.range, confirmExclude.n)
+            setConfirmExclude(null)
+          }}
+        >
+          <p>
+            Photos {confirmExclude.range[0] + 1} → {confirmExclude.range[1] + 1} de la plage sélectionnée. Elles ne sont ni supprimées ni
+            exportées ; Ctrl+Z annule.
+          </p>
+        </Confirm>
+      )}
+      {addingBasemap && (
+        <AddBasemap
+          onCancel={() => setAddingBasemap(false)}
+          onAdd={(name, url, attribution) => {
+            const b: Basemap = { id: `custom-${Date.now()}`, name, url, attribution, maxzoom: 19, custom: true }
+            const list = [...custom, b]
+            setCustom(list)
+            saveCustomBasemaps(list)
+            setAddingBasemap(false)
+            chooseBasemap(b.id)
+          }}
+        />
+      )}
       {stopCompare && (
         <StopCompare
           projectId={projectId}

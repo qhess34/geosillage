@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, Job, PanoramaxStatus, seqColor, Sequence, Tag } from './api'
+import { Confirm } from './Dialogs'
 
 export const PUBLICATION_STATES: Record<string, string> = {
   uploading: 'envoi interrompu',
@@ -134,21 +135,31 @@ export default function PublishPanel({
               sont copiés sur la séquence Panoramax et reproposés au prochain envoi.
             </p>
           </fieldset>
-          {confirm ? (
-            <div className="confirm-box">
-              Publier {chosen.length} séquence(s) sur {st!.instance.replace(/^https?:\/\//, '')}
-              {visibility === 'anyone' ? ', visibles par tout le monde' : ', visibles par vous seulement'} ?{' '}
-              <button className="small primary" onClick={publish}>
-                Publier
-              </button>{' '}
-              <button className="small" onClick={() => setConfirm(false)}>
-                Annuler
-              </button>
-            </div>
-          ) : (
+          <div className="actions">
             <button className="primary" disabled={!chosen.length || running || parsed.bad.length > 0} onClick={() => setConfirm(true)}>
               {running ? 'Publication en cours…' : `Publier ${chosen.length} séquence(s)`}
             </button>
+          </div>
+          {confirm && (
+            <Confirm
+              title={`Publier ${chosen.length} séquence(s) ?`}
+              confirmLabel="Publier"
+              onCancel={() => setConfirm(false)}
+              onConfirm={publish}
+            >
+              <p>
+                Sur <strong>{st!.instance.replace(/^https?:\/\//, '')}</strong>,{' '}
+                {visibility === 'anyone' ? 'visibles par tout le monde' : 'visibles par vous seulement'}
+                {semantics.length ? <>, avec {semantics.map((t) => `${t.key}=${t.value}`).join(', ')}</> : ''}.
+              </p>
+              <ul className="small-text">
+                {chosen.map((c) => (
+                  <li key={c.id}>
+                    {c.name} ({c.count} photos)
+                  </li>
+                ))}
+              </ul>
+            </Confirm>
           )}
         </>
       )}
