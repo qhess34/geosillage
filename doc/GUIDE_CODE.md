@@ -30,7 +30,7 @@ backend/app/
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
   ProjectList.tsx  création, ouverture, suppression (avec confirmation) des projets
-  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export, Envoi, Bilan ; projet Panoramax : pas d'Export), raccourcis clavier
+  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export, Envoi, Bilan ; projet Panoramax : pas d'Export), barre d'étapes (`StepBar.tsx`), raccourcis clavier
   PhotoMap.tsx     MapLibre : une source GeoJSON (points colorés par séquence + trace), flèches de cap (SDF), plage, sélection
   Timeline.tsx     bande chronologique (canvas) : couleur par séquence, anomalies, interruptions, sélection de plage
   HeadingDial.tsx  cadran de cap (glisser, Maj = pas de 5°)
@@ -404,6 +404,16 @@ si la distance dépasse `jump_min_m` **et** la vitesse implicite `jump_speed_ms`
 Si la photo suivante est cohérente avec la référence, c'est un saut isolé : la référence n'est pas mise à jour.
 Sinon c'est un décalage durable : la photo est signalée une fois et devient la référence.
 Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`).
+
+## Barre d'étapes
+
+`StepBar.tsx`, sous la barre d'outils : calculée côté interface à partir de ce qui est déjà chargé (`photos`,
+`sequences`, `project.summary`, points à vérifier `quality`), sans route dédiée. Étapes dans l'ordre de travail :
+import, doublons et arrêts (`quality` `stop`), correction GPS (photos sans position, `GPS_JUMP` sans `pos_method`,
+autres points de `quality`), séquences (photos utilisables non classées), export (`last_export`, `needs_export`),
+envoi (`last_publication`, `changed_since_publication`) ; projet Panoramax : sans séquences ni export. États
+`ok` / `warn` / `todo` ; `onTab` ouvre un onglet, `onShow` sélectionne des photos (onglet Photo). `.workspace` est
+une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des tâches).
 
 ## Points à vérifier (contrôle qualité)
 

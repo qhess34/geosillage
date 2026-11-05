@@ -100,6 +100,7 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 
 ```
 ┌ barre d'outils : ← projets · Importer · Annuler/Rétablir · Couper ici · Début · Fin · Positions · ? · Panoramax · fond de carte
+├ étapes : Import · Doublons et arrêts · Correction GPS · Séquences · Export · Envoi
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
 │   (Centrer · Suivre · Exclues · Reporter…)   │ Photo · Séquences · Synchro  │
@@ -108,6 +109,22 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 │ timeline (toute la sortie)                   │                              │
 └──────────────────────────────────────────────┴──────────────────────────────┘
 ```
+
+**Barre d'étapes** (sous la barre d'outils) : où en est la sortie, dans l'ordre de travail. Chaque étape est
+**✓ verte** (rien à faire), **! orange** (quelque chose à reprendre, résumé à côté) ou **numérotée en gris** (pas
+commencée) ; l'étape de l'onglet ouvert est encadrée. Au survol, le détail ; au clic, le bon endroit :
+
+| Étape | Orange quand… | Clic |
+|---|---|---|
+| Import | — (gris tant qu'aucune photo) | *Bilan* |
+| Doublons et arrêts | des arrêts restent à trier (les fichiers identiques sont écartés à l'import) | premier arrêt, photos sélectionnées |
+| Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | premier point ; *Synchro* quand tout est vert (la synchro n'est jamais exigée) |
+| Séquences | photos ni dans une séquence, ni exclues | *Séquences* |
+| Export | séquences pas encore exportées, ou à réexporter | *Export* |
+| Envoi | séquences pas encore publiées, modifiées depuis, ou envoi interrompu | *Envoi* |
+
+Dans un projet Panoramax : Import Panoramax · Doublons et arrêts · Correction GPS · Envoi (orange quand des
+séquences ont été corrigées depuis leur import ou leur dernier envoi).
 
 
 ![Écran principal](images/02-ecran.webp)

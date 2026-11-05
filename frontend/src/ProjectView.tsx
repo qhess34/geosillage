@@ -8,6 +8,7 @@ import ImportDialog from './ImportDialog'
 import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
 import PublishPanel from './PublishPanel'
+import StepBar from './StepBar'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
@@ -1225,6 +1226,19 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           <option value="__add">+ Ajouter un fond XYZ…</option>
         </select>
       </header>
+      <StepBar
+        project={project}
+        photos={photos}
+        sequences={sequences}
+        quality={quality}
+        tab={tab}
+        onTab={setTab}
+        onShow={(r) => {
+          goIdx(r[0])
+          setRange(r[1] > r[0] ? r : null)
+          setTab('photo')
+        }}
+      />
       {error && (
         <div className="error banner" onClick={() => setError(null)}>
           {error} <span className="muted">(cliquer pour fermer)</span>

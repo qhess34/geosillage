@@ -175,9 +175,13 @@ select {
 }
 
 .workspace {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+}
+.workspace > .main {
+  flex: 1;
+  min-height: 0;
 }
 .toolbar button {
   white-space: nowrap;
@@ -988,4 +992,78 @@ input.coord {
   box-sizing: border-box;
   margin-top: 4px;
   font-family: ui-monospace, monospace;
+}
+
+/* Step bar under the toolbar: progress of the ride */
+.steps {
+  display: flex;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.steps .step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 8px 3px 5px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.steps .step:hover {
+  background: rgba(127, 127, 127, 0.1);
+}
+.steps .step.current {
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.07);
+}
+.steps .ico {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 11px;
+  color: #fff;
+}
+.steps .ok .ico {
+  background: #059669;
+}
+.steps .warn .ico {
+  background: #d97706;
+}
+.steps .todo .ico {
+  color: var(--muted, #6b7280);
+  border: 1.5px solid #9ca3af;
+}
+.steps .txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.steps .lab {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.steps .sub {
+  color: var(--muted, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.steps .warn .sub {
+  color: #b45309;
 }
