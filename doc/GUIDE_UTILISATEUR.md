@@ -433,7 +433,8 @@ Un projet à part, sans photo sur le disque : les photos restent sur Panoramax e
 1. Page d'accueil : **Corriger des séquences déjà publiées sur Panoramax…**. Se connecter si besoin (même lien de
    validation que pour publier), cocher ses séquences dans la liste (titre, nombre de photos, date ; filtre par
    titre), ou coller l'adresse de séquences, puis **Créer le projet Panoramax**. Les photos sont chargées
-   (positions, caps, orientation tels que sur Panoramax), puis leurs miniatures.
+   (positions, caps, orientation tels que sur Panoramax), puis leurs miniatures. La visionneuse affiche les
+   photos comme Panoramax : orientation (lacet) et redressement de l'horizon (tangage, roulis) compris.
 2. Corriger avec les outils habituels : positions (glisser, report →, synchro, recalage OSM, photos sans
    position), caps (le cap de départ est celui de Panoramax, marqué *Panoramax* ; *Revenir au cap calculé* le
    recalcule depuis la trace), orientation (*Fixer la direction du vélo*, *Corriger le montage*), exclusion (`X`).

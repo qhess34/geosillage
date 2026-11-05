@@ -355,6 +355,8 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
           alt={photo.filename}
           height={280}
           yaw={photo.yaw_offset}
+          pitch={photo.pitch_orig}
+          roll={photo.roll_orig}
           onView={onView}
           fixLabel={range ? `Direction du vélo (plage ${range[0] + 1}→${range[1] + 1})` : 'Fixer la direction du vélo'}
           onFixYaw={(y) =>

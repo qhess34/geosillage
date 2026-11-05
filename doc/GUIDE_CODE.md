@@ -339,7 +339,8 @@ est avancée (`changed_since_publication` retombe). Tests : `test_publish.py` (f
 (`panoramax.import_sequences`) : une ligne `photo` par image, **sans fichier** (`path = 'pnx:<picture id>'`,
 `size`/`mtime` à 0), `lat_orig/lon_orig` = géométrie, `heading_exif` et `heading_manual` = `view:azimuth` (le cap
 Panoramax est gardé tel quel ; « Revenir au cap calculé » efface `heading_manual`), `yaw_offset` = `pers:yaw`
-ramené à ±180 ; une `sequence` par séquence publiée + `publication` (`ready`) + `published_photo` : comparer /
+ramené à ±180, `pitch_orig` / `roll_orig` = `pers:pitch` / `pers:roll` (affichage seulement : la visionneuse
+applique `sphereCorrection = {pan: yaw, tilt: −pitch, roll}` comme le viewer Panoramax ; jamais modifiés) ; une `sequence` par séquence publiée + `publication` (`ready`) + `published_photo` : comparer /
 envoyer / remettre fonctionnent sans changement. Juste après l'import, la comparaison est vide (sauf lacet sans
 tangage/roulis, que le viewer n'applique pas : 0,01 proposé). Images : miniatures téléchargées
 (`importer.thumbnails`, échec réseau → `thumb = -1` sans marquer la photo illisible) ; `GET …/photos/{id}/image`

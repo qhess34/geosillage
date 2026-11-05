@@ -12,6 +12,8 @@ interface Props {
   // XMP-GPano:PoseHeadingDegrees, i.e. Panoramax's yaw. Shown exactly like the Panoramax viewer does:
   // sphereCorrection pan = yaw, so the view's front shows the image at +yaw degrees from its centre.
   yaw?: number | null
+  pitch?: number | null // published picture: pers:pitch / pers:roll (display only)
+  roll?: number | null
   onFixYaw?: (yaw: number) => void // "the bike goes where I am looking now"
   onResetYaw?: () => void
   fixLabel?: string
@@ -34,7 +36,7 @@ function savedMode(): '360' | 'flat' {
 // 360° viewer (equirectangular). The thumbnail is shown first, then the full-resolution photo. The view
 // direction is kept from one photo to the next, so stepping through a ride keeps looking the same way.
 // Keyboard handling stays with the application (arrows = previous / next photo).
-function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabel, onView }: Props) {
+function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onResetYaw, fixLabel, onView }: Props) {
   const onViewRef = useRef(onView)
   onViewRef.current = onView
   const el = useRef<HTMLDivElement>(null)
@@ -82,7 +84,8 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
       zoom: v.getZoomLevel(),
       transition: false as const,
       showLoader: false,
-      sphereCorrection: { pan: (pose * Math.PI) / 180 },
+      // pitch / roll of a published picture: corrected like the Panoramax viewer (tilt = -pitch)
+      sphereCorrection: { pan: (pose * Math.PI) / 180, tilt: (-(pitch ?? 0) * Math.PI) / 180, roll: ((roll ?? 0) * Math.PI) / 180 },
       panoData: (image: HTMLImageElement, xmp?: PanoData): PanoData => ({
         ...xmp,
         isEquirectangular: true,
@@ -105,7 +108,7 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, onFixYaw, onResetYaw, fixLabe
       cancelled = true
     }
     // a new yaw for the same photo reloads it (cached) with the new correction
-  }, [thumbUrl, imageUrl, pose])
+  }, [thumbUrl, imageUrl, pose, pitch, roll])
 
   const fix = async () => {
     const v = viewer.current

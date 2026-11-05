@@ -367,3 +367,19 @@ def test_panoramax_project_refuses_file_operations(account):
             assert r.status_code == 409, (url, r.status_code, r.text)
         # corrections remain possible
         assert client.put(f"/api/projects/{pid}/photos/3/position", json={"lat": 43.6001, "lon": 3.8701}).status_code == 200
+
+
+def test_panoramax_project_keeps_pitch_and_roll_for_display(account):
+    with TestClient(main.app) as client:
+        connect(client, account)
+        cid = account.add_sequence(4, yaw=30.0)
+        for f in account.items[cid].values():
+            f["properties"].update({"pers:pitch": 4.5, "pers:roll": -2.0})
+        pid = client.post("/api/panoramax/projects", json={"name": "P", "collections": [cid]}).json()["id"]
+        wait_jobs(client, pid)
+        first = client.get(f"/api/projects/{pid}/photos").json()["rows"][0][0]
+        d = client.get(f"/api/projects/{pid}/photos/{first}").json()
+        assert (d["yaw_offset"], d["pitch_orig"], d["roll_orig"]) == (30.0, 4.5, -2.0)
+        (seq,) = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+        # nothing to send: yaw, pitch and roll are those of Panoramax
+        assert client.get(f"/api/projects/{pid}/sequences/{seq['id']}/panoramax/compare").json()["photos_to_update"] == 0

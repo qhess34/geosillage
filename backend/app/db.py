@@ -174,6 +174,11 @@ MIGRATIONS = [
         reverted INTEGER NOT NULL DEFAULT 0
     );
     """,
+    """
+    -- Pitch / roll of a published picture (pers:pitch / pers:roll): shown by the viewer like Panoramax, never edited
+    ALTER TABLE photo ADD COLUMN pitch_orig REAL;
+    ALTER TABLE photo ADD COLUMN roll_orig REAL;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

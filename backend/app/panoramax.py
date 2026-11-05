@@ -668,12 +668,12 @@ def import_sequences(ctx, pid: str, collection_ids: list[str]) -> None:
                     head = p.get("view:azimuth")
                     conn.execute(
                         """INSERT OR IGNORE INTO photo(path, filename, size, mtime, ts, ts_text, gps_ts, lat_orig, lon_orig,
-                               heading_exif, heading_manual, is_360, projection, yaw_offset, sequence_id)
-                           VALUES(?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               heading_exif, heading_manual, is_360, projection, yaw_offset, sequence_id, pitch_orig, roll_orig)
+                           VALUES(?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         (
                             PNX_PREFIX + f["id"], p.get("original_file:name") or f["id"], t, p.get("datetime"), t, lat, lon,
                             head, head, 1 if fov == 360 else 0, "equirectangular" if fov == 360 else None,
-                            yaw or None, sid,
+                            yaw or None, sid, p.get("pers:pitch"), p.get("pers:roll"),
                         ),
                     )
                 rows = conn.execute("SELECT id, path FROM photo WHERE sequence_id=?", (sid,)).fetchall()

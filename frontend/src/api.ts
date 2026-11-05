@@ -168,6 +168,8 @@ export interface MissingRun {
 }
 
 export interface PhotoDetail extends PhotoRow {
+  pitch_orig: number | null // published picture (Panoramax project): pers:pitch, shown like Panoramax
+  roll_orig: number | null
   path: string
   filename: string
   size: number
