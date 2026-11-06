@@ -243,6 +243,10 @@ de la photo (pour ne pas s'accrocher à un autre passage dans la même rue) ; d�
 instant de la photo. Le navigateur fait la même projection (`timesync.ts`, projection plane locale) pour l'aperçu
 pendant le glisser, puis demande la valeur au backend au relâchement.
 
+Lots (`timesync.runs`, `GET …/timesync/runs`) : photos consécutives (non exclues, utilisables) de même
+`time_offset` arrondi au dixième (`pos_method = 'time'`), sinon « non synchronisées » ; les photos corrigées à la
+main (`MANUAL_METHODS`) ne coupent pas un lot, elles y sont comptées (`manual`). Affiché dans l'onglet *Synchro*.
+
 Portées de `POST …/timesync/apply` : `all`, `sequence`, `range`, `from` (photos `idx >= start_idx` : retard
 variable au cours d'une sortie, les photos d'avant ne sont pas touchées donc pas marquées « à réexporter »).
 `SyncTab` propose `all` tant qu'aucune synchro n'a été appliquée (`last_time_offset`), puis `from` ; la médiane
@@ -421,15 +425,19 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 
 ## Confort de l'interface
 
-- `StopCompare.tsx` : photos d'un arrêt côte à côte, exclusion des non gardées en un appel `excludePhotos`.
+- `StopCompare.tsx` : photos d'un arrêt côte à côte, la vignette cliquée dans `Viewer360` (orientation lue par
+  `api.photo`), exclusion des non gardées en un appel `excludePhotos`.
 - `N` / `Maj+N` (`checkPoints` dans `ProjectView`) : points à vérifier, sauts GPS non corrigés, photos sans position,
   photos non classées, triés par index.
+  `issues.ts` : type `Issue` (`kind`, `start`, `end`, `count`, `detail` du backend, `meters`), `computeIssues`, la
+  table unique des textes `ISSUE_TEXT` (titre, nom, cause, correction), prédicats partagés `isUsable` / `isPlaced`.
+  `focusOn` y va et l'explique dans `CheckCard.tsx` (haut de l'onglet Photo : précision, cause, correction, actions ;
+  `fixIssue` pour les actions, exclusion confirmée) ; le point est recherché dans la liste à chaque rendu : disparu =
+  « Corrigé ✓ ». `focusFirst(kinds)` sert à l'étape *Correction GPS* ; l'encadré est retiré quand la photo courante
+  sort de `start..end`.
   `IssuesPanel.tsx` : fenêtre flottante (`useDraggable`, partagé avec `OsmSnapPanel`) des problèmes d'une étape
-  (`STEP_KINDS`), groupés avec cause et correction (`KIND_INFO`) ; ouverte par la `StepBar` (`onIssues`) ; plus de
+  (`STEP_KINDS`), groupés avec cause et correction (`ISSUE_TEXT`) ; ouverte par la `StepBar` (`onIssues`) ; plus de
   listes de corrections dans le *Bilan*.
-  Chaque `CheckPoint` a un `kind` ; `focusOn` y va et l'explique dans `CheckCard` (haut de l'onglet Photo : problème,
-  marche à suivre, actions) ; `focusFirst(kinds)` sert à l'étape *Correction GPS* ; la carte est retirée quand la
-  photo courante sort de `start..end`.
 - `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`) ; pastille de sélection (`.selection-chip`) ;
   carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
 - `Timeline` : bulle au survol (`HoverBubble`), zoom gardé sous `pss-timeline-<projet>` si le nombre de photos n'a

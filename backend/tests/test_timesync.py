@@ -157,3 +157,48 @@ def test_sync_from_photo_leaves_earlier_photos(project, tmp_path):
     d = client.get(f"/api/projects/{pid}/photos/{after['rows'][-2][0]}").json()
     assert d["time_offset"] == 1.0
     assert client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "from"}).status_code == 400
+
+
+def test_sync_runs_by_offset(project):
+    """The Synchro tab lists the lots of photos synchronised with each offset (e.g. 1-100 at +1 s, 101-700 at +1.9 s)."""
+    client, pid = project
+    assert [r["offset_s"] for r in client.get(f"/api/projects/{pid}/timesync/runs").json()] == [None]  # nothing synced yet
+    photos = client.get(f"/api/projects/{pid}/photos").json()
+    n = len(photos["rows"])
+    cut = n // 3
+    client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "all"})
+    client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.9, "scope": "from", "start_idx": cut})
+    runs = client.get(f"/api/projects/{pid}/timesync/runs").json()
+    synced = [r for r in runs if r["offset_s"] is not None]
+    assert [r["offset_s"] for r in synced] == [1.0, 1.9]
+    assert synced[0]["end_idx"] < cut <= synced[1]["start_idx"] + 1 and synced[1]["end_idx"] >= n - 3
+    # a photo corrected by hand inside a lot does not split it
+    mid = synced[1]["start_idx"] + 3
+    pid_photo = next(r[0] for r in photos["rows"] if r[photos["fields"].index("idx")] == mid)
+    d = client.get(f"/api/projects/{pid}/photos/{pid_photo}").json()
+    client.put(f"/api/projects/{pid}/photos/{pid_photo}/position", json={"lat": d["lat"] + 1e-5, "lon": d["lon"]})
+    after = [r for r in client.get(f"/api/projects/{pid}/timesync/runs").json() if r["offset_s"] is not None]
+    assert [r["offset_s"] for r in after] == [1.0, 1.9] and after[1]["manual"] == 1
+    assert after[1]["count"] == synced[1]["count"]
+
+
+def test_sync_runs_hand_corrected_photo_between_lots(project):
+    """A photo corrected by hand between two lots belongs to the following lot, which starts at it."""
+    client, pid = project
+    client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "all"})
+    runs = client.get(f"/api/projects/{pid}/timesync/runs").json()
+    first = runs[0]["start_idx"]
+    with db.open_project(pid) as conn:
+        ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE excluded = 0 AND idx >= ? ORDER BY idx LIMIT 5", (first,))]
+        idx = [conn.execute("SELECT idx FROM photo WHERE id=?", (i,)).fetchone()[0] for i in ids]
+        conn.execute("UPDATE photo SET time_offset=1.9 WHERE id IN (?, ?)", (ids[3], ids[4]))
+        conn.execute("UPDATE photo SET time_offset=1.9 WHERE idx > ? AND pos_method = 'time'", (idx[4],))
+        conn.execute("UPDATE photo SET pos_method='manual', time_offset=NULL WHERE id=?", (ids[2],))
+    runs = [r for r in client.get(f"/api/projects/{pid}/timesync/runs").json() if r["offset_s"] is not None]
+    a, b = runs[0], runs[1]
+    assert (a["offset_s"], a["end_idx"], a["manual"]) == (1.0, idx[1], 0)
+    assert (b["offset_s"], b["start_idx"], b["manual"]) == (1.9, idx[2], 1)  # starts at the hand-corrected photo
+    # every photo of the ride belongs to exactly one lot (ranges contiguous, no hole)
+    allr = client.get(f"/api/projects/{pid}/timesync/runs").json()
+    assert all(x["end_idx"] < y["start_idx"] for x, y in zip(allr, allr[1:]))
+    assert a["end_idx"] < b["start_idx"] == idx[2]

@@ -1167,13 +1167,15 @@ input.coord {
 .stop-preview {
   margin: 0 0 10px;
 }
-.stop-preview img {
+.stop-thumb {
   display: block;
   width: 100%;
-  height: min(38vh, 420px);
-  object-fit: contain;
-  border-radius: 6px;
-  background: #111;
+  padding: 0;
+  border: none;
+  background: none;
+}
+.stop-grid li.shown {
+  box-shadow: 0 0 0 2px #facc15;
 }
 .stop-grid {
   list-style: none;
@@ -1369,6 +1371,13 @@ input.coord {
   margin: 6px 0 8px;
   line-height: 1.45;
 }
+.check-card.fixed {
+  border-color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+}
+.check-card .check-precise {
+  font-weight: 600;
+}
 .check-card .dot {
   display: inline-block;
   width: 9px;
@@ -1442,4 +1451,26 @@ a.button-link:hover {
 }
 .brand-back img {
   display: block;
+}
+
+/* Synchro tab: lots of photos per applied offset */
+.sync-runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sync-runs li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.sync-runs li.current {
+  background: rgba(234, 88, 12, 0.08);
+  border-left: 3px solid #ea580c;
+}
+.sync-runs .row {
+  align-items: center;
 }

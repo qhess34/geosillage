@@ -109,6 +109,15 @@ export interface QualityIssue {
   meters?: number
 }
 
+// Lot of consecutive photos synchronised with the same offset (null: not synchronised)
+export interface SyncRun {
+  offset_s: number | null
+  start_idx: number
+  end_idx: number
+  count: number
+  manual: number // photos corrected by hand inside the lot (they keep their own position)
+}
+
 export interface SnapCandidate {
   id: number
   name: string
@@ -385,6 +394,7 @@ export const api = {
     id: string,
     body: { offset_s: number; scope: 'all' | 'sequence' | 'range' | 'from'; sequence_id?: number; start_idx?: number; end_idx?: number; keep_manual: boolean },
   ) => req<{ changed: number; kept_manual: number; uncovered: number; undo: UndoState }>('POST', `/api/projects/${id}/timesync/apply`, body),
+  syncRuns: (id: string) => req<SyncRun[]>('GET', `/api/projects/${id}/timesync/runs`),
   syncPoints: (id: string) => req<{ points: SyncPoint[]; last_offset_s: number | null }>('GET', `/api/projects/${id}/timesync/points`),
   saveSyncPoints: (id: string, points: SyncPoint[]) => req<{ points: SyncPoint[] }>('PUT', `/api/projects/${id}/timesync/points`, points),
   excludePhotos: (id: string, target: { photo_ids?: number[]; start_idx?: number; end_idx?: number }, excluded = true) =>
