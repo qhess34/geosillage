@@ -444,7 +444,8 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
   `IssuesPanel.tsx` : fenêtre flottante (`useDraggable`, partagé avec `OsmSnapPanel`) des problèmes d'une étape
   (`STEP_KINDS`), groupés avec cause et correction (`ISSUE_TEXT`) ; ouverte par la `StepBar` (`onIssues`) ; plus de
   listes de corrections dans le *Bilan*.
-- `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`) ; pastille de sélection (`.selection-chip`) ;
+- `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`, avec les classes d'âge de la couverture Panoramax
+  quand elle est affichée) ; pastille de sélection (`.selection-chip`) ;
   carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
 - `Timeline` : bulle au survol (`HoverBubble`), zoom gardé sous `pss-timeline-<projet>` si le nombre de photos n'a
   pas changé ; photo et onglet gardés sous `pss-view-<projet>`.

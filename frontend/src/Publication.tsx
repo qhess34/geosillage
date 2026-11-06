@@ -34,8 +34,9 @@ export function usePublishOptions() {
 }
 export type PublishOptions = ReturnType<typeof usePublishOptions>
 
-// Section « Publier sur Panoramax » of the Export tab: connection and options; each exported sequence has its own
-// « Publier » button in the list above
+// Section « Publier sur Panoramax » of the Export tab: connection, options, and « Publier les n séquences exportées non
+// publiées » (one confirmation, one api.publish call); each exported sequence also has its own « Publier » button in
+// the list above
 export function PublishOptionsPanel({
   o,
   projectId,

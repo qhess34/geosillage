@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react'
+import { AGE_CLASSES } from './panoramaxLayer'
 
 // Meaning of the colours and marks of the map and the timeline (folded by default, remembered)
 const dot = (fill: string, stroke = '#ffffff', w = 1) => (
@@ -39,7 +40,8 @@ const TIMELINE: [ReactNode, string][] = [
   [bar('rgba(250,204,21,0.5)'), 'plage sélectionnée'],
 ]
 
-export default function MapLegend() {
+// panoramax: source of the coverage of photos already published, when shown on the map (null: hidden)
+export default function MapLegend({ panoramax }: { panoramax: string | null }) {
   const [open, setOpenState] = useState(() => {
     try {
       return localStorage.getItem('pss-legend') === '1'
@@ -70,6 +72,19 @@ export default function MapLegend() {
               </li>
             ))}
           </ul>
+          {panoramax && (
+            <>
+              <strong title={panoramax}>Couverture Panoramax</strong>
+              <ul>
+                {AGE_CLASSES.map((c) => (
+                  <li key={c.label}>
+                    {line(c.color)} photos 360° publiées il y a {c.label}
+                  </li>
+                ))}
+                <li className="muted">survol d'une photo : date, appareil, auteur</li>
+              </ul>
+            </>
+          )}
           <strong>Timeline</strong>
           <ul>
             {TIMELINE.map(([icon, label]) => (

@@ -162,8 +162,9 @@ séquences ont été corrigées depuis leur import ou leur dernier envoi).
 ### Surcouche Panoramax
 
 Bouton **Panoramax** (contrôles de la carte, en haut à droite) : affiche les photos 360° **déjà publiées**, pour voir ce qui manque ou ce qui est ancien.
-Couleur selon l'âge : vert moins d'un an, orange 1 à 3 ans, rouge plus de 3 ans. Séquences visibles à partir du
-zoom 7, photos à partir du zoom 15. Au survol : date, appareil, **auteur**.
+Couleur selon l'âge : vert moins d'un an, orange 1 à 3 ans, rouge plus de 3 ans (rappelé dans la **Légende** de la
+carte, groupe *Couverture Panoramax*, quand la couverture est affichée). Séquences visibles à partir du zoom 7,
+photos à partir du zoom 15. Au survol : date, appareil, **auteur**.
 
 Source (bouton **⚙ Réglages** de la barre d'outils) : **toutes les instances** (par défaut, méta-catalogue de panoramax.fr), OpenStreetMap
 France, IGN, ou l'adresse d'une autre instance.
