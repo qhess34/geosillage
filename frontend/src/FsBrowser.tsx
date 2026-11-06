@@ -8,12 +8,14 @@ export default function FsBrowser({
   onGo,
   headExtra,
   rowExtra,
+  onFile,
 }: {
   listing: FsListing | null
   error: string | null
   onGo: (path: string) => void
   headExtra?: React.ReactNode
   rowExtra?: (path: string) => React.ReactNode
+  onFile?: (path: string) => void // files can be picked (listing made with an extension)
 }) {
   if (!listing) return error ? <p className="error">{error}</p> : null
   const sep = listing.path.includes('\\') && !listing.path.includes('/') ? '\\' : '/'
@@ -64,12 +66,21 @@ export default function FsBrowser({
           </li>
         ))}
         {!listing.dirs.length && !listing.files.length && <li className="muted">Dossier vide</li>}
-        {listing.files.map((f) => (
-          <li key={f.name} className="fs-file" title="Photo de ce dossier (pour information : l'import se fait par dossier)">
-            <span>🖼 {f.name}</span>
-            {f.size != null && <span>{(f.size / 1e6).toFixed(1)} Mo</span>}
-          </li>
-        ))}
+        {listing.files.map((f) =>
+          onFile ? (
+            <li key={f.name}>
+              <button className="fs-dir" onClick={() => onFile(join(f.name))} title="Choisir ce fichier">
+                <span>📄 {f.name}</span>
+                <span className="muted">{f.size != null ? `${(f.size / 1e6).toFixed(1)} Mo` : ''}</span>
+              </button>
+            </li>
+          ) : (
+            <li key={f.name} className="fs-file" title="Photo de ce dossier (pour information : l'import se fait par dossier)">
+              <span>🖼 {f.name}</span>
+              {f.size != null && <span>{(f.size / 1e6).toFixed(1)} Mo</span>}
+            </li>
+          ),
+        )}
         {listing.jpeg_count > listing.files.length && (
           <li className="muted">… et {listing.jpeg_count - listing.files.length} autres photos</li>
         )}

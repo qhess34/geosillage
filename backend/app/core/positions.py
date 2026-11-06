@@ -81,7 +81,7 @@ def corrected_count(conn) -> int:
 # Photos that can never be placed (or used): not listed as "without position"
 UNUSABLE = db.DUPLICATE | db.UNREADABLE | db.MISSING_FILE
 # Manual corrections: never overwritten by the time synchronisation or by snapping
-MANUAL_METHODS = ("manual", "offset", "along", "interp", "osm")
+MANUAL_METHODS = ("manual", "offset", "along", "interp", "osm", "gpx")
 
 
 def _positioned_sql() -> str:

@@ -28,6 +28,16 @@ class SyncError(Exception):
 
 
 def build_track(conn) -> list[list[tuple[float, float, float]]]:
+    """Reference track of the synchronisation: the imported GPX when it is chosen (core.gpx, in the photo clock),
+    else the camera's own track."""
+    from . import gpx  # gpx imports osm, which is not needed here otherwise
+
+    if gpx.use_gpx(conn):
+        return gpx.track(conn)
+    return build_camera_track(conn)
+
+
+def build_camera_track(conn) -> list[list[tuple[float, float, float]]]:
     """Runs of (ts, lat, lon) from the original GPS of reliable photos, split at capture interruptions."""
     rows = conn.execute("SELECT ts, lat_orig, lon_orig, flags FROM photo ORDER BY idx").fetchall()
     runs: list[list[tuple[float, float, float]]] = []

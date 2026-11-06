@@ -26,6 +26,7 @@ backend/app/
   core/positions.py corrections de position : saisie, décalage, le long du trajet, retour à l'original,
                    photos sans position (blocs, interpolation, rattachement à la séquence)
   core/osm.py      recalage sur les voies OpenStreetMap : Overpass (cache), appariement, tronçons
+  core/gpx.py      trace GPX : lecture, décalage horaire, trace de référence de la synchro, projection sur la ligne
   core/timesync.py  retard GPS : trace, position à un instant, projection d'un point sur la trace, application
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
@@ -153,6 +154,21 @@ au plus 20 photos ; défilement par la barre, Maj+molette ou glissement horizont
 dans la fenêtre ; écouteur `wheel` non passif) ; aperçu `snapPreview` de `PhotoMap` (couches `snap-ways`, `snap-hl` =
 voie survolée, `snap-moves`, `snap-new`). Tests : `test_osm.py` (voie unique, voies parallèles, carrefour, rien à
 proximité, API avec réponse Overpass simulée, Overpass injoignable → 502).
+
+## Trace GPX
+
+`core/gpx.py`. `parse` : points horodatés des `trkseg` (les `rte` sans heure sont refusés), coupés aux trous de plus
+de max(30 s, `gap_seconds`). Stockée dans `meta.gpx` (`runs` en UTC, `shift_s`, `shift_from`) ; `meta.track_source` =
+`gpx` ou `camera`. **Horloges** : les photos sont en heure locale de la caméra stockée comme UTC (`exif.reader`), le
+GPX en UTC vrai : `shift_s` = heure des photos − UTC, détecté à l'import (`detect_shift`) : d'abord le décalage, au
+quart d'heure près sur ±14 h, qui rapproche le plus le GPX des positions d'origine de la caméra (médiane < 200 m),
+sinon la médiane de `ts − gps_ts` ; modifiable (`PATCH …/gpx`). `track` = runs dans l'heure des photos ;
+`timesync.build_track` le renvoie quand la source est `gpx` (synchro, glisser, aperçu inchangés), sinon
+`build_camera_track`. **Projection** (`snap`, `POST …/gpx/snap`) : point le plus proche de la ligne (`osm.Frame`,
+`_project_xy`), seulement sur les morceaux du GPX proches des photos ; au-delà de `max_dist` la photo ne bouge pas ;
+`pos_method='gpx'` (dans `MANUAL_METHODS`), une opération annulable. Interface : `Gpx.tsx` (`GpxSection` de l'onglet
+Synchro, `GpxFilePicker` = `FsBrowser` avec `onFile` et `/api/fs?ext=.gpx`, `GpxSnapDialog` avec la ligne affichée
+par `PhotoMap.lineTrack`). Tests : `test_gpx.py`.
 
 ## Positions
 
