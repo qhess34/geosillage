@@ -124,3 +124,42 @@ def apply(conn, offset_s: float, ids: list[int], keep_manual: bool = True) -> di
         )
         changed += 1
     return {"changed": changed, "kept_manual": kept, "uncovered": uncovered}
+
+
+def runs(conn) -> list[dict]:
+    """Lots of consecutive photos synchronised with the same offset (the GPS delay may change during a ride:
+    e.g. photos 1-100 at +1.0 s, 101-700 at +1.9 s), and the lots not synchronised.
+
+    Photos corrected by hand (dragged, interpolated, snapped…) do not break a lot: they keep their own position
+    whatever the offset, and are counted as `manual`. Excluded and unusable photos are skipped."""
+    rows = conn.execute(
+        f"""SELECT idx, time_offset, pos_method FROM photo
+            WHERE excluded = 0 AND flags & {positions.UNUSABLE} = 0 ORDER BY idx"""
+    ).fetchall()
+    out: list[dict] = []
+    cur: dict | None = None
+    pending: list = []  # hand-corrected photos waiting to know which lot they belong to: the one that follows
+
+    for r in rows:
+        if r["pos_method"] in positions.MANUAL_METHODS:
+            pending.append(r)
+            continue
+        key = round(r["time_offset"], 1) if r["pos_method"] == "time" and r["time_offset"] is not None else None
+        if cur is None or cur["offset_s"] != key:
+            if cur:
+                out.append(cur)
+            # a lot starts at the first photo it holds, hand-corrected photos before it included
+            cur = {"offset_s": key, "start_idx": (pending[0] if pending else r)["idx"], "end_idx": r["idx"], "count": 0, "manual": 0}
+        cur["count"] += len(pending) + 1
+        cur["manual"] += len(pending)
+        cur["end_idx"] = r["idx"]
+        pending = []
+    if pending:  # hand-corrected photos at the end: in the last lot (or a lot of their own if there is none)
+        if cur is None:
+            cur = {"offset_s": None, "start_idx": pending[0]["idx"], "end_idx": pending[-1]["idx"], "count": 0, "manual": 0}
+        cur["end_idx"] = pending[-1]["idx"]
+        cur["count"] += len(pending)
+        cur["manual"] += len(pending)
+    if cur:
+        out.append(cur)
+    return out

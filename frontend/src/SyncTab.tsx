@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, PhotoDetail, PhotoRow, Sequence, SyncPoint } from './api'
+import { api, PhotoDetail, PhotoRow, Sequence, SyncPoint, SyncRun } from './api'
 import Viewer360 from './Viewer360'
 
 interface Props {
@@ -39,6 +39,11 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
   }
   const [keepManual, setKeepManual] = useState(true)
   const [lastApplied, setLastApplied] = useState<number | null>(null)
+  // lots of photos per applied offset, reloaded with the photos (after a sync, a correction, an undo…)
+  const [runs, setRuns] = useState<SyncRun[]>([])
+  useEffect(() => {
+    api.syncRuns(projectId).then(setRuns, () => undefined)
+  }, [projectId, photos])
 
   useEffect(() => {
     api.syncPoints(projectId).then((r) => {
@@ -173,6 +178,31 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
                 </button>
               </li>
             ))}
+          </ul>
+        </>
+      )}
+
+      {runs.some((r) => r.offset_s != null) && (
+        <>
+          <h3>Décalages appliqués</h3>
+          <ul className="sync-runs small-text">
+            {runs.map((r) => {
+              const here = photo != null && photo.idx >= r.start_idx && photo.idx <= r.end_idx
+              return (
+                <li key={r.start_idx} className={here ? 'current' : ''}>
+                  <span>
+                    Photos {r.start_idx + 1} → {r.end_idx + 1} <span className="muted">({r.count})</span>
+                    {r.manual > 0 && <span className="muted" title="Positions corrigées à la main dans ce lot : elles gardent leur position"> · dont {r.manual} corrigée(s) à la main</span>}
+                  </span>
+                  <span className="row">
+                    {r.offset_s == null ? <span className="muted">non synchronisées</span> : <strong>{fmt(r.offset_s)}</strong>}
+                    <button className="small" onClick={() => onGo(r.start_idx)} title="Aller à la première photo du lot">
+                      Voir
+                    </button>
+                  </span>
+                </li>
+              )
+            })}
           </ul>
         </>
       )}
