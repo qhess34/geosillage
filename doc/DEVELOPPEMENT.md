@@ -123,7 +123,7 @@ Panoramax. Pour la surcouche Panoramax, un faux serveur de tuiles (`mapbox-vecto
 
 ### Captures d'écran du guide d'utilisation
 
-`tools/captures.sh` régénère `doc/images/*.webp` (seulement à la demande de l'utilisateur, voir AGENTS.md) : sortie simulée près de Montpellier (400 photos), projet de
+`tools/captures.sh` régénère `doc/images/*.webp` (seulement à la demande de l'utilisateur ; en attendant, les écrans à refaire sont listés dans l'issue « Mettre à jour les captures du guide », voir AGENTS.md) : sortie simulée près de Montpellier (400 photos), projet de
 démonstration créé par l'API (séquences, exclusion, synchro, orientation, exports), puis `tools/captures.js`
 (Playwright) prend les captures à 1280 × 760 px, en thème clair. Il faut le réseau vers
 `tile.openstreetmap.org`, `data.geopf.fr` et `api.panoramax.xyz` (vraies tuiles et vraie surcouche Panoramax), un
