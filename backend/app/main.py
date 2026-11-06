@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from . import config, db, exporter, importer, jobs, panoramax, routes_edit, routes_publish, undo
 from .core import analysis, headings
@@ -49,6 +49,38 @@ class SettingsIn(BaseModel):
     jump_min_m: float | None = Field(default=None, ge=0)
     heading_min_m: float | None = Field(default=None, gt=0, le=100)
     heading_window_s: float | None = Field(default=None, gt=0, le=120)
+    stop_m: float | None = Field(default=None, gt=0, le=50)
+    stop_min: int | None = Field(default=None, ge=2, le=100)
+    spacing_m: float | None = Field(default=None, gt=0, le=1000)
+    dop_max: float | None = Field(default=None, gt=0, le=50)
+    heading_diff: float | None = Field(default=None, ge=10, le=180)
+
+
+# Names of the settings and wording of their limits in error messages (shown to the user)
+SETTING_LABELS = {
+    "gap_seconds": "durée d'une interruption (s)",
+    "jump_speed_ms": "vitesse d'un saut GPS (m/s)",
+    "jump_min_m": "distance d'un saut GPS (m)",
+    "heading_min_m": "distance minimale du cap (m)",
+    "heading_window_s": "fenêtre de temps du cap (s)",
+    "stop_m": "distance d'un arrêt (m)",
+    "stop_min": "nombre de photos d'un arrêt",
+    "spacing_m": "grand écart (m)",
+    "dop_max": "précision GPS (DOP)",
+    "heading_diff": "écart de cap (°)",
+}
+_LIMITS = {"greater_than_equal": ("ge", "au moins"), "greater_than": ("gt", "plus de"), "less_than_equal": ("le", "au plus"), "less_than": ("lt", "moins de")}
+
+
+def _setting_error(x: dict) -> str:
+    name = SETTING_LABELS.get(str(x["loc"][-1]) if x.get("loc") else "", str(x.get("loc", ["réglage"])[-1]))
+    if x["type"] in _LIMITS:
+        key, words = _LIMITS[x["type"]]
+        limit = x.get("ctx", {}).get(key)
+        return f"{name} : {words} {limit:g}" if isinstance(limit, (int, float)) else f"{name} : {words} {limit}"
+    if x["type"] == "extra_forbidden":
+        return f"{name} : réglage inconnu"
+    return f"{name} : nombre attendu"
 
 
 class ImportIn(BaseModel):
@@ -95,7 +127,10 @@ def project_update(pid: str, body: dict):
                 raise HTTPException(400, "Nom vide")
             db.set_meta(conn, "name", name)
         if "settings" in body:
-            s = SettingsIn(**body["settings"]).model_dump(exclude_none=True)
+            try:
+                s = SettingsIn(**body["settings"]).model_dump(exclude_none=True)
+            except ValidationError as e:  # a value out of range: refused (in French), not a server error
+                raise HTTPException(422, "Réglage invalide : " + " ; ".join(_setting_error(x) for x in e.errors()))
             db.set_meta(conn, "settings", {**(db.get_meta(conn, "settings", {}) or {}), **s})
             analysis.run(conn)
             headings.recompute(conn)

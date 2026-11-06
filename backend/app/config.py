@@ -23,6 +23,12 @@ DEFAULT_SETTINGS = {
     "jump_min_m": 25.0,  # ...only if the displacement is at least this long
     "heading_min_m": 3.0,  # heading target: the next point, skipping points closer than this (stops)
     "heading_window_s": 12.0,  # ...looked for within this time window
+    # Points to check (core/quality.py)
+    "stop_m": 2.0,  # stop: displacement between consecutive photos below this
+    "stop_min": 3,  # ...over at least this many photos
+    "spacing_m": 25.0,  # long spacing between two consecutive photos
+    "dop_max": 5.0,  # imprecise GPS fix above this dilution of precision
+    "heading_diff": 90.0,  # manual heading this far from the computed one
 }
 
 

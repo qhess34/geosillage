@@ -102,3 +102,25 @@ def test_heading_to_check_can_be_ignored_until_changed(project, tmp_path):  # no
     client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target]})
     client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target], "ignore": False})
     assert len(heading()) == 1
+
+
+def test_thresholds_are_project_settings(project):  # noqa: F811
+    """Points to check use the project settings: a stricter stop distance finds more stops, a looser one fewer."""
+    client, pid, _, _ = project
+    _clean(pid)
+    ps = [r for r in rows_of(pid) if not r["flags"]]
+    stop = [p for p in ps if 30 <= p["idx"] <= 33]
+    _set(pid, "UPDATE photo SET lat=?, lon=?, pos_method='manual' WHERE id=?", [(stop[0]["lat_orig"], stop[0]["lon_orig"] + 3e-5 * i, p["id"]) for i, p in enumerate(stop)])
+    stops = lambda: [i for i in client.get(f"/api/projects/{pid}/quality").json() if i["kind"] == "stop"]  # noqa: E731
+    assert not [i for i in stops() if i["start_idx"] == 30]  # 2.4 m apart: not a stop with the default 2 m
+    assert client.patch(f"/api/projects/{pid}", json={"settings": {"stop_m": 3}}).status_code == 200
+    assert [i for i in stops() if i["start_idx"] == 30 and i["count"] == 4]
+    client.patch(f"/api/projects/{pid}", json={"settings": {"stop_min": 5}})
+    assert not [i for i in stops() if i["start_idx"] == 30]  # 4 photos < 5
+    assert client.get(f"/api/projects/{pid}").json()["settings"]["stop_min"] == 5
+    r = client.patch(f"/api/projects/{pid}", json={"settings": {"stop_min": 1, "dop_max": 99, "spacing_m": "loin", "heading_diff": 200}})
+    assert r.status_code == 422
+    msg = r.json()["detail"]
+    assert "Input should" not in msg and "stop_min" not in msg  # in French, with the user's names
+    assert "nombre de photos d'un arrêt : au moins 2" in msg and "précision GPS (DOP) : au plus 50" in msg and "grand écart (m) : nombre attendu" in msg
+    assert "écart de cap (°) : au plus 180" in msg and "180.0" not in msg

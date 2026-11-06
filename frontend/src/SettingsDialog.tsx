@@ -12,6 +12,7 @@ export default function SettingsDialog({
   custom,
   onRemoveBasemap,
   onHeadingsSaved,
+  onQualitySaved,
   onError,
   onClose,
 }: {
@@ -21,6 +22,7 @@ export default function SettingsDialog({
   custom: Basemap[]
   onRemoveBasemap: (id: string) => void
   onHeadingsSaved: () => void
+  onQualitySaved: () => void // thresholds of the points to check changed: recompute them
   onError: (m: string) => void
   onClose: () => void
 }) {
@@ -78,7 +80,55 @@ export default function SettingsDialog({
             <p>Il disparaît de la liste des fonds de carte de toutes les sorties. Pour le retrouver, il faudra l'ajouter de nouveau.</p>
           </Confirm>
         )}
+        <QualitySettings key={JSON.stringify(QUALITY_KEYS.map((k) => project.settings[k]))} p={project} onSaved={onQualitySaved} onError={onError} />
         <HeadingSettings key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`} p={project} onSaved={onHeadingsSaved} onError={onError} />
+      </div>
+    </div>
+  )
+}
+
+const QUALITY_KEYS = ['stop_m', 'stop_min', 'spacing_m', 'dop_max', 'heading_diff'] as const
+const QUALITY_FIELDS: { key: (typeof QUALITY_KEYS)[number]; label: string; unit: string; min: number; max: number; step: number }[] = [
+  { key: 'stop_min', label: 'Arrêt : au moins', unit: 'photos de suite', min: 2, max: 100, step: 1 },
+  { key: 'stop_m', label: '…à moins de', unit: 'm les unes des autres', min: 0.5, max: 50, step: 0.5 },
+  { key: 'spacing_m', label: 'Grand écart : plus de', unit: 'm entre deux photos', min: 1, max: 1000, step: 1 },
+  { key: 'dop_max', label: 'Précision GPS faible : DOP au-dessus de', unit: '', min: 0.5, max: 50, step: 0.5 },
+  { key: 'heading_diff', label: 'Cap à vérifier : écart de plus de', unit: '° avec le cap calculé', min: 10, max: 180, step: 5 },
+]
+
+// Thresholds of the points to check (quality.py), for this project
+function QualitySettings({ p, onSaved, onError }: { p: Project; onSaved: () => void; onError: (m: string) => void }) {
+  const [v, setV] = useState<Record<string, string>>(() => Object.fromEntries(QUALITY_KEYS.map((k) => [k, String(p.settings[k])])))
+  const save = () =>
+    api
+      .updateProject(p.id, { settings: Object.fromEntries(QUALITY_KEYS.map((k) => [k, Number(v[k])])) })
+      .then(onSaved, (e) => onError(e.message))
+  return (
+    <div className="small-text">
+      <h3>Points à vérifier (ce projet)</h3>
+      <p className="muted">Seuils des points signalés dans les étapes « Doublons et arrêts » et « Correction GPS ».</p>
+      {QUALITY_FIELDS.map((f) => (
+        <div key={f.key} className="form-row wide">
+          <span>{f.label}</span>
+          <span>
+            <input
+              className="num"
+              type="number"
+              min={f.min}
+              max={f.max}
+              step={f.step}
+              value={v[f.key]}
+              onChange={(e) => setV({ ...v, [f.key]: e.target.value })}
+              aria-label={f.label}
+            />{' '}
+            {f.unit}
+          </span>
+        </div>
+      ))}
+      <div className="row">
+        <button className="small" onClick={save}>
+          Enregistrer
+        </button>
       </div>
     </div>
   )
