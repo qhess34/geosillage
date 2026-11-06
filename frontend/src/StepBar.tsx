@@ -1,4 +1,5 @@
 import { FLAGS, PhotoRow, Project, QualityIssue, Sequence } from './api'
+import { isPlaced, isUsable } from './issues'
 
 // Progress of the ride, step by step: import → GPS delay (sync) → duplicates and stops → GPS correction → sequences → export → upload.
 // Computed from what the interface already has (photos, sequences, points to check); a click opens the right place.
@@ -13,8 +14,6 @@ interface Step {
   go: () => void
 }
 
-const UNUSABLE = FLAGS.DUPLICATE | FLAGS.UNREADABLE | FLAGS.MISSING_FILE
-const placed = (p: PhotoRow) => p.lat != null || (p.lat_orig != null && !(p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD)))
 const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`
 
 export default function StepBar({
@@ -38,8 +37,8 @@ export default function StepBar({
   issueCounts: { dups: number; gps: number; seq: number }
 }) {
   const pnx = project.kind === 'panoramax'
-  const usable = photos.filter((p) => !p.excluded && !(p.flags & UNUSABLE))
-    const steps: Step[] = []
+  const usable = photos.filter(isUsable)
+  const steps: Step[] = []
 
   // 1. Import
   steps.push({
@@ -80,7 +79,7 @@ export default function StepBar({
   })
 
   // 4. GPS correction: positions, GPS jumps, points to check about positions and headings
-  const missing = usable.filter((p) => !placed(p))
+  const missing = usable.filter((p) => !isPlaced(p))
   const jumps = usable.filter((p) => p.flags & FLAGS.GPS_JUMP && p.pos_method == null)
   const gpsPoints = quality.filter((q) => q.kind !== 'stop')
   const gpsParts = [

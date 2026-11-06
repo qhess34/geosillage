@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { api, PhotoRow, SeqState } from './api'
+import { api, PhotoDetail, PhotoRow, SeqState } from './api'
+import Viewer360 from './Viewer360'
 import { fmtTime } from './format'
 
 // Photos of a stop side by side: the user ticks the ones to keep (not necessarily the first one), the others are
-// excluded in one go (one undoable operation). Large preview of the photo under the pointer.
+// excluded in one go (one undoable operation). The photo clicked is shown in the 360° viewer; the view direction
+// is kept from one photo to the next, so the same detail can be compared.
 export default function StopCompare({
   projectId,
   photos,
@@ -23,7 +25,24 @@ export default function StopCompare({
 }) {
   const list = photos.slice(range[0], range[1] + 1).filter((p) => !p.excluded)
   const [keep, setKeep] = useState<Set<number>>(() => new Set(list.map((p) => p.id)))
-  const [focus, setFocus] = useState<PhotoRow | null>(list[0] ?? null)
+  // photo shown in the 360° viewer, with its orientation (yaw / pitch / roll, as in the Photo tab). A clicked photo
+  // replaces the one shown only once its orientation is known: the viewer then loads it once, in the same view
+  // direction (the viewer is kept, not re-created)
+  const [shown, setShown] = useState<{ photo: PhotoRow; detail: PhotoDetail | null } | null>(null)
+  const [asked, setAsked] = useState<PhotoRow | null>(list[0] ?? null) // last thumbnail clicked
+  useEffect(() => {
+    if (!asked) return
+    let live = true
+    api.photo(projectId, asked.id).then(
+      (d) => live && setShown({ photo: asked, detail: d }),
+      () => live && setShown({ photo: asked, detail: null }),
+    )
+    return () => {
+      live = false
+    }
+  }, [projectId, asked])
+  const focus = shown?.photo ?? null
+  const setFocus = setAsked
   const drop = list.filter((p) => !keep.has(p.id))
 
   useEffect(() => {
@@ -54,11 +73,20 @@ export default function StopCompare({
         </h2>
         <p className="small-text muted">
           Cochez la ou les photos à garder (la plus nette, la mieux cadrée — pas forcément la première) ; les autres seront
-          exclues. Survol : aperçu en grand. Ctrl+Z annule.
+          exclues. Clic sur une vignette : la photo dans la visionneuse 360° (la direction regardée est gardée d'une photo à
+          l'autre). Ctrl+Z annule.
         </p>
         {focus && (
           <figure className="stop-preview">
-            <img src={api.imageUrl(projectId, focus.id)} alt={`Photo ${focus.idx + 1}`} />
+            <Viewer360
+              thumbUrl={api.thumbUrl(projectId, focus.id)}
+              imageUrl={api.imageUrl(projectId, focus.id)}
+              alt={`Photo ${focus.idx + 1}`}
+              height={300}
+              yaw={shown?.detail?.yaw_offset ?? null}
+              pitch={shown?.detail?.pitch_orig ?? null}
+              roll={shown?.detail?.roll_orig ?? null}
+            />
             <figcaption className="small-text muted">
               Photo {focus.idx + 1} · {fmtTime(focus.ts, false)}
             </figcaption>
@@ -66,9 +94,11 @@ export default function StopCompare({
         )}
         <ul className="stop-grid">
           {list.map((p) => (
-            <li key={p.id} className={keep.has(p.id) ? 'keep' : 'drop'} onMouseEnter={() => setFocus(p)}>
-              <label>
+            <li key={p.id} className={`${keep.has(p.id) ? 'keep' : 'drop'}${(asked ?? focus)?.id === p.id ? ' shown' : ''}`}>
+              <button className="stop-thumb" onClick={() => setFocus(p)} title="Afficher dans la visionneuse 360°">
                 <img src={api.thumbUrl(projectId, p.id)} alt={`Photo ${p.idx + 1}`} loading="lazy" />
+              </button>
+              <label>
                 <span>
                   <input type="checkbox" checked={keep.has(p.id)} onChange={() => toggle(p.id)} />
                   <strong>Photo {p.idx + 1}</strong>
@@ -83,8 +113,8 @@ export default function StopCompare({
             Tout garder
           </button>
           <span className="spacer" />
-          <button onClick={() => focus && onGo(focus.idx)} disabled={!focus}>
-            Ouvrir dans la visionneuse
+          <button onClick={() => focus && onGo(focus.idx)} disabled={!focus} title="Fermer et aller à cette photo dans l'écran principal">
+            Aller à cette photo
           </button>
           <button onClick={onClose}>Fermer</button>
           <button className="primary" disabled={!drop.length || !keep.size} onClick={apply} title={keep.size ? '' : 'Gardez au moins une photo'}>

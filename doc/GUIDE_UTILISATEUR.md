@@ -245,6 +245,11 @@ synchronisation, la portée proposée devient *À partir de cette photo* : les p
 ne sont pas marquées *à réexporter*. La médiane proposée ne tient compte que des points de calage de la portée
 choisie.
 
+**Décalages appliqués** (onglet *Synchro*) : la liste des lots de photos synchronisés avec chaque décalage, par
+exemple « Photos 1 → 100 (100) · +1.0 s », « Photos 101 → 700 (600) · +1.9 s », et les photos pas encore
+synchronisées. Le lot de la photo courante est surligné ; *Voir* va à sa première photo. Une photo corrigée à la
+main dans un lot ne le coupe pas (elle garde sa position) : elle est comptée à part.
+
 
 ![Onglet Synchro](images/05-synchro.webp)
 *Onglet *Synchro* sur le fond *Satellite IGN Ortho* : marqueur orange de la photo courante, positions décalées en aperçu (points orange) le long de la trace ; décalage en secondes à droite.*
@@ -386,7 +391,8 @@ L'onglet *Photo* sélectionne alors les photos concernées et affiche en haut un
 plus *Suivant (N)*. L'encadré disparaît quand on quitte ces photos ou avec ✕. **Rien n'est modifié
 automatiquement** ; `N` / `Maj+N` passent au point suivant / précédent (avec aussi les sauts GPS, les photos sans
 position et les photos non classées). Pour un arrêt, **Comparer** (ou un clic sur l'étape *Doublons et arrêts*)
-affiche ses photos côte à côte, avec un aperçu en grand au survol : cocher celles à garder, puis *Exclure n photos*
+affiche ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
+regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder, puis *Exclure n photos*
 (une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
 listés dans la même fenêtre (étape *Correction GPS*), les photos non classées avec l'étape *Séquences*.
 
