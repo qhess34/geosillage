@@ -267,3 +267,32 @@ def test_reexport_modified_sequence(project, tmp_path):
     client.post(f"/api/projects/{pid}/undo")
     seqs = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
     assert [s["needs_export"] for s in seqs] == [True, False]
+
+
+def test_db_locked_gives_clear_message(tmp_path):
+    # another connection holds the write lock: the edit is refused with a French message (503), not a 500
+    import sqlite3
+
+    from fastapi.testclient import TestClient
+
+    from app import db as _db, main
+
+    with TestClient(main.app) as client:
+        pid = client.post("/api/projects", json={"name": "verrou"}).json()["id"]
+        holder = sqlite3.connect(_db.db_path(pid), isolation_level=None)
+        holder.execute("BEGIN IMMEDIATE")
+        orig = _db._connect
+
+        def fast(path):  # do not wait 30 s in the test
+            c = orig(path)
+            c.execute("PRAGMA busy_timeout=200")
+            return c
+
+        _db._connect = fast
+        try:
+            r = client.patch(f"/api/projects/{pid}", json={"settings": {"stop_m": 3}})
+        finally:
+            _db._connect = orig
+            holder.execute("ROLLBACK")
+            holder.close()
+        assert r.status_code == 503 and "occupée" in r.json()["detail"]

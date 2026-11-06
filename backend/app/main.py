@@ -1,6 +1,7 @@
 """FastAPI application: REST API + built frontend, served on 127.0.0.1 only."""
 
 import os
+import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -34,6 +35,17 @@ app.include_router(routes_publish.router)
 @app.exception_handler(db.ProjectNotFound)
 async def not_found(request: Request, exc):
     return JSONResponse({"detail": "Projet introuvable"}, status_code=404)
+
+
+@app.exception_handler(sqlite3.OperationalError)
+async def db_busy(request: Request, exc: sqlite3.OperationalError):
+    # another writer kept the project database for longer than the wait (30 s): a clear message, nothing changed
+    if "locked" in str(exc) or "busy" in str(exc):
+        return JSONResponse(
+            {"detail": "Base du projet occupée par une tâche en cours : rien n'a été modifié, réessayez dans un instant."},
+            status_code=503,
+        )
+    raise exc
 
 
 # ---- Projects ----
