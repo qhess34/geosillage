@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { api, PhotoDetail, PhotoRow, Sequence, SyncPoint, SyncRun } from './api'
+import { api, MANUAL_METHODS, PhotoDetail, PhotoRow, Sequence, SyncPoint, SyncRun } from './api'
 import Viewer360 from './Viewer360'
 
 interface Props {
@@ -25,10 +25,6 @@ function median(v: number[]): number {
   const m = s.length >> 1
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
-
-// positions corrected by hand: kept by a synchronisation with « Garder les positions corrigées à la main » (backend
-// positions.MANUAL_METHODS)
-const MANUAL_METHODS = ['manual', 'offset', 'along', 'interp', 'osm']
 
 const fmt = (o: number) => `${o >= 0 ? '+' : ''}${o.toFixed(1)} s`
 
@@ -83,7 +79,8 @@ export default function SyncTab({ onPreviewIds, projectId, photo, photos, sequen
       (scope === 'from' && photo != null && p.idx >= photo.idx) ||
       (scope === 'sequence' && seq != null && p.sequence_id === seq.id) ||
       (scope === 'range' && range != null && p.idx >= range[0] && p.idx <= range[1])
-    const moved = photos.filter((p) => inRange(p) && !(keepManual && p.pos_method != null && MANUAL_METHODS.includes(p.pos_method)))
+    // photos without a time are skipped by the synchronisation (timesync.apply) and have no point on the map
+    const moved = photos.filter((p) => p.ts != null && inRange(p) && !(keepManual && p.pos_method != null && MANUAL_METHODS.includes(p.pos_method)))
     return { ids: scope === 'all' && !keepManual ? null : new Set(moved.map((p) => p.id)), count: moved.length }
   }, [scope, photo, seq, range, photos, keepManual])
   useEffect(() => {

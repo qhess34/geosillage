@@ -454,6 +454,10 @@ export const api = {
 }
 
 // Must match backend/app/db.py
+// Positions corrected by hand, kept by a synchronisation with « Garder les positions corrigées à la main »: same list
+// as backend/app/core/positions.py MANUAL_METHODS (checked by tests/test_frontend_constants.py)
+export const MANUAL_METHODS = ['manual', 'offset', 'along', 'interp', 'osm']
+
 export const FLAGS = {
   NO_GPS: 1,
   NO_DATE: 2,
