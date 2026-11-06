@@ -9,3 +9,4 @@ frontend/dist
 **/__pycache__
 **/.pytest_cache
 backend/tests
+e2e
