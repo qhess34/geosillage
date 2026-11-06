@@ -35,10 +35,32 @@ def test_short_steps_look_further_ahead():
     assert all(abs(h - 30.0) < 0.01 for h, _ in res.values())
 
 
-def test_stop_is_uncertain_not_invented():
-    # rider stopped: 10 photos at the same place, no movement within the time window
+def test_stop_takes_direction_of_arrival():
+    # rider stopped after riding east: 10 photos at the same place, no movement within the time window. The photo
+    # kept from a stop (the others excluded) must keep a heading: the direction of arrival
+    ride = line(5, 90.0)
+    end = ride[-1]
+    stopped = [Pt(100 + i, end.ts + 2 + i * 2, end.lat, end.lon, 0) for i in range(10)]
+    # then leaves northwards: the stop is not at the end of the run
+    after = [Pt(200 + i, stopped[-1].ts + 2 + i * 2, end.lat + 0.0002 * (i + 1), end.lon, 0) for i in range(3)]
+    res = headings.compute(ride + stopped + after)
+    # beginning of the stop: nothing ahead within the window -> direction of arrival (the last ones, close to the
+    # departure, look ahead as usual)
+    for p in stopped[:4]:
+        assert res[p.id][1] == "stop" and res[p.id][0] == pytest.approx(90.0, abs=0.01)
+    assert all(res[p.id][0] is not None for p in stopped)
+
+
+def test_stop_at_start_takes_direction_of_departure():
+    start = line(5, 180.0)
+    stopped = [Pt(100 + i, start[0].ts - 40 + i * 2, start[0].lat, start[0].lon, 0) for i in range(10)]
+    res = headings.compute(stopped + start)
+    assert all(res[p.id][1] == "stop" and res[p.id][0] == pytest.approx(180.0, abs=0.01) for p in stopped)
+
+
+def test_never_moving_is_uncertain_not_invented():
     stopped = [Pt(100 + i, 5000 + i * 2, 43.61, 3.88, 0) for i in range(10)]
-    res = headings.compute(line(3, 0.0) + stopped)
+    res = headings.compute(stopped)
     assert all(res[p.id] == (None, "uncertain") for p in stopped)
 
 

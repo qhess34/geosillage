@@ -285,7 +285,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
         <HeadingDial value={shown} computed={computedWithOffset} onChange={setDraft} onCommit={(v) => set(v)} />
         <div className="heading-info small-text">
           <div>
-            Calculé : {photo.heading_auto != null ? `${photo.heading_auto.toFixed(1)}°` : photo.heading_auto_state === 'uncertain' ? 'incertain (arrêt)' : 'impossible'}
+            Calculé : {photo.heading_auto != null ? `${photo.heading_auto.toFixed(1)}°${photo.heading_auto_state === 'stop' ? ' (à l\'arrêt : direction d\'arrivée ou de départ)' : ''}` : photo.heading_auto_state === 'uncertain' ? 'incertain (la caméra ne bouge pas)' : 'impossible'}
             {photo.heading_offset ? ` ${photo.heading_offset > 0 ? '+' : ''}${photo.heading_offset}° (décalage)` : ''}
           </div>
           <div>

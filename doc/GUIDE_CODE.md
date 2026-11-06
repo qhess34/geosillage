@@ -120,6 +120,11 @@ photos plus loin et les flèches coupaient les virages. Mesures sur la sortie si
 7,2° / 90e centile 29° avec 5 m, 3,9° / 15,8° avec 15 m, 3,4° / 14,5°
 avec 20 m mais 16 photos incertaines. À revalider sur de vraies photos.
 
+Arrêt (aucun point assez loin dans la fenêtre, ni devant ni derrière) : la photo prend la **direction d'arrivée** à
+l'arrêt (dernier point à plus du seuil avant elle, sans limite de temps, dans le même tronçon), sinon celle de départ ;
+état `stop`. Sans cela, la photo gardée d'un arrêt (les autres exclues) n'avait pas de cap. Seul un tronçon où la
+caméra ne bouge jamais reste `uncertain`.
+
 ## Recalage sur les voies OpenStreetMap
 
 `core/osm.py`. **Données** : `fetch_ways` interroge Overpass (`PSS_OVERPASS_URL`, défaut overpass-api.de) sur

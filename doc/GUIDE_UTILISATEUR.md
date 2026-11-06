@@ -357,7 +357,8 @@ la photo.
 
 ### Vérifier les caps
 
-Flèches sur la carte (zoom ≥ 15). Onglet *Photo* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
+Flèches sur la carte (zoom ≥ 15). À un arrêt (feu rouge, pause), le cap calculé est la direction d'arrivée à
+l'arrêt (sinon celle de départ) : la photo gardée d'un arrêt a donc toujours un cap. Onglet *Photo* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
 **Décalage du cap** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Bilan*, *Cap et orientation de
 toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du cap (sens de déplacement)…*, ou
 *Décaler* dans les outils de la plage de l'onglet *Photo*). La valeur remplace le décalage déjà posé sur ces

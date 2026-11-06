@@ -2,8 +2,10 @@
 
 The heading of a photo is the azimuth towards the first following position at least `min_m` away,
 looked for within `window_s` seconds and never across a capture interruption. At the end of a run the
-previous position is used instead. When the rider is stopped (no position far enough on either side)
-the heading is reported as uncertain rather than invented.
+previous position is used instead. When the rider is stopped (no position far enough on either side within
+the window), the photo takes the direction of arrival at the stop (from the last position at least `min_m`
+away before it, in the same run), else the direction of departure: state `stop`. Only a run where the
+camera never moves is left uncertain.
 
 Final heading = manual heading if set, else (computed heading + sequence offset) mod 360.
 """
@@ -13,7 +15,7 @@ from dataclasses import dataclass
 from .. import db
 from . import geo
 
-OK, UNCERTAIN, MISSING = "ok", "uncertain", "missing"
+OK, UNCERTAIN, MISSING, STOP = "ok", "uncertain", "missing", "stop"
 
 # Positions that must not be used as trajectory points
 UNUSABLE = db.NO_GPS | db.INVALID_COORD | db.GPS_JUMP | db.DUPLICATE | db.NO_DATE | db.UNREADABLE
@@ -68,6 +70,17 @@ def compute(points: list[Pt], min_m: float = 5.0, window_s: float = 12.0) -> dic
                         break
                     k -= 1
             out[p.id] = (round(heading, 2), OK) if heading is not None else (None, UNCERTAIN)
+        # stopped photos: direction of arrival at the stop, else of departure (no time limit, same run)
+        for i, p in enumerate(run):
+            if out[p.id][1] != UNCERTAIN:
+                continue
+            k = next((k for k in range(i - 1, -1, -1) if geo.distance(run[k].lat, run[k].lon, p.lat, p.lon) >= min_m), None)
+            if k is not None:
+                out[p.id] = (round(geo.azimuth(run[k].lat, run[k].lon, p.lat, p.lon), 2), STOP)
+                continue
+            j = next((j for j in range(i + 1, n) if geo.distance(p.lat, p.lon, run[j].lat, run[j].lon) >= min_m), None)
+            if j is not None:
+                out[p.id] = (round(geo.azimuth(p.lat, p.lon, run[j].lat, run[j].lon), 2), STOP)
     return out
 
 
