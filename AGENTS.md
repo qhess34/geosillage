@@ -59,11 +59,13 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 ```sh
 cd backend && ../.venv/bin/python -m pytest -q     # tous verts
 cd frontend && npm run build                        # tsc + vite sans erreur
+cd e2e && npm test                                  # tests d'interface Playwright (après la construction)
 ```
 
-Puis piloter l'interface dans un navigateur (Playwright, recette dans `doc/DEVELOPPEMENT.md` § 3) : aucune erreur
-JavaScript, affichage à 1280 et 1024 px (application pour ordinateur : pas d'affichage pour téléphone). GitHub Actions (`.github/workflows/ci.yml`) relance tests, construction et
-image Docker à chaque push, mais pas le test dans le navigateur : après le push, vérifier que les vérifications
+Une fonction nouvelle ou corrigée dans l'interface s'accompagne d'un test dans `e2e/tests/` (`doc/DEVELOPPEMENT.md`
+§ 3). Pour un nouvel écran ou une mise en page : regarder aussi une capture à 1280 et 1024 px (application pour
+ordinateur : pas d'affichage pour téléphone). GitHub Actions (`.github/workflows/ci.yml`) relance tests backend,
+construction, tests d'interface et image Docker à chaque push : après le push, vérifier que les vérifications
 passent.
 
 ## Pièges fréquents

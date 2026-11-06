@@ -1,0 +1,13 @@
+{
+  "name": "geosillage-e2e",
+  "private": true,
+  "description": "Tests d'interface (Playwright) : l'application complète (serveur + interface construite) sur une sortie simulée",
+  "scripts": {
+    "test": "playwright test --trace off",
+    "test:trace": "playwright test --trace on"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.10.2"
+  }
+}

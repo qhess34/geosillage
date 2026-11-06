@@ -59,18 +59,34 @@ terrain en CSV) :
 ## 3. Vérifier un changement
 
 **Ces vérifications sont à faire avant chaque commit.** GitHub Actions (`.github/workflows/ci.yml`, « Vérifications »)
-relance à chaque push et pull request les tests backend (avec ExifTool), la construction de l'interface et celle de
-l'image Docker : ✅ / ❌ à côté de chaque commit. Le test dans le navigateur n'y est pas : il reste à faire à la
-main.
+relance à chaque push et pull request les tests backend (avec ExifTool), la construction de l'interface, les tests
+d'interface (Playwright) et la construction de l'image Docker : ✅ / ❌ à côté de chaque commit ; en cas d'échec des
+tests d'interface, le rapport (captures des tests en échec) est joint au lancement (« rapport-playwright »).
 
 | Quoi | Commande | Attendu |
 |---|---|---|
 | Tests backend | `cd backend && ../.venv/bin/python -m pytest -q` | tous verts (~1 min) |
 | Types + construction de l'interface | `cd frontend && npm run build` | `✓ built`, aucune erreur `tsc` |
-| Comportement dans le navigateur | Playwright (ci-dessous) | aucune erreur JavaScript ; affichage à 1280 et 1024 px (pas d'affichage pour téléphone) |
+| Tests d'interface | `cd e2e && npm test` (après `npm run build` dans `frontend/`) | tous verts (~20 s) |
+| Nouvel écran ou mise en page | Playwright (ci-dessous) + capture | aucune erreur JavaScript ; affichage à 1280 et 1024 px (pas d'affichage pour téléphone) |
 | Image Docker (si `Dockerfile`, dépendances) | `docker compose build` | construction OK |
 
-### Test de bout en bout (Playwright)
+### Tests d'interface (`e2e/`)
+
+`e2e/` : suite `@playwright/test` (version identique au Playwright installé, pour réutiliser son Chromium ;
+`npm install` une fois dans `e2e/`). `serve.sh` (lancé par Playwright) démarre le vrai backend, qui sert l'interface
+construite, sur un dossier de données neuf, avec une sortie simulée (160 photos, générée une fois dans
+`e2e/.cache/`). Chaque test crée son propre projet par l'API (`newProject` dans `tests/helpers.ts`, réglages
+optionnels) : les tests sont indépendants et tournent en parallèle. Le fixture commun bloque les tuiles et fait
+échouer le test à la moindre erreur JavaScript de la page. Couvert : navigation (clavier, timeline), aide `?`,
+séquence D / F + annulation, exclusion X, timeline sans les exclues, réglage refusé, liste « À corriger » et fiche,
+arrêt (ajuster, comparer, tout exclure), import (sous-dossiers, fil d'Ariane), GPX (import, décalage, aperçu,
+recalage, annulation). **Une fonction nouvelle ou corrigée = un test ici.** Pièges : attendre l'état affiché avant
+de cliquer (ex. l'étape « … arrêts à trier » avant d'ouvrir sa liste) et lire la photo avec `pickOnTimeline` /
+`expect.poll` (les photos se rechargent après chaque action). `npm run test:trace` garde la trace d'exécution pour
+déboguer un échec.
+
+### Script ponctuel (Playwright)
 
 L'interface est servie par le backend une fois construite (`frontend/dist`). Démarrer le backend sur un dossier de
 données jetable, créer un projet et importer des photos simulées par l'API, puis piloter un navigateur :

@@ -353,11 +353,10 @@ select {
   border-bottom: 1px solid var(--border);
 }
 .fs-crumbs {
+  /* long paths wrap: every element stays visible and clickable */
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .fs-crumbs .link {
   font: inherit;

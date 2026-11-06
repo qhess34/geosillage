@@ -1086,6 +1086,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         return
       } else if (e.key === '?') {
         setShowHelp((v) => !v)
+      } else if (e.key === 'Escape' && showHelp) {
+        setShowHelp(false)
       } else if (!photos.length) {
         return
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -1155,7 +1157,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, confirmInterp, showSettings, gpxSnap])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, confirmInterp, showSettings, gpxSnap, showHelp])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
