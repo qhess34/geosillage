@@ -1033,12 +1033,22 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   }, [current, focusPoint])
 
   // Actions of the card of the Photo tab on the photos of the issue being corrected (exclusion: confirmed first)
+  // « Ignorer » headings to check: the manual heading is right (computed one wrong, GPS lost); points recomputed
+  const ignoreHeadings = useCallback(
+    (ids: number[]) =>
+      api.ignoreHeadings(projectId, ids).then((res) => {
+        setQuality(res.issues)
+        setNotice('Cap gardé : il n\'est plus signalé (tant qu\'il ne change pas)')
+      }, (er) => setError(er.message)),
+    [projectId],
+  )
   const fixIssue = useCallback(
     (what: CheckAction) => {
       if (!focusPoint) return
       const r: [number, number] = [focusPoint.start, focusPoint.end]
       const kept = photos.slice(r[0], r[1] + 1).filter((p) => !p.excluded)
       if (what === 'exclude') return setConfirmExclude({ range: r, n: kept.length })
+      if (what === 'ignore-headings') return ignoreHeadings(kept.map((p) => p.id))
       if (what === 'interpolate')
         return api.positionsBatch(projectId, { photo_ids: kept.map((p) => p.id), mode: 'interpolate' }).then((res) => {
           if (!res.changed) setError('Impossible d\'interpoler : pas de photo positionnée avant et après')
@@ -1054,7 +1064,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         .createSequence(projectId, r[0], r[1])
         .then((st) => applyState({ ...st, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` }), (er) => setError(er.message))
     },
-    [focusPoint, photos, projectId, afterHeadingChange, applyState],
+    [focusPoint, photos, projectId, afterHeadingChange, applyState, ignoreHeadings],
   )
   // « Interpoler tous les trous possibles » (list of things to fix): every hole with a positioned photo before and
   // after; a bulk action, confirmed first
@@ -1444,6 +1454,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               current={focusPoint}
               duplicates={project.summary.duplicates}
               onPick={focusOn}
+              onIgnore={(i) => ignoreHeadings(photos.slice(i.start, i.end + 1).filter((p) => !p.excluded).map((p) => p.id))}
               onClose={closeIssues}
               onInterpolateAll={askInterpolateAll}
             />

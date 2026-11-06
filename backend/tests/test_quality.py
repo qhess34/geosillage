@@ -70,3 +70,24 @@ def test_hole_left_by_excluded_photos_is_not_a_spacing(project):  # noqa: F811
     client.post(f"/api/projects/{pid}/photos/exclude", json={"photo_ids": ids, "excluded": True})
     sp = [i for i in client.get(f"/api/projects/{pid}/quality").json() if i["kind"] == "spacing"]
     assert not any(i["start_idx"] < ps[115]["idx"] < i["end_idx"] for i in sp)
+
+
+def test_heading_to_check_can_be_ignored_until_changed(project):  # noqa: F811
+    """GPS lost: the computed heading is wrong, the manual one right. « Ignorer » hides the point while the manual
+    heading stays the same."""
+    client, pid, _, _ = project
+    _clean(pid)
+    ps = [r for r in rows_of(pid) if not r["flags"]]
+    target = ps[40]["id"]
+    with db.open_project(pid) as conn:
+        auto = conn.execute("SELECT heading_auto FROM photo WHERE id=?", (target,)).fetchone()[0]
+    client.put(f"/api/projects/{pid}/photos/{target}/heading", json={"value": (auto + 170) % 360})
+    heading = lambda: [i for i in client.get(f"/api/projects/{pid}/quality").json() if i["kind"] == "heading"]  # noqa: E731
+    assert len(heading()) == 1
+    r = client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target]}).json()
+    assert r["changed"] == 1 and not [i for i in r["issues"] if i["kind"] == "heading"] and not heading()
+    client.put(f"/api/projects/{pid}/photos/{target}/heading", json={"value": (auto + 160) % 360})  # changed: back
+    assert len(heading()) == 1
+    client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target]})
+    client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target], "ignore": False})
+    assert len(heading()) == 1

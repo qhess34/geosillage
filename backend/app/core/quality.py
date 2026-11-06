@@ -38,6 +38,30 @@ def _merge(kind: str, flagged: list, detail) -> list[dict]:
     return out
 
 
+IGNORED_KEY = "quality_ignored_headings"  # meta: {photo id: manual heading kept by the user}
+
+
+def ignored_headings(conn) -> dict[int, float]:
+    return {int(k): v for k, v in db.get_meta(conn, IGNORED_KEY, {}).items()}
+
+
+def ignore_headings(conn, photo_ids: list[int], ignore: bool = True) -> int:
+    """« Ignorer » a heading to check: the manual heading is right, the computed one is not (GPS lost…). Remembered
+    with the manual heading: changing it later makes the check come back."""
+    kept = ignored_headings(conn)
+    n = 0
+    for pid, manual in conn.execute(
+        f"SELECT id, heading_manual FROM photo WHERE id IN ({','.join('?' * len(photo_ids))})", photo_ids
+    ).fetchall():
+        if ignore and manual is not None:
+            kept[pid] = manual
+            n += 1
+        elif not ignore and kept.pop(pid, None) is not None:
+            n += 1
+    db.set_meta(conn, IGNORED_KEY, {str(k): v for k, v in kept.items()})
+    return n
+
+
 def check(conn) -> list[dict]:
     rows = conn.execute(
         f"""SELECT p.id, p.idx, p.ts, p.flags, p.gps_dop, p.heading_manual, p.heading_auto, p.sequence_id,
@@ -85,7 +109,9 @@ def check(conn) -> list[dict]:
             return 0.0
         return abs((r["heading_manual"] - r["heading_auto"] + 180) % 360 - 180)
 
-    heads = [(pos, r) for pos, r in enumerate(rows) if head_diff(r) > HEADING_DIFF]
+    # headings the user chose to keep (computed heading wrong, e.g. GPS lost): not reported while unchanged
+    kept = ignored_headings(conn)
+    heads = [(pos, r) for pos, r in enumerate(rows) if head_diff(r) > HEADING_DIFF and kept.get(r["id"]) != r["heading_manual"]]
     issues += _merge("heading", heads, lambda rs: f"cap manuel à plus de {HEADING_DIFF:.0f}° du cap calculé (jusqu'à {max(head_diff(x) for x in rs):.0f}°)")
 
     issues.sort(key=lambda i: (i["start_idx"], KINDS.index(i["kind"])))

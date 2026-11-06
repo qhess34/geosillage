@@ -454,7 +454,9 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 ## Points à vérifier (contrôle qualité)
 
 `core/quality.py`, `GET /api/projects/{id}/quality` : calcul à la demande, rien n'est écrit ni modifié (le choix
-de la photo à garder dans un arrêt revient à l'utilisateur). Photos non exclues et utilisables, dans l'ordre :
+de la photo à garder dans un arrêt revient à l'utilisateur). Seule exception : les caps « ignorés » (`POST …/quality/ignore-headings`,
+méta `quality_ignored_headings` = {photo : cap manuel gardé}) ne sont plus signalés tant que le cap manuel est le même ;
+le modifier fait revenir le point. Pas dans l'annulation (Ctrl+Z) : ce n'est pas une correction des photos. Photos non exclues et utilisables, dans l'ordre :
 `stop` (≥ `STOP_MIN` photos consécutives à moins de `STOP_M` les unes des autres), `spacing` (> `SPACING_M` entre deux
 photos consécutives, pas à travers une interruption, un saut GPS ni des photos exclues), `gps_dop` (> `DOP_MAX`),
 `heading` (cap manuel à plus de `HEADING_DIFF` du cap calculé) ; photos consécutives regroupées en tronçons

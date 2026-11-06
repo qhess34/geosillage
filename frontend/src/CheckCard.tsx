@@ -1,10 +1,10 @@
 import { PhotoDetail } from './api'
 import { Issue, ISSUE_TEXT, issueDetail, MISSING_EDGE_FIX } from './issues'
 
-export type CheckAction = 'interpolate' | 'clear-headings' | 'create-sequence' | 'exclude'
+export type CheckAction = 'interpolate' | 'clear-headings' | 'ignore-headings' | 'create-sequence' | 'exclude'
 
 // Card on top of the Photo tab: what is wrong on these photos (cause), how to fix it, the useful actions. When the
-// issue is no longer in the list (fixed: interpolated, heading restored, sequence created…), it says so.
+// issue is no longer in the list (fixed: interpolated, heading restored, sequence created… or ignored), it says so.
 export default function CheckCard({
   issue,
   fixed,
@@ -43,7 +43,7 @@ export default function CheckCard({
     return (
       <section className="check-card fixed small-text" role="status">
         <header>
-          <strong>Corrigé ✓ : {t.one}</strong>
+          <strong>Traité ✓ : {t.one}</strong>
           <span className="muted">{where}</span>
           <button className="small icon" onClick={onClose} title="Fermer" aria-label="Fermer">
             ✕
@@ -91,9 +91,18 @@ export default function CheckCard({
       </>
     ),
     heading: (
-      <button className="small primary" onClick={() => onAction('clear-headings')}>
-        Revenir au cap calculé
-      </button>
+      <>
+        <button className="small primary" onClick={() => onAction('clear-headings')}>
+          Revenir au cap calculé
+        </button>
+        <button
+          className="small"
+          onClick={() => onAction('ignore-headings')}
+          title="Le cap saisi est le bon (le cap calculé est faux, par exemple après une perte du GPS) : ne plus le signaler, tant qu'il ne change pas"
+        >
+          Ignorer : le cap saisi est bon
+        </button>
+      </>
     ),
     stop: (
       <button className="small primary" onClick={onCompare}>

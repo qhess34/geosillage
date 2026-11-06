@@ -421,6 +421,19 @@ def quality_check(pid: str):
         return quality.check(conn)
 
 
+class IgnoreHeadingsIn(BaseModel):
+    photo_ids: list[int] = Field(min_length=1)
+    ignore: bool = True
+
+
+@router.post("/quality/ignore-headings")
+def quality_ignore_headings(pid: str, body: IgnoreHeadingsIn):
+    """Headings to check that the user keeps (computed heading wrong, e.g. GPS lost); returns the new points to check."""
+    with db.open_project(pid) as conn:
+        n = quality.ignore_headings(conn, body.photo_ids, body.ignore)
+        return {"changed": n, "issues": quality.check(conn)}
+
+
 @router.get("/positions/missing")
 def positions_missing(pid: str):
     """Blocks of photos without a position, with the positioned photos before / after them."""
