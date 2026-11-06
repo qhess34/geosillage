@@ -405,6 +405,10 @@ Les problèmes sont aussi marqués **en orange en haut de la timeline** :
 - **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?). Si c'est le cap
   calculé qui est faux (perte du GPS : la trace ne donne plus la bonne direction), **Ignorer** (dans la fenêtre *À
   corriger* ou l'encadré de l'onglet *Photo*) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas (`Ctrl+Z` annule).
+- **Photos sans cap** (étape *Correction GPS*) : photo positionnée sans cap final, ni calculé ni saisi — pas de
+  position utilisable autour (voisines sans position ou en saut GPS), ou caméra immobile sur tout le tronçon. Sans
+  cap, Panoramax ne peut pas orienter la photo : corriger les positions voisines (le cap est recalculé), saisir le cap
+  à la main (section *Cap* de l'onglet *Photo*), ou exclure.
 
 Les valeurs ci-dessus sont celles par défaut : elles se règlent pour chaque projet dans **⚙ Réglages**, section
 *Points à vérifier* (nombre de photos et distance d'un arrêt, grand écart, DOP, écart de cap).

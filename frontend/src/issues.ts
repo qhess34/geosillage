@@ -2,7 +2,7 @@
 // texts per kind, and the photo predicates they share.
 import { FLAGS, PhotoRow, QualityIssue } from './api'
 
-export type IssueKind = QualityIssue['kind'] | 'jump' | 'missing' | 'unclassified'
+export type IssueKind = QualityIssue['kind'] | 'jump' | 'missing' | 'no_heading' | 'unclassified'
 export type IssueStep = 'dups' | 'gps' | 'seq'
 
 // Located on photos start..end. `detail` is the backend's text for the points to check (quality.py), shown as is;
@@ -18,7 +18,7 @@ export interface Issue {
 
 export const STEP_KINDS: Record<IssueStep, IssueKind[]> = {
   dups: ['stop'],
-  gps: ['missing', 'jump', 'spacing', 'gps_dop', 'heading'],
+  gps: ['missing', 'jump', 'spacing', 'gps_dop', 'heading', 'no_heading'],
   seq: ['unclassified'],
 }
 
@@ -60,6 +60,13 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; one: string; cause: 
     cause: 'cap saisi à la main très différent du cap calculé depuis la trace.',
     fix: 'revenir au cap calculé si c\'est une erreur de saisie ; si c\'est le cap calculé qui est faux (perte du GPS), ignorer.',
   },
+  no_heading: {
+    title: 'Photos sans cap',
+    one: 'Photos sans cap',
+    cause:
+      'aucun cap ne peut être calculé : pas de position utilisable autour de la photo (photos voisines sans position ou en saut GPS), ou caméra immobile sur tout le tronçon. Sans cap, Panoramax ne sait pas orienter la photo.',
+    fix: 'corriger les positions voisines (le cap est alors recalculé), ou saisir le cap à la main dans la section Cap de l\'onglet Photo (cadran, [ ]) ; sinon, exclure.',
+  },
   unclassified: {
     title: 'Photos non classées',
     one: 'Photos non classées',
@@ -75,6 +82,11 @@ export const MISSING_EDGE_FIX =
 // A photo that can be used (not excluded, file readable, not a duplicate) / that has a usable position
 export const isUsable = (p: PhotoRow) => !p.excluded && !(p.flags & (FLAGS.DUPLICATE | FLAGS.UNREADABLE | FLAGS.MISSING_FILE))
 export const isPlaced = (p: PhotoRow) => p.lat != null || (p.lat_orig != null && !(p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD)))
+
+// A placed, usable photo with no final heading (neither computed nor typed); uncorrected GPS jumps are reported
+// apart (their heading comes back once the position is fixed)
+export const hasNoHeading = (p: PhotoRow) =>
+  isUsable(p) && isPlaced(p) && p.heading == null && !(p.flags & FLAGS.GPS_JUMP && p.pos_method == null)
 
 export const sameIssue = (a: Pick<Issue, 'kind' | 'start' | 'end'>, b: Pick<Issue, 'kind' | 'start' | 'end'>) =>
   a.kind === b.kind && a.start === b.start && a.end === b.end
@@ -107,6 +119,7 @@ export function computeIssues(quality: QualityIssue[], photos: PhotoRow[], pnx: 
     if (isUsable(p) && p.flags & FLAGS.GPS_JUMP && p.pos_method == null) out.push({ kind: 'jump', start: p.idx, end: p.idx, count: 1, detail: null })
   })
   runs('missing', (p) => !isPlaced(p))
+  runs('no_heading', hasNoHeading)
   if (!pnx) runs('unclassified', (p) => p.sequence_id == null)
   return out.sort((a, b) => a.start - b.start || a.end - b.end)
 }

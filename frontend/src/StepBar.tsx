@@ -1,5 +1,5 @@
 import { FLAGS, PhotoRow, Project, QualityIssue, Sequence } from './api'
-import { isPlaced, isUsable } from './issues'
+import { hasNoHeading, isPlaced, isUsable } from './issues'
 
 // Progress of the ride, step by step: import → GPS delay (sync) → duplicates and stops → GPS correction → sequences → export → upload.
 // Computed from what the interface already has (photos, sequences, points to check); a click opens the right place.
@@ -82,9 +82,11 @@ export default function StepBar({
   const missing = usable.filter((p) => !isPlaced(p))
   const jumps = usable.filter((p) => p.flags & FLAGS.GPS_JUMP && p.pos_method == null)
   const gpsPoints = quality.filter((q) => q.kind !== 'stop')
+  const noHeading = photos.filter(hasNoHeading)
   const gpsParts = [
     missing.length && plural(missing.length, 'sans position', 'sans position'),
     jumps.length && plural(jumps.length, 'saut GPS', 'sauts GPS'),
+    noHeading.length && plural(noHeading.length, 'sans cap', 'sans cap'),
     gpsPoints.length && plural(gpsPoints.length, 'point à vérifier', 'points à vérifier'),
   ].filter(Boolean) as string[]
   steps.push({

@@ -69,12 +69,24 @@ export default function CheckCard({
     spacing: `${issueDetail(issue)} entre les photos ${issue.start + 1} et ${issue.end + 1}.`,
     gps_dop: issue.detail,
     stop: issue.detail,
+    no_heading:
+      detail?.heading_auto_state === 'uncertain'
+        ? 'La caméra ne bouge pas sur tout le tronçon : pas de sens de déplacement.'
+        : 'Pas de position utilisable autour de cette photo pour calculer le sens de déplacement.',
     heading:
       detail?.heading_manual != null && detail.heading_auto != null
         ? `Cap saisi ${detail.heading_manual.toFixed(0)}°, calculé ${detail.heading_auto.toFixed(0)}°.`
         : issue.detail,
   }
   const actions: Record<Issue['kind'], React.ReactNode> = {
+    no_heading: (
+      <>
+        {positions}
+        <button className="small" onClick={() => onAction('exclude')}>
+          Exclure ces photos
+        </button>
+      </>
+    ),
     jump: positions,
     spacing: positions,
     gps_dop: positions,
