@@ -17,6 +17,7 @@ interface Props {
   // time synchronisation mode; ids: photos the offset would move (scope chosen in the Synchro tab), null = all
   sync: { track: Track; offset: number | null; ids: Set<number> | null } | null
   viewAzimuth?: number | null // direction looked at in the 360° viewer: the selected arrow follows it
+  lineTrack?: Track | null // a track drawn without the sync tools (GPX line while snapping photos onto it)
   viewYaw?: number // the same, relative to the direction of travel: the sync marker's arrow follows it
   overlay: OverlaySettings // photos already published on Panoramax
   follow: boolean // move the map to keep the selected photo visible while navigating
@@ -154,7 +155,7 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, viewYaw = 0, overlay, follow, centerTick, snapPreview, onSelect, onMove, onSyncOffset, onContextMenu }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, lineTrack, viewAzimuth, viewYaw = 0, overlay, follow, centerTick, snapPreview, onSelect, onMove, onSyncOffset, onContextMenu }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
@@ -435,14 +436,15 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
 
   // Sync mode: track and preview of the photos of the chosen scope shifted by the offset (one update per frame)
   const syncTrack = sync?.track
+  const shownTrack = syncTrack ?? lineTrack ?? undefined
   const syncOffset = sync?.offset ?? null
   const syncIds = sync?.ids ?? null
   useEffect(() => {
     const m = map.current
     if (!m || !ready.current || !m.getLayer('sync-track')) return
-    m.setLayoutProperty('sync-track', 'visibility', syncTrack ? 'visible' : 'none')
-    ;(m.getSource('sync-track') as GeoJSONSource | undefined)?.setData(syncTrackGeoJSON(syncTrack))
-  }, [syncTrack])
+    m.setLayoutProperty('sync-track', 'visibility', shownTrack ? 'visible' : 'none')
+    ;(m.getSource('sync-track') as GeoJSONSource | undefined)?.setData(syncTrackGeoJSON(shownTrack))
+  }, [shownTrack])
   useEffect(() => {
     const m = map.current
     if (!m || !ready.current) return

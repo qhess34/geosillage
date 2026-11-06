@@ -237,6 +237,15 @@ de la sortie.
 La GoPro enregistre la position avec 0,5 à 3 s de retard : chaque photo est placée un peu derrière l'endroit où elle
 a été prise. On mesure ce retard une fois et on l'applique à toute la sortie.
 
+**Trace de référence** (en haut de l'onglet) : par défaut le GPS de la caméra. Une trace **GPX** enregistrée en même
+temps (compteur vélo, montre, téléphone), souvent plus précise, peut la remplacer : *Importer un GPX…*, choisir le
+fichier (il doit être horodaté). L'application affiche le nombre de points, la longueur, la période, les photos
+couvertes, et le **décalage horaire** détecté entre l'heure des photos (heure locale de la caméra) et l'heure UTC du
+GPX — d'après les positions de la caméra, sinon l'heure GPS des photos ; *Modifier* pour le corriger (en heures). La
+synchro place alors chaque photo sur le GPX à son heure + le décalage réglé ci-dessous (quelques secondes d'écart
+d'horloge). Les boutons radio repassent au GPS de la caméra ; *Retirer le GPX* l'oublie (les positions déjà
+appliquées restent).
+
 1. Choisir un fond satellite (en France : *Satellite IGN Ortho*).
 2. Trouver une photo où l'on voit un repère net, visible aussi sur la vue satellite (passage piéton, angle de
    bâtiment, ligne d'arrêt). Agrandir la photo (molette).
@@ -319,6 +328,15 @@ Internet nécessaire) et la découpe en tronçons :
 L'aperçu montre les voies retenues en bleu foncé et le déplacement de chaque photo en pointillés. *Recaler N photos*
 place chaque photo sur la voie choisie (position la plus proche) ; les photos placées à la main ne bougent pas
 (case à décocher pour les inclure). Une seule opération, annulable avec `Ctrl+Z`.
+
+### Recaler sur la ligne GPX
+
+Avec une trace GPX importée (onglet *Synchro*) : *Recaler des photos sur la ligne GPX…* (onglet *Synchro*), ou clic
+droit sur une plage / une séquence → *Recaler … sur la trace GPX…*. Chaque photo de la plage choisie (photos N → M,
+une séquence ou toute la sortie) est déplacée sur le point le plus proche de la ligne GPX, **sans tenir compte de
+l'heure** (contrairement à la synchro) ; celles à plus de la distance maximale (30 m par défaut) ne bougent pas, les
+positions corrigées à la main sont gardées (case à décocher). Bilan : photos recalées, déplacement moyen et maximal.
+Une seule opération, `Ctrl+Z` l'annule.
 
 ### Photos sans position
 

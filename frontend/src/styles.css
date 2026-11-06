@@ -1623,3 +1623,22 @@ a.button-link:hover {
 .stop-range-go > span:nth-child(3) {
   text-align: right;
 }
+
+/* Synchro tab: reference track (camera GPS or GPX) */
+.gpx-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+.gpx-section h3 {
+  margin-top: 2px;
+}
+.gpx-info > div {
+  margin: 3px 0;
+}
+.inline-form {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}

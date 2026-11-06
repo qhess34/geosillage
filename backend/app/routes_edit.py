@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from . import db, exporter, jobs, undo
-from .core import headings, osm, positions, quality, sequences, timesync
+from .core import gpx, headings, osm, positions, quality, sequences, timesync
 
 router = APIRouter(prefix="/api/projects/{pid}")
 
@@ -553,9 +553,114 @@ def _sync_errors(fn):
 
 @router.get("/track")
 def track_get(pid: str):
-    """GPS track used for synchronisation: runs of [ts, lat, lon]."""
+    """GPS track used for synchronisation: runs of [ts, lat, lon] (the imported GPX when chosen, else the camera's)."""
     with db.open_project(pid) as conn:
-        return {"runs": [[list(p) for p in run] for run in timesync.build_track(conn)], "max_extrapolation_s": timesync.MAX_EXTRAPOLATION_S}
+        return {
+            "runs": [[list(p) for p in run] for run in timesync.build_track(conn)],
+            "max_extrapolation_s": timesync.MAX_EXTRAPOLATION_S,
+            "source": "gpx" if gpx.use_gpx(conn) else "camera",
+        }
+
+
+# ---- GPX track (reference of the sync, or line to snap photos onto) ----
+
+
+class GpxIn(BaseModel):
+    path: str
+
+
+class GpxPatch(BaseModel):
+    in_use: bool | None = None  # reference track of the synchronisation: GPX (true) or camera (false)
+    shift_s: float | None = Field(default=None, ge=-15 * 3600, le=15 * 3600)  # photo clock - UTC
+
+
+class GpxSnapIn(BaseModel):
+    start_idx: int
+    end_idx: int
+    max_dist: float = Field(default=gpx.SNAP_MAX_DIST_M, gt=0, le=200)
+    keep_manual: bool = True
+
+
+@router.get("/gpx")
+def gpx_get(pid: str):
+    with db.open_project(pid) as conn:
+        return {"gpx": gpx.summary(conn)}
+
+
+@router.get("/gpx/track")
+def gpx_track(pid: str):
+    """The GPX line (runs of [ts, lat, lon] in the photo clock), shown on the map while snapping onto it."""
+    with db.open_project(pid) as conn:
+        tr = gpx.track(conn)
+        if tr is None:
+            raise HTTPException(404, "Aucune trace GPX importée")
+        return {"runs": [[list(p) for p in run] for run in tr]}
+
+
+@router.post("/gpx")
+def gpx_import(pid: str, body: GpxIn):
+    """Read a GPX file of this machine; the clock shift with the photos is detected; it becomes the sync reference."""
+    path = Path(os.path.expanduser(body.path))
+    if not path.is_file():
+        raise HTTPException(400, "Fichier introuvable")
+    if path.stat().st_size > gpx.MAX_FILE_BYTES:
+        raise HTTPException(400, "Fichier GPX trop gros (50 Mo au plus)")
+    with db.open_project(pid) as conn:
+        try:
+            runs = gpx.parse(path.read_bytes(), max(30.0, db.get_settings(conn)["gap_seconds"]))
+        except gpx.GpxError as e:
+            raise HTTPException(400, str(e))
+        return {"gpx": gpx.store(conn, path.name, str(path), runs)}
+
+
+@router.patch("/gpx")
+def gpx_patch(pid: str, body: GpxPatch):
+    with db.open_project(pid) as conn:
+        g = gpx.load(conn)
+        if not g:
+            raise HTTPException(404, "Aucune trace GPX importée")
+        if body.shift_s is not None:
+            db.set_meta(conn, gpx.META, {**g, "shift_s": body.shift_s, "shift_from": "manual"})
+        if body.in_use is not None:
+            db.set_meta(conn, gpx.SOURCE, "gpx" if body.in_use else "camera")
+        return {"gpx": gpx.summary(conn)}
+
+
+@router.delete("/gpx")
+def gpx_delete(pid: str):
+    """Forget the GPX (photos already placed with it keep their positions)."""
+    with db.open_project(pid) as conn:
+        conn.execute("DELETE FROM meta WHERE key IN (?, ?)", (gpx.META, gpx.SOURCE))
+        return {"gpx": None}
+
+
+@router.post("/gpx/snap")
+def gpx_snap(pid: str, body: GpxSnapIn):
+    """Photos of the range moved onto the closest point of the GPX line, whatever the time (one undoable operation).
+    Photos farther than max_dist stay where they are."""
+    with db.open_project(pid) as conn:
+        g = gpx.load(conn)
+        if not g:
+            raise HTTPException(404, "Aucune trace GPX importée")
+        photos = _snap_photos(conn, body.start_idx, body.end_idx)
+        if not photos:
+            raise HTTPException(400, "Aucune photo positionnée dans la sélection")
+        todo = [p for p in photos if not (body.keep_manual and p["pos_method"] in positions.MANUAL_METHODS and p["pos_method"] != "gpx")]
+        res = gpx.snap(todo, g["runs"], body.max_dist)
+        a, b = sorted((body.start_idx, body.end_idx))
+        with undo.undoable(conn, f"Recalage sur la trace GPX (photos {a + 1} → {b + 1})"):
+            for pid_, (lat, lon, _) in res.items():
+                conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='gpx', time_offset=NULL WHERE id=?", (lat, lon, pid_))
+        headings.recompute(conn, mark_stale_ids=set(res))
+        dists = [d for _, _, d in res.values()]
+        return {
+            "moved": len(res),
+            "too_far": len(todo) - len(res),
+            "kept_manual": len(photos) - len(todo),
+            "mean_m": round(sum(dists) / len(dists), 1) if dists else 0,
+            "max_m": round(max(dists), 1) if dists else 0,
+            "undo": undo.state(conn),
+        }
 
 
 @router.get("/timesync/runs")

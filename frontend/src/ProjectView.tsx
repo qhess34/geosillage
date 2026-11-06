@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, FLAG_LABELS, FLAGS, Job, PhotoDetail, PhotoRow, Project, QualityIssue, SeqState, Sequence, UndoState } from './api'
+import { api, FLAG_LABELS, FLAGS, GpxSummary, Job, PhotoDetail, PhotoRow, Project, QualityIssue, SeqState, Sequence, UndoState } from './api'
 import { BUILTIN_BASEMAPS } from './basemaps'
 import { useCustomBasemaps } from './useCustomBasemaps'
 import SettingsDialog from './SettingsDialog'
@@ -25,6 +25,7 @@ import Viewer360 from './Viewer360'
 import ContextMenu, { MenuItem } from './ContextMenu'
 import OsmSnapPanel, { SnapPreview, SnapScope } from './OsmSnapPanel'
 import YawRotate from './YawRotate'
+import { GpxSnapDialog } from './Gpx'
 import { CAP_HELP, CapOrientationDiagram, ORIENTATION_HELP } from './CapOrientation'
 
 const JOB_LABELS: Record<string, string> = {
@@ -43,6 +44,7 @@ const POS_LABELS: Record<string, string> = {
   time: 'synchro temporelle',
   interp: 'interpolée',
   osm: 'recalée sur OSM',
+  gpx: 'recalée sur la trace GPX',
 }
 
 // Great-circle distance (display only)
@@ -694,6 +696,22 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [stopCompare, setStopCompare] = useState<[number, number] | null>(null) // photos of a stop side by side
   const [editMode, setEditMode] = useState(false)
   const [track, setTrack] = useState<Track | null>(null)
+  // imported GPX (summary), and the dialog projecting a range of photos onto its line (with the line on the map)
+  const [gpx, setGpx] = useState<GpxSummary | null>(null)
+  const [gpxSnap, setGpxSnap] = useState<[number, number] | null>(null)
+  const [gpxLine, setGpxLine] = useState<Track | null>(null)
+  useEffect(() => {
+    api.gpx(projectId).then((r) => setGpx(r.gpx), () => undefined)
+  }, [projectId])
+  useEffect(() => {
+    if (!gpxSnap) return setGpxLine(null)
+    api.gpxTrack(projectId).then((r) => setGpxLine(r.runs), (e) => setError(e.message))
+  }, [gpxSnap, projectId])
+  // proposed photos to project onto the GPX: the selection, else the current photo's sequence, else the whole ride
+  const openGpxSnap = (r?: [number, number]) => {
+    const seq = current?.sequence_id != null ? sequences.find((x) => x.id === current.sequence_id) : undefined
+    setGpxSnap(r ?? (range && range[1] > range[0] ? range : seq ? [seq.start_idx, seq.end_idx] : [0, Math.max(0, photos.length - 1)]))
+  }
   const [syncOffset, setSyncOffset] = useState<number | null>(null)
   const [syncDragged, setSyncDragged] = useState<{ photoId: number; offset: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -841,7 +859,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   useEffect(() => {
     if (tab !== 'sync') return
     api.track(projectId).then((t) => setTrack(t.runs), (e) => setError(e.message))
-  }, [tab, projectId, photoCount])
+  }, [tab, projectId, photoCount, gpx?.in_use, gpx?.shift_s, gpx?.name])
   // photos the offset would move (scope of the Synchro tab): only they are previewed on the map
   const [syncIds, setSyncIds] = useState<Set<number> | null>(null)
   const sync = useMemo(() => (tab === 'sync' && track ? { track, offset: syncOffset, ids: syncIds } : null), [tab, track, syncOffset, syncIds])
@@ -1058,7 +1076,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg || confirmInterp || showSettings) return
+      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg || confirmInterp || showSettings || gpxSnap) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl && e.key.toLowerCase() === 'z') {
         undoRedo(e.shiftKey ? 'redo' : 'undo')
@@ -1137,7 +1155,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, confirmInterp, showSettings])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, confirmInterp, showSettings, gpxSnap])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
@@ -1163,6 +1181,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               setSnapOpen({ scope: 'sequence', sequenceId: sq.id })
             },
           },
+          ...(gpx && sq ? [{ label: 'Recaler sur la trace GPX…', onClick: () => openGpxSnap([sq.start_idx, sq.end_idx]) }] : []),
         ],
       }
     }
@@ -1176,6 +1195,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         label: r[0] === r[1] ? 'Recaler cette photo sur OpenStreetMap…' : `Recaler ces ${r[1] - r[0] + 1} photos sur OpenStreetMap…`,
         onClick: () => setSnapOpen({ scope: 'custom', sequenceId: inSeq, bounds: r }),
       },
+      ...(gpx
+        ? [{ label: r[0] === r[1] ? 'Recaler cette photo sur la trace GPX…' : `Recaler ces ${r[1] - r[0] + 1} photos sur la trace GPX…`, onClick: () => openGpxSnap(r) }]
+        : []),
       { label: `Décalage du cap (sens de déplacement) ${these}…`, onClick: () => setValueDlg({ kind: 'offset', range: r }) },
       { label: `Orientation de la caméra ${these}…`, onClick: () => setValueDlg({ kind: 'yaw', range: r }) },
     ]
@@ -1316,6 +1338,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             follow={follow}
             centerTick={centerTick}
             snapPreview={snapPreview}
+            lineTrack={gpxLine}
             viewAzimuth={(tab === 'photo' || tab === 'sync') && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
             viewYaw={tab === 'sync' ? viewYaw : 0}
             onSyncOffset={onSyncOffset}
@@ -1552,6 +1575,12 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'sync' && (
               <SyncTab
                 onPreviewIds={setSyncIds}
+                gpx={gpx}
+                onGpx={(g) => {
+                  setGpx(g)
+                  setNotice(g ? (g.in_use ? `Synchro sur la trace GPX « ${g.name} »` : 'Synchro sur le GPS de la caméra') : 'Trace GPX retirée : synchro sur le GPS de la caméra')
+                }}
+                onGpxSnap={() => openGpxSnap()}
                 onView={setViewYaw}
                 projectId={projectId}
                 photo={detail}
@@ -1710,6 +1739,21 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             const b = addBasemap(name, url, attribution)
             setAddingBasemap(false)
             chooseBasemap(b.id)
+          }}
+        />
+      )}
+      {gpxSnap && (
+        <GpxSnapDialog
+          projectId={projectId}
+          photos={photos.length}
+          initial={gpxSnap}
+          sequences={sequences}
+          onClose={() => setGpxSnap(null)}
+          onError={fail}
+          onDone={(msg, u) => {
+            setGpxSnap(null)
+            setNotice(msg)
+            afterHeadingChange(u)
           }}
         />
       )}

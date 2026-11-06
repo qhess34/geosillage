@@ -298,6 +298,21 @@ export interface ExportRecord {
   }
 }
 
+// GPX track imported for the project (times in the photo clock; shift_s = photo clock - UTC)
+export interface GpxSummary {
+  name: string
+  points: number
+  runs: number
+  start: number
+  end: number
+  length_m: number
+  shift_s: number
+  shift_from: 'gps' | 'positions' | 'manual' | 'none' | null
+  photos: number
+  covered: number
+  in_use: boolean
+}
+
 export interface FsListing {
   path: string
   parent: string | null
@@ -341,7 +356,14 @@ export const api = {
   },
   photo: (id: string, photo: number) => req<PhotoDetail>('GET', `/api/projects/${id}/photos/${photo}`),
   exif: (id: string, photo: number) => req<Record<string, unknown>>('GET', `/api/projects/${id}/photos/${photo}/exif`),
-  fs: (path: string) => req<FsListing>('GET', `/api/fs?path=${encodeURIComponent(path)}`),
+  fs: (path: string, ext?: string) => req<FsListing>('GET', `/api/fs?path=${encodeURIComponent(path)}${ext ? `&ext=${encodeURIComponent(ext)}` : ''}`),
+  gpx: (id: string) => req<{ gpx: GpxSummary | null }>('GET', `/api/projects/${id}/gpx`),
+  gpxImport: (id: string, path: string) => req<{ gpx: GpxSummary }>('POST', `/api/projects/${id}/gpx`, { path }),
+  gpxPatch: (id: string, body: { in_use?: boolean; shift_s?: number }) => req<{ gpx: GpxSummary }>('PATCH', `/api/projects/${id}/gpx`, body),
+  gpxTrack: (id: string) => req<{ runs: [number, number, number][][] }>('GET', `/api/projects/${id}/gpx/track`),
+  gpxDelete: (id: string) => req<{ gpx: null }>('DELETE', `/api/projects/${id}/gpx`),
+  gpxSnap: (id: string, body: { start_idx: number; end_idx: number; max_dist: number; keep_manual: boolean }) =>
+    req<{ moved: number; too_far: number; kept_manual: number; mean_m: number; max_m: number; undo: UndoState }>('POST', `/api/projects/${id}/gpx/snap`, body),
   sequences: (id: string) => req<SeqState>('GET', `/api/projects/${id}/sequences`),
   createSequence: (id: string, start_idx: number, end_idx: number) =>
     req<SeqState & { excluded: number }>('POST', `/api/projects/${id}/sequences`, { start_idx, end_idx }),
@@ -388,7 +410,7 @@ export const api = {
       exclude_gps_jumps,
       mode,
     }),
-  track: (id: string) => req<{ runs: [number, number, number][][]; max_extrapolation_s: number }>('GET', `/api/projects/${id}/track`),
+  track: (id: string) => req<{ runs: [number, number, number][][]; max_extrapolation_s: number; source: 'camera' | 'gpx' }>('GET', `/api/projects/${id}/track`),
   syncOffset: (id: string, photo: number, lat: number, lon: number) =>
     req<{ offset_s: number; lat: number; lon: number }>('GET', `/api/projects/${id}/timesync/offset?photo_id=${photo}&lat=${lat}&lon=${lon}`),
   syncApply: (
@@ -459,7 +481,7 @@ export const api = {
 
 // Positions corrected by hand, kept by a synchronisation with « Garder les positions corrigées à la main »: same list
 // as backend/app/core/positions.py MANUAL_METHODS (checked by tests/test_frontend_constants.py)
-export const MANUAL_METHODS = ['manual', 'offset', 'along', 'interp', 'osm']
+export const MANUAL_METHODS = ['manual', 'offset', 'along', 'interp', 'osm', 'gpx']
 
 // Must match backend/app/db.py
 export const FLAGS = {

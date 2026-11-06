@@ -275,7 +275,8 @@ FS_MAX_FILES = 500
 
 
 @app.get("/api/fs")
-def fs_list(path: str = "~"):
+def fs_list(path: str = "~", ext: str | None = None):
+    """Sub-folders, and the JPEGs (or the files with extension `ext`, e.g. ".gpx", to pick one) of a folder."""
     if path == "~":
         path = config.DEFAULT_DIR
     p = Path(os.path.expanduser(path)).resolve()
@@ -292,7 +293,13 @@ def fs_list(path: str = "~"):
                 continue
             if is_dir:
                 dirs.append(e.name)
-            elif Path(e.name).suffix.lower() in importer.JPEG_EXT:
+            elif ext and Path(e.name).suffix.lower() == ext.lower():
+                if len(files) < FS_MAX_FILES:
+                    try:
+                        files.append({"name": e.name, "size": e.stat().st_size})
+                    except OSError:
+                        files.append({"name": e.name, "size": None})
+            elif not ext and Path(e.name).suffix.lower() in importer.JPEG_EXT:
                 jpegs += 1
                 if len(files) < FS_MAX_FILES:  # shown (greyed) in the picker; imports are by folder only
                     try:
