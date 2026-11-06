@@ -543,6 +543,13 @@ def track_get(pid: str):
         return {"runs": [[list(p) for p in run] for run in timesync.build_track(conn)], "max_extrapolation_s": timesync.MAX_EXTRAPOLATION_S}
 
 
+@router.get("/timesync/runs")
+def sync_runs(pid: str):
+    """Lots of consecutive photos synchronised with the same offset, and lots not synchronised."""
+    with db.open_project(pid) as conn:
+        return timesync.runs(conn)
+
+
 @router.get("/timesync/offset")
 def sync_offset(pid: str, photo_id: int, lat: float, lon: float, window_s: float = 30.0):
     """Offset making the photo match (lat, lon) projected on the track."""

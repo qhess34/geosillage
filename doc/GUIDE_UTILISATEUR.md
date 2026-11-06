@@ -245,6 +245,11 @@ synchronisation, la portée proposée devient *À partir de cette photo* : les p
 ne sont pas marquées *à réexporter*. La médiane proposée ne tient compte que des points de calage de la portée
 choisie.
 
+**Décalages appliqués** (onglet *Synchro*) : la liste des lots de photos synchronisés avec chaque décalage, par
+exemple « Photos 1 → 100 (100) · +1.0 s », « Photos 101 → 700 (600) · +1.9 s », et les photos pas encore
+synchronisées. Le lot de la photo courante est surligné ; *Voir* va à sa première photo. Une photo corrigée à la
+main dans un lot ne le coupe pas (elle garde sa position) : elle est comptée à part.
+
 
 ![Onglet Synchro](images/05-synchro.webp)
 *Onglet *Synchro* sur le fond *Satellite IGN Ortho* : marqueur orange de la photo courante, positions décalées en aperçu (points orange) le long de la trace ; décalage en secondes à droite.*

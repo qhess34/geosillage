@@ -1351,3 +1351,25 @@ a.button-link:hover {
 .brand-back img {
   display: block;
 }
+
+/* Synchro tab: lots of photos per applied offset */
+.sync-runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sync-runs li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.sync-runs li.current {
+  background: rgba(234, 88, 12, 0.08);
+  border-left: 3px solid #ea580c;
+}
+.sync-runs .row {
+  align-items: center;
+}

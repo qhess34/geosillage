@@ -157,3 +157,26 @@ def test_sync_from_photo_leaves_earlier_photos(project, tmp_path):
     d = client.get(f"/api/projects/{pid}/photos/{after['rows'][-2][0]}").json()
     assert d["time_offset"] == 1.0
     assert client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "from"}).status_code == 400
+
+
+def test_sync_runs_by_offset(project):
+    """The Synchro tab lists the lots of photos synchronised with each offset (e.g. 1-100 at +1 s, 101-700 at +1.9 s)."""
+    client, pid = project
+    assert [r["offset_s"] for r in client.get(f"/api/projects/{pid}/timesync/runs").json()] == [None]  # nothing synced yet
+    photos = client.get(f"/api/projects/{pid}/photos").json()
+    n = len(photos["rows"])
+    cut = n // 3
+    client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "all"})
+    client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.9, "scope": "from", "start_idx": cut})
+    runs = client.get(f"/api/projects/{pid}/timesync/runs").json()
+    synced = [r for r in runs if r["offset_s"] is not None]
+    assert [r["offset_s"] for r in synced] == [1.0, 1.9]
+    assert synced[0]["end_idx"] < cut <= synced[1]["start_idx"] + 1 and synced[1]["end_idx"] >= n - 3
+    # a photo corrected by hand inside a lot does not split it
+    mid = synced[1]["start_idx"] + 3
+    pid_photo = next(r[0] for r in photos["rows"] if r[photos["fields"].index("idx")] == mid)
+    d = client.get(f"/api/projects/{pid}/photos/{pid_photo}").json()
+    client.put(f"/api/projects/{pid}/photos/{pid_photo}/position", json={"lat": d["lat"] + 1e-5, "lon": d["lon"]})
+    after = [r for r in client.get(f"/api/projects/{pid}/timesync/runs").json() if r["offset_s"] is not None]
+    assert [r["offset_s"] for r in after] == [1.0, 1.9] and after[1]["manual"] == 1
+    assert after[1]["count"] == synced[1]["count"]

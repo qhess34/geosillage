@@ -124,3 +124,52 @@ def apply(conn, offset_s: float, ids: list[int], keep_manual: bool = True) -> di
         )
         changed += 1
     return {"changed": changed, "kept_manual": kept, "uncovered": uncovered}
+
+
+def runs(conn) -> list[dict]:
+    """Lots of consecutive photos synchronised with the same offset (the GPS delay may change during a ride:
+    e.g. photos 1-100 at +1.0 s, 101-700 at +1.9 s), and the lots not synchronised.
+
+    Photos corrected by hand (dragged, interpolated, snapped…) do not break a lot: they keep their own position
+    whatever the offset, and are counted as `manual`. Excluded and unusable photos are skipped."""
+    rows = conn.execute(
+        f"""SELECT idx, time_offset, pos_method FROM photo
+            WHERE excluded = 0 AND flags & {positions.UNUSABLE} = 0 ORDER BY idx"""
+    ).fetchall()
+    out: list[dict] = []
+    cur: dict | None = None
+    pending_manual: list = []  # hand-corrected photos waiting to know which lot they belong to
+
+    def close():
+        nonlocal cur
+        if cur:
+            out.append(cur)
+        cur = None
+
+    for r in rows:
+        if r["pos_method"] in positions.MANUAL_METHODS:
+            pending_manual.append(r)
+            continue
+        key = round(r["time_offset"], 1) if r["pos_method"] == "time" and r["time_offset"] is not None else None
+        if cur is None or cur["offset_s"] != key:
+            close()
+            start = pending_manual[0]["idx"] if pending_manual and not out else r["idx"]
+            cur = {"offset_s": key, "start_idx": start, "end_idx": r["idx"], "count": 0, "manual": 0}
+            if pending_manual and not out:  # leading hand-corrected photos join the first lot
+                cur["count"] += len(pending_manual)
+                cur["manual"] += len(pending_manual)
+                pending_manual = []
+        if pending_manual:  # hand-corrected photos inside or between lots: attached to the lot they precede
+            cur["count"] += len(pending_manual)
+            cur["manual"] += len(pending_manual)
+            pending_manual = []
+        cur["end_idx"] = r["idx"]
+        cur["count"] += 1
+    if pending_manual:
+        if cur is None:
+            cur = {"offset_s": None, "start_idx": pending_manual[0]["idx"], "end_idx": pending_manual[-1]["idx"], "count": 0, "manual": 0}
+        cur["end_idx"] = pending_manual[-1]["idx"]
+        cur["count"] += len(pending_manual)
+        cur["manual"] += len(pending_manual)
+    close()
+    return out
