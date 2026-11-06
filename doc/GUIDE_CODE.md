@@ -31,7 +31,14 @@ backend/app/
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
   ProjectList.tsx  création, ouverture, suppression (avec confirmation) des projets
-  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export et envoi, Bilan ; projet Panoramax : Envoi au lieu d'Export), barre d'étapes (`StepBar.tsx`), raccourcis clavier
+  ProjectView.tsx  état de l'écran projet, barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export et envoi, Bilan ; projet Panoramax : Envoi au lieu d'Export), barre d'étapes (`StepBar.tsx`)
+  shortcuts.ts     raccourcis clavier : hook `useShortcuts` (un seul écouteur `keydown`) et tableau `SHORTCUTS` de l'aide `?`
+  useIssues.ts     points à vérifier (`quality`, `checkPoints`, par étape) et correction en cours (`focusPoint`, `stopAdj`, `fixIssue`, `nextIssue`)
+  contextMenuItems.ts entrées du menu contextuel (clic droit sur la carte, la timeline ou une séquence)
+  PhotoTab.tsx     onglet Photo : visionneuse, cap, orientation, position, outils de la plage, informations ; boutons Début / Fin (`SeqButtons`)
+  SummaryTab.tsx   onglet Bilan : chiffres de la sortie, cap et orientation de toute la sortie (`RideHeadings`), dossiers sources
+  ProjectDialogs.tsx aide des raccourcis, confirmations (exclure une plage, interpoler les trous), valeur pour une série de photos
+  JobBar.tsx       barre d'état : tâches en cours, temps restant, notification de fin
   PhotoMap.tsx     MapLibre : une source GeoJSON (points colorés par séquence + trace), flèches de cap (SDF), plage, sélection
   Timeline.tsx     bande chronologique (canvas) : couleur par séquence, anomalies, interruptions, sélection de plage
   HeadingDial.tsx  cadran de cap (glisser, Maj = pas de 5°)
@@ -454,7 +461,7 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 
 - `StopCompare.tsx` : photos d'un arrêt côte à côte, la vignette cliquée dans `Viewer360` (orientation lue par
   `api.photo`), exclusion des non gardées en un appel `excludePhotos`.
-- `N` / `Maj+N` (`checkPoints` dans `ProjectView`) : points à vérifier, sauts GPS non corrigés, photos sans position,
+- `N` / `Maj+N` (`checkPoints` de `useIssues.ts`) : points à vérifier, sauts GPS non corrigés, photos sans position,
   photos non classées, triés par index.
   `issues.ts` : type `Issue` (`kind`, `start`, `end`, `count`, `detail` du backend, `meters`), `computeIssues`, la
   table unique des textes `ISSUE_TEXT` (titre, nom, cause, correction), prédicats partagés `isUsable` / `isPlaced`.

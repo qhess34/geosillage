@@ -26,7 +26,7 @@ navigateur (React 18 + TypeScript, Vite)          un seul processus local, 127.0
 - **EXIF** : lecture et écriture uniquement par ExifTool (`exif/reader.py`, `exif/writer.py`), jamais de
   recompression.
 - **Interface** : pas de gestionnaire d'état ; `ProjectView.tsx` tient l'état (photos, séquences, sélection, plage,
-  modes) et le passe aux composants. Carte MapLibre GL, visionneuse Photo Sphere Viewer.
+  modes) et le passe aux composants et aux hooks (`useShortcuts`, `useIssues`). Carte MapLibre GL, visionneuse Photo Sphere Viewer.
 
 ## 2. Installer l'environnement
 
@@ -184,8 +184,9 @@ défaut si absent ; écrire dans un `try` aussi. Exemples : `pss-follow`, `pss-s
 
 ### Ajouter un raccourci clavier
 
-Gestionnaire `onKey` de `ProjectView.tsx` (ignoré quand un champ de saisie a le focus) ; ajouter la touche au
-tableau `SHORTCUTS` (aide `?`), au guide utilisateur (§ 10) et aux dépendances de l'effet. Une case à cocher qui
+Gestionnaire `onKey` de `useShortcuts` (`shortcuts.ts`, ignoré quand un champ de saisie a le focus ou qu'une fenêtre
+est ouverte) ; ajouter la touche au tableau `SHORTCUTS` du même fichier (aide `?`) et au guide utilisateur (§ 10) ; une
+valeur ou fonction nouvelle passe par `ShortcutsParams` (lue au dernier rendu, pas de liste de dépendances). Une case à cocher qui
 change le comportement des flèches doit perdre le focus après le clic (`e.target.blur()`).
 
 ### Ajouter un fond de carte
