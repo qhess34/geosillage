@@ -1749,6 +1749,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           initial={gpxSnap}
           sequences={sequences}
           onClose={() => setGpxSnap(null)}
+          onPreview={setSnapPreview}
           onError={fail}
           onDone={(msg, u) => {
             setGpxSnap(null)

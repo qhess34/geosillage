@@ -335,8 +335,10 @@ Avec une trace GPX importée (onglet *Synchro*) : *Recaler des photos sur la lig
 droit sur une plage / une séquence → *Recaler … sur la trace GPX…*. Chaque photo de la plage choisie (photos N → M,
 une séquence ou toute la sortie) est déplacée sur le point le plus proche de la ligne GPX, **sans tenir compte de
 l'heure** (contrairement à la synchro) ; celles à plus de la distance maximale (30 m par défaut) ne bougent pas, les
-positions corrigées à la main sont gardées (case à décocher). Bilan : photos recalées, déplacement moyen et maximal.
-Une seule opération, `Ctrl+Z` l'annule.
+positions corrigées à la main sont gardées (case à décocher). La fenêtre se déplace par sa barre de titre ; la carte
+montre la trace GPX en gris et l'**aperçu** des déplacements en pointillés bleus, avec le nombre de photos déplacées,
+le déplacement moyen et maximal, recalculés à chaque réglage. *Recaler N photos* applique : une seule opération,
+`Ctrl+Z` l'annule.
 
 ### Photos sans position
 
