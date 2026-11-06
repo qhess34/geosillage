@@ -1257,7 +1257,7 @@ input.coord {
   gap: 4px;
 }
 .map-legend-body {
-  max-height: min(55vh, calc(100vh - 340px)); /* never over the zoom buttons: scrolls instead */
+  max-height: min(55vh, calc(100vh - 400px)); /* never over the zoom buttons: scrolls instead */
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
