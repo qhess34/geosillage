@@ -699,6 +699,10 @@ input.coord {
 
 .viewer-wrap {
   position: relative;
+  /* its own stacking context: the viewer's buttons and controls (z-index up to 101) stay below the tabs, which
+     are sticky on top of the side panel when it scrolls */
+  isolation: isolate;
+  z-index: 0;
 }
 .viewer360 {
   position: relative;
