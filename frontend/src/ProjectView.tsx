@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, FLAG_LABELS, FLAGS, Job, PhotoDetail, PhotoRow, Project, QualityIssue, SeqState, Sequence, UndoState } from './api'
-import { Basemap, BUILTIN_BASEMAPS, loadCustomBasemaps, saveCustomBasemaps } from './basemaps'
+import { BUILTIN_BASEMAPS } from './basemaps'
+import { useCustomBasemaps } from './useCustomBasemaps'
+import SettingsDialog from './SettingsDialog'
 import ExportTab from './ExportTab'
 import { fmtCoord, fmtDistance, fmtDuration, fmtSize, fmtTime } from './format'
 import HeadingDial from './HeadingDial'
@@ -18,7 +20,7 @@ import { AddBasemap, Confirm, ValueDialog } from './Dialogs'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
-import { AGE_CLASSES, loadOverlay, OverlaySettings, PANORAMAX_PRESETS, saveOverlay } from './panoramaxLayer'
+import { AGE_CLASSES, loadOverlay, OverlaySettings, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
 import ContextMenu, { MenuItem } from './ContextMenu'
@@ -96,99 +98,7 @@ function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDon
   )
 }
 
-// Settings (button ⚙ of the toolbar): display of the map for every ride, heading computation of this project
-function SettingsDialog({
-  project,
-  overlay,
-  onOverlay,
-  custom,
-  onRemoveBasemap,
-  onHeadingsSaved,
-  onError,
-  onClose,
-}: {
-  project: Project
-  overlay: OverlaySettings
-  onOverlay: (o: OverlaySettings) => void
-  custom: Basemap[]
-  onRemoveBasemap: (id: string) => void
-  onHeadingsSaved: () => void
-  onError: (m: string) => void
-  onClose: () => void
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopImmediatePropagation()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [onClose])
-  return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal settings" role="dialog" aria-label="Réglages">
-        <div className="row between">
-          <h2>⚙ Réglages</h2>
-          <button className="small" onClick={onClose} aria-label="Fermer">
-            ✕
-          </button>
-        </div>
-        <OverlayUrl overlay={overlay} onSave={onOverlay} />
-        <div className="small-text">
-          <h3>Fonds de carte ajoutés (toutes les sorties)</h3>
-          {custom.length ? (
-            <ul className="settings-list">
-              {custom.map((b) => (
-                <li key={b.id}>
-                  <span>
-                    <strong>{b.name}</strong> <span className="muted mono break">{b.url}</span>
-                  </span>
-                  <button className="small danger" onClick={() => onRemoveBasemap(b.id)}>
-                    Retirer
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="muted">Aucun : « + Ajouter un fond XYZ… » dans la liste des fonds de carte (contrôles de la carte).</p>
-          )}
-        </div>
-        <HeadingSettings key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`} p={project} onSaved={onHeadingsSaved} onError={onError} />
-      </div>
-    </div>
-  )
-}
 
-function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => void; onError: (m: string) => void }) {
-  const [minM, setMinM] = useState(String(p.settings.heading_min_m))
-  const [win, setWin] = useState(String(p.settings.heading_window_s))
-  const save = () =>
-    api
-      .updateProject(p.id, { settings: { heading_min_m: Number(minM), heading_window_s: Number(win) } })
-      .then(onSaved, (e) => onError(e.message))
-  return (
-    <div className="small-text">
-      <h3>Calcul du cap (ce projet)</h3>
-      <p className="muted">
-        Le cap d'une photo est la direction vers le premier point suivant situé à au moins cette distance (cherché dans la
-        fenêtre de temps). Les caps manuels ne sont jamais recalculés.
-      </p>
-      <div className="row wrap">
-        <label>
-          Distance min. <input className="num" type="number" min={1} max={100} value={minM} onChange={(e) => setMinM(e.target.value)} /> m
-        </label>
-        <label>
-          Fenêtre <input className="num" type="number" min={1} max={120} value={win} onChange={(e) => setWin(e.target.value)} /> s
-        </label>
-        <button className="small" onClick={save}>
-          Enregistrer et recalculer
-        </button>
-      </div>
-    </div>
-  )
-}
 
 function Summary({ p }: { p: Project }) {
   const s = p.summary
@@ -231,49 +141,6 @@ function metersBetween(lat0: number, lon0: number, lat1: number, lon1: number): 
 }
 function shifted(lat: number, lon: number, east: number, north: number): { lat: number; lon: number } {
   return { lat: lat + north / M_PER_DEG, lon: lon + east / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)) }
-}
-
-
-function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o: OverlaySettings) => void }) {
-  const [url, setUrl] = useState(overlay.url)
-  return (
-    <div className="small-text">
-      <h3>Surcouche Panoramax (toutes les sorties)</h3>
-      <p className="muted">
-        Photos 360° déjà publiées affichées par le bouton « Panoramax » des contrôles de la carte : toutes les instances
-        (méta-catalogue) ou une seule instance.
-      </p>
-      <div className="row wrap">
-        {PANORAMAX_PRESETS.map((p) => (
-          <label key={p.url}>
-            <input
-              type="radio"
-              name="pnx-source"
-              checked={overlay.url === p.url}
-              onChange={() => {
-                setUrl(p.url)
-                onSave({ ...overlay, url: p.url })
-              }}
-            />{' '}
-            {p.label}
-          </label>
-        ))}
-      </div>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault()
-          const u = url.trim().replace(/\/+$/, '')
-          if (/^https?:\/\//.test(u)) onSave({ ...overlay, url: u })
-        }}
-      >
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.example.org" aria-label="Autre instance Panoramax" />
-        <button className="small" type="submit">
-          Enregistrer
-        </button>
-      </form>
-    </div>
-  )
 }
 
 function SeqButtons({
@@ -810,7 +677,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [syncDragged, setSyncDragged] = useState<{ photoId: number; offset: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [custom, setCustom] = useState<Basemap[]>(loadCustomBasemaps)
+  const { custom, add: addBasemap, remove: removeBasemap } = useCustomBasemaps()
   const basemaps = useMemo(() => [...BUILTIN_BASEMAPS, ...custom], [custom])
   const [basemapId, setBasemapId] = useState(() => {
     try {
@@ -1739,9 +1606,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           onOverlay={setOverlay}
           custom={custom}
           onRemoveBasemap={(id) => {
-            const list = custom.filter((b) => b.id !== id)
-            setCustom(list)
-            saveCustomBasemaps(list)
+            removeBasemap(id)
             if (basemapId === id) chooseBasemap('osm')
           }}
           onHeadingsSaved={() => {
@@ -1784,10 +1649,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         <AddBasemap
           onCancel={() => setAddingBasemap(false)}
           onAdd={(name, url, attribution) => {
-            const b: Basemap = { id: `custom-${Date.now()}`, name, url, attribution, maxzoom: 19, custom: true }
-            const list = [...custom, b]
-            setCustom(list)
-            saveCustomBasemaps(list)
+            const b = addBasemap(name, url, attribution)
             setAddingBasemap(false)
             chooseBasemap(b.id)
           }}
