@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, FsListing, GpxSummary, UndoState } from './api'
+import { api, FsListing, GpxSnapStats, GpxSummary, UndoState } from './api'
+import type { SnapPreview } from './OsmSnapPanel'
+import { useDraggable } from './useDraggable'
 import { Confirm } from './Dialogs'
 import FsBrowser from './FsBrowser'
 import { fmtDistance, fmtTime } from './format'
@@ -23,6 +25,16 @@ export function GpxFilePicker({ onPick, onClose }: { onPick: (path: string) => v
       },
       (e) => setError(e.message),
     )
+  // keys stay in the window: arrows must not change the photo behind it; Escape closes
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest('input, textarea, select')) return
+      e.stopImmediatePropagation()
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onClose])
   useEffect(() => {
     let start = '~'
     try {
@@ -194,12 +206,14 @@ export function GpxSection({
   )
 }
 
-// Photos of a range moved onto the closest point of the GPX line (whatever the time), one undoable operation
+// Photos of a range moved onto the closest point of the GPX line (whatever the time), one undoable operation.
+// Floating window (moved by its title bar): the map stays visible with the preview of the moves.
 export function GpxSnapDialog({
   projectId,
   photos,
   initial,
   sequences,
+  onPreview,
   onDone,
   onClose,
   onError,
@@ -208,14 +222,56 @@ export function GpxSnapDialog({
   photos: number // number of photos of the ride
   initial: [number, number] // range proposed (selection, sequence or whole ride)
   sequences: { id: number; name: string; start_idx: number; end_idx: number }[]
+  onPreview: (p: SnapPreview | null) => void // current position → position on the GPX, drawn on the map
   onDone: (msg: string, undo: UndoState) => void
   onClose: () => void
   onError: (m: string) => void
 }) {
+  const { box, style, handlers } = useDraggable<HTMLDivElement>()
   const [range, setRange] = useState<[number, number]>(initial)
   const [maxDist, setMaxDist] = useState(30)
   const [keepManual, setKeepManual] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [stats, setStats] = useState<GpxSnapStats | null>(null)
+  // preview, recomputed when the settings change (a little after the last keystroke)
+  useEffect(() => {
+    let live = true
+    const t = window.setTimeout(() => {
+      api.gpxSnapPreview(projectId, { start_idx: range[0], end_idx: range[1], max_dist: maxDist, keep_manual: keepManual }).then(
+        (r) => {
+          if (!live) return
+          setStats(r)
+          onPreview({
+            ways: { type: 'FeatureCollection', features: [] },
+            moves: {
+              type: 'FeatureCollection',
+              features: r.moves.flatMap(([from, to]) => [
+                { type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates: [from, to] } },
+                { type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: to } },
+              ]),
+            },
+            highlight: null,
+          })
+        },
+        (e) => live && (setStats(null), onPreview(null), onError(e.message)),
+      )
+    }, 300)
+    return () => {
+      live = false
+      window.clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, range[0], range[1], maxDist, keepManual])
+  useEffect(() => () => onPreview(null), []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || (e.target as HTMLElement)?.closest('input, textarea, select')) return
+      e.stopImmediatePropagation()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onClose])
   const apply = () => {
     setBusy(true)
     api
@@ -234,54 +290,70 @@ export function GpxSnapDialog({
       .finally(() => setBusy(false))
   }
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal small-modal" role="dialog" aria-label="Recaler sur la ligne GPX">
-        <h2>Recaler sur la ligne GPX</h2>
-        <p className="small-text muted">
-          Chaque photo est déplacée sur le point le plus proche de la trace GPX (affichée sur la carte), sans tenir compte de
-          l'heure. Pour placer les photos d'après l'heure, utilisez la synchro avec la trace GPX comme référence.
-        </p>
-        <div className="row wrap">
-          <label>
-            Photos{' '}
-            <input type="number" min={1} max={photos} value={range[0] + 1} onChange={(e) => setRange([Math.max(0, Math.min(Number(e.target.value) - 1, range[1])), range[1]])} style={{ width: '6em' }} />
-          </label>
-          <label>
-            →{' '}
-            <input type="number" min={1} max={photos} value={range[1] + 1} onChange={(e) => setRange([range[0], Math.min(photos - 1, Math.max(Number(e.target.value) - 1, range[0]))])} style={{ width: '6em' }} />
-          </label>
-          <button className="link small-text" onClick={() => setRange([0, photos - 1])}>
-            Toute la sortie
-          </button>
-          {sequences.length > 0 && (
-            <select aria-label="Séquence" value="" onChange={(e) => {
+    <div className="snap-panel snap-modal gpx-snap small-text" ref={box} role="dialog" aria-label="Recaler sur la ligne GPX" style={style}>
+      <div className="row between snap-title" title="Faire glisser pour déplacer la fenêtre" {...handlers}>
+        <h3>Recaler sur la ligne GPX</h3>
+        <button className="small" onClick={onClose} aria-label="Fermer">
+          ✕
+        </button>
+      </div>
+      <p className="muted">
+        Chaque photo est déplacée sur le point le plus proche de la trace GPX (en gris sur la carte), sans tenir compte de
+        l'heure ; aperçu des déplacements en pointillés bleus. Pour placer les photos d'après l'heure : la synchro avec la
+        trace GPX comme référence.
+      </p>
+      <div className="row wrap">
+        <label>
+          Photos{' '}
+          <input type="number" min={1} max={photos} value={range[0] + 1} onChange={(e) => setRange([Math.max(0, Math.min(Number(e.target.value) - 1, range[1])), range[1]])} style={{ width: '6em' }} />
+        </label>
+        <label>
+          →{' '}
+          <input type="number" min={1} max={photos} value={range[1] + 1} onChange={(e) => setRange([range[0], Math.min(photos - 1, Math.max(Number(e.target.value) - 1, range[0]))])} style={{ width: '6em' }} />
+        </label>
+        <button className="link small-text" onClick={() => setRange([0, photos - 1])}>
+          Toute la sortie
+        </button>
+        {sequences.length > 0 && (
+          <select
+            aria-label="Séquence"
+            value=""
+            onChange={(e) => {
               const sq = sequences.find((x) => x.id === Number(e.target.value))
               if (sq) setRange([sq.start_idx, sq.end_idx])
-            }}>
-              <option value="">Séquence…</option>
-              {sequences.map((sq) => (
-                <option key={sq.id} value={sq.id}>
-                  {sq.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        <div className="row wrap">
-          <label>
-            Distance maximale{' '}
-            <input type="number" min={1} max={200} value={maxDist} onChange={(e) => setMaxDist(Math.max(1, Math.min(200, Number(e.target.value) || 30)))} style={{ width: '5em' }} /> m
-          </label>
-          <label>
-            <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} /> Garder les positions corrigées à la main
-          </label>
-        </div>
-        <div className="actions">
-          <button onClick={onClose}>Annuler</button>
-          <button className="primary" disabled={busy} onClick={apply}>
-            Recaler les photos {range[0] + 1} → {range[1] + 1}
-          </button>
-        </div>
+            }}
+          >
+            <option value="">Séquence…</option>
+            {sequences.map((sq) => (
+              <option key={sq.id} value={sq.id}>
+                {sq.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+      <div className="row wrap">
+        <label>
+          Distance maximale{' '}
+          <input type="number" min={1} max={200} value={maxDist} onChange={(e) => setMaxDist(Math.max(1, Math.min(200, Number(e.target.value) || 30)))} style={{ width: '5em' }} /> m
+        </label>
+        <label>
+          <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} /> Garder les positions corrigées à la main
+        </label>
+      </div>
+      <p className="gpx-snap-stats">
+        {stats
+          ? `${stats.moved} photo(s) déplacée(s) : ${stats.mean_m} m en moyenne, ${stats.max_m} m au plus` +
+            (stats.too_far ? ` · ${stats.too_far} trop loin` : '') +
+            (stats.kept_manual ? ` · ${stats.kept_manual} corrigée(s) à la main gardée(s)` : '')
+          : 'Calcul de l\'aperçu…'}
+      </p>
+      <div className="row">
+        <span className="spacer" />
+        <button onClick={onClose}>Annuler</button>
+        <button className="primary" disabled={busy || !stats?.moved} onClick={apply}>
+          Recaler {stats ? `${stats.moved} photo(s)` : ''} ({range[0] + 1} → {range[1] + 1})
+        </button>
       </div>
     </div>
   )

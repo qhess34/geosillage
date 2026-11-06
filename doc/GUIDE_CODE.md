@@ -167,8 +167,8 @@ sinon la médiane de `ts − gps_ts` ; modifiable (`PATCH …/gpx`). `track` = r
 `build_camera_track`. **Projection** (`snap`, `POST …/gpx/snap`) : point le plus proche de la ligne (`osm.Frame`,
 `_project_xy`), seulement sur les morceaux du GPX proches des photos ; au-delà de `max_dist` la photo ne bouge pas ;
 `pos_method='gpx'` (dans `MANUAL_METHODS`), une opération annulable. Interface : `Gpx.tsx` (`GpxSection` de l'onglet
-Synchro, `GpxFilePicker` = `FsBrowser` avec `onFile` et `/api/fs?ext=.gpx`, `GpxSnapDialog` avec la ligne affichée
-par `PhotoMap.lineTrack`). Tests : `test_gpx.py`.
+Synchro, `GpxFilePicker` = `FsBrowser` avec `onFile` et `/api/fs?ext=.gpx`, `GpxSnapDialog`, fenêtre flottante sans fond : ligne
+affichée par `PhotoMap.lineTrack`, aperçu `preview: true` → `moves` dans `snapPreview`). Tests : `test_gpx.py`.
 
 ## Positions
 

@@ -313,6 +313,14 @@ export interface GpxSummary {
   in_use: boolean
 }
 
+export interface GpxSnapStats {
+  moved: number
+  too_far: number
+  kept_manual: number
+  mean_m: number
+  max_m: number
+}
+
 export interface FsListing {
   path: string
   parent: string | null
@@ -363,7 +371,9 @@ export const api = {
   gpxTrack: (id: string) => req<{ runs: [number, number, number][][] }>('GET', `/api/projects/${id}/gpx/track`),
   gpxDelete: (id: string) => req<{ gpx: null }>('DELETE', `/api/projects/${id}/gpx`),
   gpxSnap: (id: string, body: { start_idx: number; end_idx: number; max_dist: number; keep_manual: boolean }) =>
-    req<{ moved: number; too_far: number; kept_manual: number; mean_m: number; max_m: number; undo: UndoState }>('POST', `/api/projects/${id}/gpx/snap`, body),
+    req<GpxSnapStats & { undo: UndoState }>('POST', `/api/projects/${id}/gpx/snap`, body),
+  gpxSnapPreview: (id: string, body: { start_idx: number; end_idx: number; max_dist: number; keep_manual: boolean }) =>
+    req<GpxSnapStats & { moves: [[number, number], [number, number]][] }>('POST', `/api/projects/${id}/gpx/snap`, { ...body, preview: true }),
   sequences: (id: string) => req<SeqState>('GET', `/api/projects/${id}/sequences`),
   createSequence: (id: string, start_idx: number, end_idx: number) =>
     req<SeqState & { excluded: number }>('POST', `/api/projects/${id}/sequences`, { start_idx, end_idx }),

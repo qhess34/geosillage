@@ -81,16 +81,18 @@ export default function StopRangeEditor({
                 <span className="muted">{d != null ? `${d < 10 ? d.toFixed(1) : Math.round(d)} m` : ''}</span>
                 {p.excluded ? <span className="muted">exclue</span> : null}
               </button>
-              {!inside && (
-                <button className="small" onClick={() => onRange([Math.min(s, i), Math.max(e, i)])} title="Ajouter à l'arrêt (avec les photos entre les deux)">
-                  + Ajouter
-                </button>
-              )}
-              {inside && s < e && (i === s || i === e) && (
-                <button className="small" onClick={() => onRange(i === s ? [s + 1, e] : [s, e - 1])} title="Retirer de l'arrêt">
-                  − Retirer
-                </button>
-              )}
+              <span className="stop-range-act">
+                {!inside && (
+                  <button className="small" onClick={() => onRange([Math.min(s, i), Math.max(e, i)])} title="Ajouter à l'arrêt (avec les photos entre les deux)">
+                    + Ajouter
+                  </button>
+                )}
+                {inside && s < e && (i === s || i === e) && (
+                  <button className="small" onClick={() => onRange(i === s ? [s + 1, e] : [s, e - 1])} title="Retirer de l'arrêt">
+                    − Retirer
+                  </button>
+                )}
+              </span>
             </li>
           )
         })}

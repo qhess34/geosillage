@@ -107,6 +107,9 @@ def test_snap_range_onto_gpx_and_undo(project):
     client.post(f"/api/projects/{pid}/gpx", json={"path": str(path)})
     good = [r for r in rows if r["flags"] == 0]
     a, b = good[10]["idx"], good[40]["idx"]
+    pre = client.post(f"/api/projects/{pid}/gpx/snap", json={"start_idx": a, "end_idx": b, "preview": True}).json()
+    assert pre["moved"] >= 25 and len(pre["moves"]) == pre["moved"] and "undo" not in pre
+    assert client.get(f"/api/projects/{pid}/photos/{good[20]['id']}").json()["pos_method"] is None  # nothing changed
     res = client.post(f"/api/projects/{pid}/gpx/snap", json={"start_idx": a, "end_idx": b}).json()
     assert res["moved"] >= 25 and res["max_m"] < 30
     d = client.get(f"/api/projects/{pid}/photos/{good[20]['id']}").json()

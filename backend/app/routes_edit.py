@@ -579,6 +579,7 @@ class GpxSnapIn(BaseModel):
     end_idx: int
     max_dist: float = Field(default=gpx.SNAP_MAX_DIST_M, gt=0, le=200)
     keep_manual: bool = True
+    preview: bool = False  # only say what would move (map preview), change nothing
 
 
 @router.get("/gpx")
@@ -648,19 +649,22 @@ def gpx_snap(pid: str, body: GpxSnapIn):
         todo = [p for p in photos if not (body.keep_manual and p["pos_method"] in positions.MANUAL_METHODS and p["pos_method"] != "gpx")]
         res = gpx.snap(todo, g["runs"], body.max_dist)
         a, b = sorted((body.start_idx, body.end_idx))
-        with undo.undoable(conn, f"Recalage sur la trace GPX (photos {a + 1} → {b + 1})"):
-            for pid_, (lat, lon, _) in res.items():
-                conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='gpx', time_offset=NULL WHERE id=?", (lat, lon, pid_))
-        headings.recompute(conn, mark_stale_ids=set(res))
         dists = [d for _, _, d in res.values()]
-        return {
+        stats = {
             "moved": len(res),
             "too_far": len(todo) - len(res),
             "kept_manual": len(photos) - len(todo),
             "mean_m": round(sum(dists) / len(dists), 1) if dists else 0,
             "max_m": round(max(dists), 1) if dists else 0,
-            "undo": undo.state(conn),
         }
+        if body.preview:
+            at = {p["id"]: p for p in todo}
+            return {**stats, "moves": [[[at[i]["lon"], at[i]["lat"]], [lon, lat]] for i, (lat, lon, _) in res.items()]}
+        with undo.undoable(conn, f"Recalage sur la trace GPX (photos {a + 1} → {b + 1})"):
+            for pid_, (lat, lon, _) in res.items():
+                conn.execute("UPDATE photo SET lat=?, lon=?, pos_method='gpx', time_offset=NULL WHERE id=?", (lat, lon, pid_))
+        headings.recompute(conn, mark_stale_ids=set(res))
+        return {**stats, "undo": undo.state(conn)}
 
 
 @router.get("/timesync/runs")
