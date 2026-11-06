@@ -53,8 +53,8 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 | Carte, fonds, surcouche Panoramax, légende | — | `PhotoMap`, `basemaps.ts`, `panoramaxLayer.ts`, `MapLegend` | — |
 
 Commandes : `cd backend && ../.venv/bin/python -m pytest -q` (~75 s) · `cd frontend && npm run build` ·
-`cd e2e && npm test` (~20 s, après la construction) · captures du guide : `tools/captures.sh` (plusieurs minutes, seulement
-si un écran montré change). `ProjectView.tsx` est long (~1 000 lignes) : chercher (`grep -n`) plutôt que le lire en entier ; raccourcis, onglets Photo / Bilan, menu contextuel et points à vérifier sont dans leurs propres fichiers.
+`cd e2e && npm test` (~20 s, après la construction) · captures du guide : `tools/captures.sh` (plusieurs minutes,
+**seulement à la demande de l'utilisateur**). `ProjectView.tsx` est long (~1 000 lignes) : chercher (`grep -n`) plutôt que le lire en entier ; raccourcis, onglets Photo / Bilan, menu contextuel et points à vérifier sont dans leurs propres fichiers.
 
 ## Règles
 
@@ -73,11 +73,25 @@ si un écran montré change). `ProjectView.tsx` est long (~1 000 lignes) : cherc
   comme HTML.
 - **Langue** : interface, erreurs, documentation et commits en **français** ; code et commentaires en anglais,
   courts.
-- **Documentation dans le même commit** : `GUIDE_UTILISATEUR.md` pour tout changement visible (et ses captures,
-  `tools/captures.sh`, si un écran montré change), `GUIDE_CODE.md` pour le fonctionnement, ce fichier si une règle
+- **Documentation dans le même commit** : `GUIDE_UTILISATEUR.md` pour tout changement visible (ses captures,
+  `tools/captures.sh`, seulement quand l'utilisateur le demande), `GUIDE_CODE.md` pour le fonctionnement, ce fichier si une règle
   ou l'organisation change.
 - **Ne pas prétendre avoir vérifié** ce qui ne peut pas l'être hors ligne (tuiles réelles, site Panoramax) : le
   dire.
+
+## Contribuer sobrement (agents IA)
+
+Pour limiter le temps et les tokens consommés par une tâche :
+
+- **Regrouper les petites corrections dans une seule PR** (une branche, une PR, un passage du CI) plutôt qu'une PR
+  par correctif ; une PR à part seulement pour un changement important ou risqué.
+- **Se fier aux tests plutôt qu'aux captures** : `e2e` (« 10 passed ») et pytest suffisent pour un comportement.
+  Une capture seulement pour une mise en page nouvelle, **recadrée** sur la zone modifiée.
+- **Captures du guide (`tools/captures.sh`) : uniquement quand l'utilisateur le demande.** Un écran du guide qui
+  change sans demande : le signaler à la fin de la tâche, sans régénérer.
+- **Lire peu de journaux** : du CI, seulement l'issue des vérifications ; le journal d'un job seulement s'il échoue,
+  limité aux dernières lignes. Idem pour les sorties locales (`tail`, `grep`).
+- Chercher (`grep -n`, carte rapide ci-dessus) plutôt que lire un gros fichier en entier.
 
 ## Vérifier avant de committer
 
