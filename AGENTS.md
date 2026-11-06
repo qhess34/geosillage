@@ -10,51 +10,36 @@ séquence avec EXIF corrigés (ExifTool), publication sur une instance Panoramax
 dernier export). Deux types de projet : **sortie** (photos du disque) et **Panoramax** (séquences déjà publiées,
 photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'export ; `routes_edit.ride_only`).
 
-| Document | Contenu |
-|---|---|
-| `doc/GUIDE_UTILISATEUR.md` | utilisation de l'outil, écran par écran, raccourcis, questions fréquentes |
-| `doc/DEVELOPPEMENT.md` | installation, vérifications (tests, construction, Playwright), recettes, conventions |
-| `doc/GUIDE_CODE.md` | fonctionnement interne : modules, données, algorithmes, pièges connus |
-| `doc/ETUDE_PHASE1.md` | étude GoPro MAX et API Panoramax (découpage, doublons, cap) |
+Docs (`doc/`) : `GUIDE_UTILISATEUR.md` (usage, écran par écran) · `DEVELOPPEMENT.md` (installation, vérifications,
+recettes, conventions) · `GUIDE_CODE.md` (modules, données, algorithmes, pièges ; sommaire en tête) ·
+`ETUDE_PHASE1.md` (GoPro MAX, API Panoramax).
 
-## Organisation
+## Où modifier quoi
 
-| Chemin | Contenu |
-|---|---|
-| `backend/app/main.py` | API projets, photos, import, fichiers ; sert l'interface construite |
-| `backend/app/routes_edit.py` | API séquences, annuler/rétablir, caps, orientation, positions, synchro, export |
-| `backend/app/core/` | calculs purs : géodésie, analyse, caps, séquences, positions, synchro, recalage OSM (`osm.py`, Overpass) |
-| `backend/app/db.py`, `undo.py`, `jobs.py` | SQLite par projet + migrations, journal annuler/rétablir, tâches de fond |
-| `backend/app/exporter.py`, `exif/` | export, modification/restauration des sources, lecture/écriture ExifTool |
-| `backend/app/panoramax.py`, `routes_publish.py` | connexion à une instance Panoramax (lien de validation), publication par séquence |
-| `backend/tests/` | pytest (photos simulées par `tools/make_samples.py`) |
-| `frontend/src/ProjectView.tsx` | écran principal : état, barre d'outils, carte, timeline, onglets ; s'appuie sur `shortcuts.ts` (raccourcis), `useIssues.ts` (points à vérifier), `contextMenuItems.ts` (clic droit), `PhotoTab`, `SummaryTab`, `ProjectDialogs`, `JobBar` |
-| `frontend/src/*.tsx`, `*.ts` | carte (`PhotoMap`), timeline, visionneuse 360°, onglets, surcouche Panoramax, API (`api.ts`) |
+Serveur : `backend/app/` — `main.py` (projets, photos, import, fichiers, sert l'interface), `routes_edit.py`
+(séquences, annuler, caps, orientation, positions, synchro, export), `core/` (calculs purs), `db.py` / `undo.py` /
+`jobs.py` (SQLite + migrations, journal, tâches), `exporter.py` + `exif/`, `panoramax.py` + `routes_publish.py`.
+Tests : `backend/tests/` (photos simulées par `tools/make_samples.py`), `e2e/tests/` (Playwright).
+Interface : `frontend/src/ProjectView.tsx` (écran principal) + `shortcuts.ts`, `useIssues.ts`, `contextMenuItems.ts`,
+`PhotoTab`, `SummaryTab`, `ProjectDialogs`, `JobBar`, `PhotoMap`, `Timeline`, `Viewer360`, `api.ts`.
 
-## Carte rapide : où modifier quoi
+| Fonction | Serveur | Interface (tests) |
+|---|---|---|
+| Import | `importer.py`, `main.py` | `ImportDialog`, `FsBrowser` (`test_import`, e2e `files`) |
+| Séquences, exclusion, annuler | `core/sequences.py`, `undo.py`, `routes_edit.py` | `SequencesTab`, `shortcuts.ts` (e2e `edits`) |
+| Raccourcis, menu contextuel | — | `shortcuts.ts`, `contextMenuItems.ts`, `HelpDialog` (e2e `navigation`) |
+| Synchro (retard GPS), GPX | `core/timesync.py`, `core/gpx.py` | `SyncTab`, `Gpx.tsx` (`test_timesync`, `test_gpx`) |
+| Positions, recalage OSM | `core/positions.py`, `core/osm.py` | `PhotoTab`, `OsmSnapPanel` (`test_positions_sources`, `test_osm`) |
+| Caps et orientation | `core/headings.py` | `PhotoTab`, `SummaryTab`, `HeadingDial`, `YawRotate` (`test_headings`) |
+| Points à vérifier, arrêts | `core/quality.py`, `core/analysis.py` | `issues.ts`, `IssuesPanel`, `StopRangeEditor` (`test_quality`, e2e `issues`) |
+| Réglages | `config.DEFAULT_SETTINGS`, `main.SettingsIn` | `SettingsDialog` |
+| Export, EXIF | `exporter.py`, `exif/` | `ExportTab` (`test_export`) |
+| Publication / projet Panoramax | `panoramax.py`, `routes_publish.py` | `Publication`, `SendTab`, `PublishedEdit` (`test_publish`) |
+| Carte, fonds, surcouche | — | `PhotoMap`, `basemaps.ts`, `panoramaxLayer.ts`, `MapLegend` |
 
-| Fonction | Serveur | Interface | Tests |
-|---|---|---|---|
-| Import, miniatures, sélecteur de dossiers / fichiers | `importer.py`, `main.py` (`/api/fs`) | `ImportDialog`, `FsBrowser`, `FolderPicker` | `test_import`, e2e `files` |
-| Séquences (D / F, couper, fusionner, limites) | `core/sequences.py`, `routes_edit.py` | `SequencesTab`, `shortcuts.ts`, `PhotoTab` (`SeqButtons`) | `test_export`, e2e `edits` |
-| Exclusion, annuler / rétablir | `undo.py`, `routes_edit.py` | `shortcuts.ts`, `ProjectDialogs` (confirmation), `Timeline` (`hideExcluded`) | e2e `edits` |
-| Raccourcis clavier, aide `?` | — | `shortcuts.ts` (`useShortcuts`, `SHORTCUTS`), `ProjectDialogs` (`HelpDialog`) | e2e `navigation`, `edits` |
-| Menu contextuel (clic droit : recalage, cap, orientation, séquence) | — | `contextMenuItems.ts`, `ProjectDialogs` (`RangeValueDialog`) | — |
-| Synchro (retard GPS) | `core/timesync.py` | `SyncTab`, `timesync.ts`, `PhotoMap` (marqueur, aperçu) | `test_timesync` |
-| Trace GPX (référence synchro, recalage sur la ligne) | `core/gpx.py`, routes `/gpx` | `Gpx.tsx` | `test_gpx`, e2e `gpx` |
-| Positions (glisser, interpolation, report) | `core/positions.py` | `ProjectView` (report), `PhotoTab`, `PhotoMap` (mode Positions) | `test_positions_sources` |
-| Recalage OSM | `core/osm.py` | `OsmSnapPanel` | `test_osm` |
-| Caps et orientation | `core/headings.py` | `PhotoTab`, `SummaryTab` (toute la sortie), `HeadingDial`, `CapOrientation`, `YawRotate`, `Viewer360` | `test_headings` |
-| Points à vérifier (arrêts, écarts, DOP, caps, sans cap…) | `core/quality.py`, `core/analysis.py` | `issues.ts` (textes, liste), `useIssues.ts`, `IssuesPanel`, `CheckCard`, `StepBar` | `test_quality`, e2e `issues` |
-| Arrêts (ajuster, comparer, exclure) | — | `StopRangeEditor`, `StopCompare` | e2e `issues` |
-| Réglages (seuils, cap, surcouche) | `config.DEFAULT_SETTINGS`, `main.SettingsIn` | `SettingsDialog` | e2e `edits` |
-| Export, EXIF | `exporter.py`, `exif/` | `ExportTab` | `test_export` |
-| Publication / projet Panoramax | `panoramax.py`, `routes_publish.py` | `Publication`, `SendTab`, `PublishedEdit`, `NewPanoramaxProject` | `test_publish` |
-| Carte, fonds, surcouche Panoramax, légende | — | `PhotoMap`, `basemaps.ts`, `panoramaxLayer.ts`, `MapLegend` | — |
-
-Commandes : `cd backend && ../.venv/bin/python -m pytest -q` (~75 s) · `cd frontend && npm run build` ·
-`cd e2e && npm test` (~20 s, après la construction) · captures du guide : `tools/captures.sh` (plusieurs minutes,
-**seulement à la demande de l'utilisateur**). `ProjectView.tsx` est long (~1 000 lignes) : chercher (`grep -n`) plutôt que le lire en entier ; raccourcis, onglets Photo / Bilan, menu contextuel et points à vérifier sont dans leurs propres fichiers.
+Vérifications : `tools/check.sh [back|front|e2e|all]` (voir plus bas). Captures du guide : `tools/captures.sh`
+(plusieurs minutes, **seulement à la demande de l'utilisateur**). `ProjectView.tsx` est long (~1 000 lignes) :
+chercher (`grep -n`) plutôt que le lire en entier.
 
 ## Règles
 
@@ -81,26 +66,32 @@ Commandes : `cd backend && ../.venv/bin/python -m pytest -q` (~75 s) · `cd fron
 
 ## Contribuer sobrement (agents IA)
 
-Pour limiter le temps et les tokens consommés par une tâche :
+Pour limiter le temps et les tokens consommés :
 
-- **Regrouper les petites corrections dans une seule PR** (une branche, une PR, un passage du CI) plutôt qu'une PR
-  par correctif ; une PR à part seulement pour un changement important ou risqué.
-- **Se fier aux tests plutôt qu'aux captures** : `e2e` (« 10 passed ») et pytest suffisent pour un comportement.
-  Une capture seulement pour une mise en page nouvelle, **recadrée** sur la zone modifiée.
+- **Une session par lot cohérent** de travail, archivée une fois la PR fusionnée ; une suite se reprend dans une
+  session neuve avec le lien de la PR. Au plus 1 à 3 PR par session.
+- **Regrouper les petites corrections dans une seule PR** (une branche, un passage du CI) ; une PR à part seulement
+  pour un changement important ou risqué.
+- **Tests plutôt que captures** : pytest et e2e (« 10 passed ») suffisent pour un comportement. Une capture seulement
+  pour une mise en page nouvelle, **recadrée** sur la zone modifiée.
 - **Captures du guide (`tools/captures.sh`) : uniquement quand l'utilisateur le demande.** Une PR qui change un
   écran montré dans le guide ne régénère pas : elle ajoute la ou les captures concernées (nom, changement, numéro de
   PR) à l'issue ouverte « Mettre à jour les captures du guide » (label `documentation`), ou la crée si aucune n'est
   ouverte. La PR qui régénère les captures ferme l'issue (« Closes #… »).
-- **Lire peu de journaux** : du CI, seulement l'issue des vérifications ; le journal d'un job seulement s'il échoue,
-  limité aux dernières lignes. Idem pour les sorties locales (`tail`, `grep`).
-- Chercher (`grep -n`, carte rapide ci-dessus) plutôt que lire un gros fichier en entier.
+- **Tests ciblés pendant la mise au point** (`tools/check.sh back tests/test_osm.py`, `e2e --grep …`), suite complète
+  une seule fois avant le push ; pousser une fois les vérifications locales vertes.
+- **Attendre le CI avec `subscribe_pr_activity`**, jamais de polling. Journaux : seulement l'issue des vérifications,
+  le journal d'un job seulement s'il échoue, sur les dernières lignes (`tail`, `grep`).
+- **Lire une section, pas le fichier** : `grep -n '^## ' doc/GUIDE_CODE.md` puis `sed -n 'a,bp'` ; idem pour le code
+  (carte rapide ci-dessus).
+- **Modèle / effort** : léger pour textes, CSS et petits défauts ; élevé pour caps, orientation, EXIF, synchro et
+  publication.
 
 ## Vérifier avant de committer
 
 ```sh
-cd backend && ../.venv/bin/python -m pytest -q     # tous verts
-cd frontend && npm run build                        # tsc + vite sans erreur
-cd e2e && npm test                                  # tests d'interface Playwright (après la construction)
+tools/check.sh all     # pytest + tsc/vite + Playwright ; n'affiche que l'essentiel, code non nul si échec
+tools/check.sh back [fichier de test]   |   front   |   e2e [--grep motif]
 ```
 
 Une fonction nouvelle ou corrigée dans l'interface s'accompagne d'un test dans `e2e/tests/` (`doc/DEVELOPPEMENT.md`
@@ -111,10 +102,4 @@ passent.
 
 ## Pièges fréquents
 
-- ExifTool : options à répéter pour chaque commande d'un fichier d'arguments ; seules les lignes `Error` sont des
-  erreurs.
-- MapLibre : `zoom` au premier niveau des expressions ; pas de `null` dans les filtres ; `setStyle(…, {diff:false})`.
-- Interface : les photos sont rechargées après chaque action ; un raccourci pressé juste après voit l'ancien état.
-- Docker : après un changement, l'utilisateur doit reconstruire (`docker compose up -d --build`).
-- SQLite : jamais d'opération longue (déplacement de fichier, réseau, ExifTool) dans `db.transaction` : le verrou
-  bloque toutes les modifications (« database is locked » au bout de 30 s, renvoyé en 503 avec un message clair).
+ExifTool, MapLibre, SQLite (verrou), rechargement des photos, Docker : voir `doc/GUIDE_CODE.md` § « Pièges connus ».

@@ -58,7 +58,7 @@ terrain en CSV) :
 
 ## 3. Vérifier un changement
 
-**Ces vérifications sont à faire avant chaque commit.** GitHub Actions (`.github/workflows/ci.yml`, « Vérifications »)
+**Ces vérifications sont à faire avant chaque commit** (`tools/check.sh all` les enchaîne en n'affichant que l'essentiel ; `back`, `front` ou `e2e` pour une seule ; arguments transmis à pytest / Playwright). GitHub Actions (`.github/workflows/ci.yml`, « Vérifications »)
 relance à chaque push et pull request les tests backend (avec ExifTool), la construction de l'interface, les tests
 d'interface (Playwright) et la construction de l'image Docker : ✅ / ❌ à côté de chaque commit ; en cas d'échec des
 tests d'interface, le rapport (captures des tests en échec) est joint au lancement (« rapport-playwright »).
