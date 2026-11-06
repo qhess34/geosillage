@@ -817,7 +817,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     if (tab !== 'sync') return
     api.track(projectId).then((t) => setTrack(t.runs), (e) => setError(e.message))
   }, [tab, projectId, photoCount])
-  const sync = useMemo(() => (tab === 'sync' && track ? { track, offset: syncOffset } : null), [tab, track, syncOffset])
+  // photos the offset would move (scope of the Synchro tab): only they are previewed on the map
+  const [syncIds, setSyncIds] = useState<Set<number> | null>(null)
+  const sync = useMemo(() => (tab === 'sync' && track ? { track, offset: syncOffset, ids: syncIds } : null), [tab, track, syncOffset, syncIds])
   const onSyncOffset = useCallback(
     (offset: number, final: boolean) => {
       setSyncOffset(offset)
@@ -1497,6 +1499,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             )}
             {tab === 'sync' && (
               <SyncTab
+                onPreviewIds={setSyncIds}
                 projectId={projectId}
                 photo={detail}
                 photos={photos}

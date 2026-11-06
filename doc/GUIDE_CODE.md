@@ -243,6 +243,10 @@ de la photo (pour ne pas s'accrocher à un autre passage dans la même rue) ; d�
 instant de la photo. Le navigateur fait la même projection (`timesync.ts`, projection plane locale) pour l'aperçu
 pendant le glisser, puis demande la valeur au backend au relâchement.
 
+Aperçu : `SyncTab` calcule les photos que la portée choisie déplacerait (sans les corrections à la main si elles
+sont gardées, comme `positions.MANUAL_METHODS`) et les passe à la carte (`sync.ids`) ; seules ces photos ont un
+point orange.
+
 Lots (`timesync.runs`, `GET …/timesync/runs`) : photos consécutives (non exclues, utilisables) de même
 `time_offset` arrondi au dixième (`pos_method = 'time'`), sinon « non synchronisées » ; les photos corrigées à la
 main (`MANUAL_METHODS`) ne coupent pas un lot, elles y sont comptées (`manual`). Affiché dans l'onglet *Synchro*.

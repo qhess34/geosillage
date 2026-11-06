@@ -14,7 +14,8 @@ interface Props {
   selectedId: number | null
   range: [number, number] | null
   editMode: boolean // positions: drag the selected photo, or click the map to place it
-  sync: { track: Track; offset: number | null } | null // time synchronisation mode
+  // time synchronisation mode; ids: photos the offset would move (scope chosen in the Synchro tab), null = all
+  sync: { track: Track; offset: number | null; ids: Set<number> | null } | null
   viewAzimuth?: number | null // direction looked at in the 360° viewer: the selected arrow follows it
   overlay: OverlaySettings // photos already published on Panoramax
   follow: boolean // move the map to keep the selected photo visible while navigating
@@ -37,11 +38,11 @@ function syncTrackGeoJSON(track: Track | undefined): GeoJSON.Feature {
 }
 
 // Preview: every dated photo placed on the track at (time + offset)
-function ghostsGeoJSON(photos: PhotoRow[], track: Track | undefined, offset: number | null): GeoJSON.FeatureCollection {
+function ghostsGeoJSON(photos: PhotoRow[], track: Track | undefined, offset: number | null, ids: Set<number> | null = null): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
   if (track && offset != null) {
     for (const p of photos) {
-      if (p.ts == null) continue
+      if (p.ts == null || (ids && !ids.has(p.id))) continue
       const pos = positionAt(track, p.ts + offset)
       if (pos) features.push({ type: 'Feature', properties: { id: p.id }, geometry: { type: 'Point', coordinates: [pos[1], pos[0]] } })
     }
@@ -419,9 +420,10 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     if (m.getLayer('snap-hl')) m.setFilter('snap-hl', ['==', ['get', 'id'], snapPreview?.highlight ?? -1])
   }, [snapPreview])
 
-  // Sync mode: track and preview of all photos shifted by the offset (one update per animation frame)
+  // Sync mode: track and preview of the photos of the chosen scope shifted by the offset (one update per frame)
   const syncTrack = sync?.track
   const syncOffset = sync?.offset ?? null
+  const syncIds = sync?.ids ?? null
   useEffect(() => {
     const m = map.current
     if (!m || !ready.current || !m.getLayer('sync-track')) return
@@ -432,10 +434,10 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     const m = map.current
     if (!m || !ready.current) return
     const id = requestAnimationFrame(() =>
-      (m.getSource('ghosts') as GeoJSONSource | undefined)?.setData(ghostsGeoJSON(latest.current.photos, syncTrack, syncTrack ? syncOffset : null)),
+      (m.getSource('ghosts') as GeoJSONSource | undefined)?.setData(ghostsGeoJSON(latest.current.photos, syncTrack, syncTrack ? syncOffset : null, syncIds)),
     )
     return () => cancelAnimationFrame(id)
-  }, [syncTrack, syncOffset, photos])
+  }, [syncTrack, syncOffset, syncIds, photos])
 
   // Sync mode: the selected photo's marker slides along the track only
   useEffect(() => {
