@@ -99,7 +99,7 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 ## 3. L'écran
 
 ```
-┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Couper · Début · Fin │ Positions … ?
+┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Couper · Début · Fin │ Positions … ⚙ Réglages · ?
 ├ étapes : Import · Synchro · Doublons et arrêts · Correction GPS · Séquences · Export · Envoi
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
@@ -109,6 +109,10 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 │ timeline (toute la sortie)                   │                              │
 └──────────────────────────────────────────────┴──────────────────────────────┘
 ```
+
+**⚙ Réglages** (barre d'outils) : les réglages généraux, dans une fenêtre — source de la surcouche Panoramax et
+fonds de carte ajoutés (pour toutes les sorties ; *Retirer* supprime un fond ajouté), calcul du cap (distance
+minimale et fenêtre de temps, pour ce projet ; *Enregistrer et recalculer*).
 
 **Barre d'étapes** (sous la barre d'outils) : où en est la sortie, dans l'ordre de travail. Chaque étape est
 **✓ verte** (rien à faire), **! orange** (quelque chose à reprendre, résumé à côté) ou **numérotée en gris** (pas
@@ -161,7 +165,7 @@ Bouton **Panoramax** (contrôles de la carte, en haut à droite) : affiche les p
 Couleur selon l'âge : vert moins d'un an, orange 1 à 3 ans, rouge plus de 3 ans. Séquences visibles à partir du
 zoom 7, photos à partir du zoom 15. Au survol : date, appareil, **auteur**.
 
-Source (onglet *Bilan*) : **toutes les instances** (par défaut, méta-catalogue de panoramax.fr), OpenStreetMap
+Source (bouton **⚙ Réglages** de la barre d'outils) : **toutes les instances** (par défaut, méta-catalogue de panoramax.fr), OpenStreetMap
 France, IGN, ou l'adresse d'une autre instance.
 
 ![Surcouche Panoramax](images/10-panoramax.webp)

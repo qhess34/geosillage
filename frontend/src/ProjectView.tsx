@@ -94,6 +94,71 @@ function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDon
   )
 }
 
+// Settings (button ⚙ of the toolbar): display of the map for every ride, heading computation of this project
+function SettingsDialog({
+  project,
+  overlay,
+  onOverlay,
+  custom,
+  onRemoveBasemap,
+  onHeadingsSaved,
+  onError,
+  onClose,
+}: {
+  project: Project
+  overlay: OverlaySettings
+  onOverlay: (o: OverlaySettings) => void
+  custom: Basemap[]
+  onRemoveBasemap: (id: string) => void
+  onHeadingsSaved: () => void
+  onError: (m: string) => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onClose])
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal settings" role="dialog" aria-label="Réglages">
+        <div className="row between">
+          <h2>⚙ Réglages</h2>
+          <button className="small" onClick={onClose} aria-label="Fermer">
+            ✕
+          </button>
+        </div>
+        <OverlayUrl overlay={overlay} onSave={onOverlay} />
+        <div className="small-text">
+          <h3>Fonds de carte ajoutés (toutes les sorties)</h3>
+          {custom.length ? (
+            <ul className="settings-list">
+              {custom.map((b) => (
+                <li key={b.id}>
+                  <span>
+                    <strong>{b.name}</strong> <span className="muted mono break">{b.url}</span>
+                  </span>
+                  <button className="small danger" onClick={() => onRemoveBasemap(b.id)}>
+                    Retirer
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">Aucun : « + Ajouter un fond XYZ… » dans la liste des fonds de carte (contrôles de la carte).</p>
+          )}
+        </div>
+        <HeadingSettings key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`} p={project} onSaved={onHeadingsSaved} onError={onError} />
+      </div>
+    </div>
+  )
+}
+
 function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => void; onError: (m: string) => void }) {
   const [minM, setMinM] = useState(String(p.settings.heading_min_m))
   const [win, setWin] = useState(String(p.settings.heading_window_s))
@@ -103,7 +168,7 @@ function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => v
       .then(onSaved, (e) => onError(e.message))
   return (
     <div className="small-text">
-      <h4>Calcul du cap</h4>
+      <h3>Calcul du cap (ce projet)</h3>
       <p className="muted">
         Le cap d'une photo est la direction vers le premier point suivant situé à au moins cette distance (cherché dans la
         fenêtre de temps). Les caps manuels ne sont jamais recalculés.
@@ -343,9 +408,9 @@ function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o:
   const [url, setUrl] = useState(overlay.url)
   return (
     <div className="small-text">
-      <h3>Surcouche Panoramax</h3>
+      <h3>Surcouche Panoramax (toutes les sorties)</h3>
       <p className="muted">
-        Photos 360° déjà publiées affichées par le bouton « Panoramax » de la barre d'outils : toutes les instances
+        Photos 360° déjà publiées affichées par le bouton « Panoramax » des contrôles de la carte : toutes les instances
         (méta-catalogue) ou une seule instance.
       </p>
       <div className="row wrap">
@@ -902,6 +967,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [showHelp, setShowHelp] = useState(false)
   const [confirmExclude, setConfirmExclude] = useState<{ range: [number, number]; n: number } | null>(null)
   const [addingBasemap, setAddingBasemap] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   // heading offset / orientation of a series of photos (context menu)
   const [valueDlg, setValueDlg] = useState<{ kind: 'offset' | 'yaw'; range: [number, number] } | null>(null)
   const [issuesStep, setIssuesStep] = useState<IssueStep | null>(null) // list of things to fix of a step (floating window)
@@ -1222,7 +1288,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg) return
+      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg || showSettings) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl && e.key.toLowerCase() === 'z') {
         undoRedo(e.shiftKey ? 'redo' : 'undo')
@@ -1301,7 +1367,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, showSettings])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
@@ -1442,6 +1508,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </button>
         <span className="spacer" />
         {notice && <div className="toast small-text">✓ {notice}</div>}
+        <button onClick={() => setShowSettings(true)} title="Réglages : surcouche Panoramax, fonds de carte ajoutés, calcul du cap">
+          ⚙ Réglages
+        </button>
         <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">
           ?
         </button>
@@ -1775,7 +1844,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <>
                 <Summary p={project} />
-                <OverlayUrl overlay={overlay} onSave={setOverlay} />
                 <div className="row wrap">
                   {!isPnx && (
                     <button className="small" onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
@@ -1789,16 +1857,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   )}
                 </div>
                 <RideHeadings projectId={projectId} onDone={(u) => afterHeadingChange(u)} onError={fail} />
-                <HeadingSettings
-                  key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`}
-                  p={project}
-                  onSaved={() => {
-                    setNotice('Caps recalculés')
-                    lastPhotosKey.current = ''
-                    refresh()
-                  }}
-                  onError={fail}
-                />
                 {project.source_dirs.length > 0 && (
                   <>
                     <h3>Dossiers sources</h3>
@@ -1834,6 +1892,27 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             exportées ; Ctrl+Z annule.
           </p>
         </Confirm>
+      )}
+      {showSettings && (
+        <SettingsDialog
+          project={project}
+          overlay={overlay}
+          onOverlay={setOverlay}
+          custom={custom}
+          onRemoveBasemap={(id) => {
+            const list = custom.filter((b) => b.id !== id)
+            setCustom(list)
+            saveCustomBasemaps(list)
+            if (basemapId === id) chooseBasemap('osm')
+          }}
+          onHeadingsSaved={() => {
+            setNotice('Caps recalculés')
+            lastPhotosKey.current = ''
+            refresh()
+          }}
+          onError={fail}
+          onClose={() => setShowSettings(false)}
+        />
       )}
       {valueDlg && (
         <ValueDialog
