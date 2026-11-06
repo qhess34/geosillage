@@ -424,6 +424,9 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 - `StopCompare.tsx` : photos d'un arrêt côte à côte, exclusion des non gardées en un appel `excludePhotos`.
 - `N` / `Maj+N` (`checkPoints` dans `ProjectView`) : points à vérifier, sauts GPS non corrigés, photos sans position,
   photos non classées, triés par index.
+  `IssuesPanel.tsx` : fenêtre flottante (`useDraggable`, partagé avec `OsmSnapPanel`) des problèmes d'une étape
+  (`STEP_KINDS`), groupés avec cause et correction (`KIND_INFO`) ; ouverte par la `StepBar` (`onIssues`) ; plus de
+  listes de corrections dans le *Bilan*.
   Chaque `CheckPoint` a un `kind` ; `focusOn` y va et l'explique dans `CheckCard` (haut de l'onglet Photo : problème,
   marche à suivre, actions) ; `focusFirst(kinds)` sert à l'étape *Correction GPS* ; la carte est retirée quand la
   photo courante sort de `start..end`.

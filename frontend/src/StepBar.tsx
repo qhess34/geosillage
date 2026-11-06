@@ -24,8 +24,8 @@ export default function StepBar({
   quality,
   tab,
   onTab,
-  onCompare,
-  onFocus,
+  onIssues,
+  issueCounts,
 }: {
   project: Project
   photos: PhotoRow[]
@@ -33,9 +33,9 @@ export default function StepBar({
   quality: QualityIssue[]
   tab: StepTab
   onTab: (t: StepTab) => void
-  onCompare: (range: [number, number]) => void // photos of a stop side by side
-  // go to the first point of these kinds and explain it (card on the Photo tab); false if there is none
-  onFocus: (kinds: ('missing' | 'jump' | 'spacing' | 'gps_dop' | 'heading')[]) => boolean
+  // steps with things to fix open their list (floating window over the map)
+  onIssues: (step: 'dups' | 'gps' | 'seq') => void
+  issueCounts: { dups: number; gps: number; seq: number }
 }) {
   const pnx = project.kind === 'panoramax'
   const usable = photos.filter((p) => !p.excluded && !(p.flags & UNUSABLE))
@@ -74,9 +74,9 @@ export default function StepBar({
       ? `${plural(stops.length, 'arrêt', 'arrêts')} à trier`
       : `${dups ? `${plural(dups, 'doublon écarté', 'doublons écartés')} · ` : ''}aucun arrêt`,
     help: stops.length
-      ? 'Photos prises au même endroit (feu rouge, pause) : gardez la ou les meilleures et excluez les autres. Clic : comparer les photos du premier arrêt.'
+      ? 'Photos prises au même endroit (feu rouge, pause) : gardez la ou les meilleures et excluez les autres. Clic : la liste des arrêts à trier.'
       : 'Les fichiers identiques sont écartés à l\'import. Aucune série de photos au même endroit.',
-    go: () => (stops.length ? onCompare([stops[0].start_idx, stops[0].end_idx]) : onTab('summary')),
+    go: () => (issueCounts.dups ? onIssues('dups') : onTab('summary')),
   })
 
   // 4. GPS correction: positions, GPS jumps, points to check about positions and headings
@@ -95,10 +95,8 @@ export default function StepBar({
     sub: gpsParts.length ? gpsParts.join(' · ') : 'rien à signaler',
     help:
       'Positions (M), photos sans position, recalage OSM, caps. ' +
-      (gpsParts.length ? 'Clic : le premier point à corriger, expliqué en haut de l\'onglet Photo.' : 'Plus rien n\'est signalé.'),
-    go: () => {
-      if (!onFocus(['missing', 'jump', 'spacing', 'gps_dop', 'heading'])) onTab('summary')
-    },
+      (gpsParts.length ? 'Clic : la liste des corrections (cause, correction) ; un clic sur une photo y va.' : 'Plus rien n\'est signalé.'),
+    go: () => (issueCounts.gps ? onIssues('gps') : onTab('summary')),
   })
 
   if (!pnx) {
@@ -114,7 +112,7 @@ export default function StepBar({
       help: unclassified.length
         ? 'Photos ni dans une séquence, ni exclues : créez des séquences (D / F) ou excluez-les (X).'
         : 'Découpage de la sortie en séquences (onglet Séquences).',
-      go: () => onTab('sequences'),
+      go: () => (issueCounts.seq ? onIssues('seq') : onTab('sequences')),
     })
 
     // 6. Export

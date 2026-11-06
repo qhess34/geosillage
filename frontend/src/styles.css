@@ -972,6 +972,49 @@ input.coord {
   margin: 0;
 }
 
+/* List of things to fix of a step (floating window over the map, moved by its title bar) */
+.issues-modal {
+  /* on the right, under the map controls: the photo reached stays visible at the centre of the map */
+  left: auto;
+  right: 10px;
+  top: 52px;
+  width: min(380px, calc(50% - 20px));
+}
+.issues-group h4 {
+  margin: 10px 0 2px;
+}
+.issues-group p {
+  margin: 2px 0 6px;
+  line-height: 1.4;
+}
+.issues-group ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.issue-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: none;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.issue-item:hover {
+  background: rgba(127, 127, 127, 0.1);
+}
+.issue-item.current {
+  background: rgba(217, 119, 6, 0.12);
+  box-shadow: inset 3px 0 0 #d97706;
+}
+.issue-item .muted {
+  text-align: right;
+}
 .snap-title {
   cursor: move;
   user-select: none;
