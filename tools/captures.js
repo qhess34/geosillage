@@ -65,7 +65,7 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   // Panoramax overlay (real data from the meta-catalogue)
   await p.selectOption('select[aria-label="Fond de carte"]', 'osm'); await wait(800);
   await go(250); await p.click('button:has-text("Panoramax")'); await wait();
-  await p.click('.map-legend button'); await wait(300); // legend open: age classes of the coverage
+  await p.click('.map-legend button'); await wait(300); await tiles(); // legend open: age classes of the coverage
   await p.evaluate(() => window.__pssMap.jumpTo({ zoom: 16.5 })); await tiles(); await wait(2500);
   const pt = await p.evaluate(() => { const m = window.__pssMap; const fs = m.queryRenderedFeatures({ layers: ['pnx-pictures'] }); const r = m.getContainer().getBoundingClientRect();
     const f = fs.find(f => { const c = m.project(f.geometry.coordinates); return c.x > 360 && c.x < r.width - 150 && c.y > 150 && c.y < r.height - 150 }); if (!f) return null; const c = m.project(f.geometry.coordinates); return [c.x + r.left, c.y + r.top] });

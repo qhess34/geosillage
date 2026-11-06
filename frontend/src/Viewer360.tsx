@@ -135,7 +135,7 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
       </button>
       {onFixYaw && (
         <div className="viewer360-fix">
-          <button className="small primary" onClick={fix} title="Tournez la vue vers l'avant, dans le sens de déplacement, puis cliquez (caméra sur casque ou mal orientée)">
+          <button className="small primary" onClick={fix} title="Règle l'orientation de la caméra : tournez la vue vers l'avant (le sens de déplacement), puis cliquez. Le cap ne change pas.">
             🧭 {fixLabel ?? 'Fixer le sens de déplacement'}
           </button>
           {yaw != null && yaw !== 0 && onResetYaw && (

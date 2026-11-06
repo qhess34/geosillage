@@ -344,11 +344,17 @@ Deux notions distinctes :
 - l'**orientation** = l'angle entre le **centre de l'image** et le sens de déplacement (XMP `PoseHeadingDegrees`).
   Elle vaut 0 quand la caméra regarde vers l'avant ; Panoramax s'en sert pour tourner la photo 360°.
 
+Changer l'un ne change jamais l'autre. L'onglet *Photo* les présente en deux sections : **Cap — sens de
+déplacement** (cadran, cap calculé et final) et **Orientation de la caméra**, avec un petit schéma vu de dessus :
+le cap en bleu (depuis le nord), le centre de l'image en orange pointillé (décalé de l'orientation), et une phrase
+comme « Centre de l'image à −35° du sens de déplacement (vers la gauche) ». *Remettre à 0°* annule l'orientation de
+la photo.
+
 ### Vérifier les caps
 
 Flèches sur la carte (zoom ≥ 15). Onglet *Photo* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
-**Décalage du cap** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Bilan*, *Caps et orientation de
-toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du cap…*, ou
+**Décalage du cap** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Bilan*, *Cap et orientation de
+toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du cap (sens de déplacement)…*, ou
 *Décaler* dans les outils de la plage de l'onglet *Photo*). La valeur remplace le décalage déjà posé sur ces
 photos ; 0 le retire. Ce réglage ne dépend pas des séquences, qui ne sont qu'un découpage. Sur une plage, aussi
 *Fixer* (même cap manuel pour toutes) et *Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
@@ -367,8 +373,8 @@ l'application comme sur Panoramax).
 ### Caméra mal orientée sur le casque, ou à l'envers
 
 Champ d'angle et bouton **↻ Corriger le montage** :
-- sur toutes les photos de la sortie (onglet *Bilan*, *Caps et orientation de toute la sortie*) ;
-- sur une série de photos sélectionnée : clic droit *Orientation…*, ou outils de la plage de l'onglet *Photo*.
+- sur toutes les photos de la sortie (onglet *Bilan*, *Cap et orientation de toute la sortie*) ;
+- sur une série de photos sélectionnée : clic droit *Orientation de la caméra…*, ou outils de la plage de l'onglet *Photo*.
 
 Comme le décalage du cap, l'orientation ne dépend pas des séquences.
 

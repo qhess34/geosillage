@@ -25,6 +25,7 @@ import Viewer360 from './Viewer360'
 import ContextMenu, { MenuItem } from './ContextMenu'
 import OsmSnapPanel, { SnapPreview, SnapScope } from './OsmSnapPanel'
 import YawRotate from './YawRotate'
+import { CAP_HELP, CapOrientationDiagram, ORIENTATION_HELP } from './CapOrientation'
 
 const JOB_LABELS: Record<string, string> = {
   import: 'Import',
@@ -74,12 +75,12 @@ function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDon
   const [value, setValue] = useState('0')
   return (
     <div className="small-text ride-headings">
-      <h3>Caps et orientation de toute la sortie</h3>
+      <h3>Cap et orientation de toute la sortie</h3>
       <p className="muted">
         Pour une série de photos : sélectionnez-la (timeline, Maj+clic) puis clic droit, ou les outils de la plage de l'onglet Photo.
       </p>
       <div className="form-row">
-        <span title="Ajouté aux caps calculés de toutes les photos (remplace les décalages déjà posés ; 0 les retire) ; les caps manuels ne changent pas">
+        <span title={`${CAP_HELP} Le décalage s'ajoute aux caps calculés de toutes les photos (il remplace les décalages déjà posés ; 0 les retire) ; les caps manuels ne changent pas.`}>
           Décalage du cap
         </span>
         <span>
@@ -90,7 +91,7 @@ function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDon
         </span>
       </div>
       <div className="form-row">
-        <span title="Caméra mal alignée sur le casque, ou à l'envers (180°) : angle ajouté à l'orientation de chaque photo">Orientation</span>
+        <span title={`${ORIENTATION_HELP} L'angle s'ajoute à l'orientation de chaque photo (180 : caméra à l'envers).`}>Orientation de la caméra</span>
         <YawRotate projectId={projectId} target={{ all: true }} what="toutes les photos du projet" onDone={onDone} onError={onError} />
       </div>
     </div>
@@ -278,7 +279,8 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
         )}
       </div>
 
-      <h3>Cap</h3>
+      <h3 title={CAP_HELP}>Cap — sens de déplacement</h3>
+      <p className="small-text muted section-help">Direction dans laquelle on avance, depuis le nord (flèches de la carte et de Panoramax).</p>
       <div className="heading-box">
         <HeadingDial value={shown} computed={computedWithOffset} onChange={setDraft} onCommit={(v) => set(v)} />
         <div className="heading-info small-text">
@@ -286,12 +288,6 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
             Calculé : {photo.heading_auto != null ? `${photo.heading_auto.toFixed(1)}°` : photo.heading_auto_state === 'uncertain' ? 'incertain (arrêt)' : 'impossible'}
             {photo.heading_offset ? ` ${photo.heading_offset > 0 ? '+' : ''}${photo.heading_offset}° (décalage)` : ''}
           </div>
-          {photo.yaw_offset != null && photo.yaw_offset !== 0 && (
-            <div title="Orientation de l'image (caméra sur casque, ou montée à l'envers) : écrite dans XMP-GPano:PoseHeadingDegrees, le JPEG n'est pas modifié">
-              Orientation : {photo.yaw_offset > 0 ? '+' : ''}
-              {photo.yaw_offset}° par rapport au sens de déplacement
-            </div>
-          )}
           <div>
             Final : <strong>{shown != null ? `${shown.toFixed(1)}°` : '—'}</strong>{' '}
             {photo.heading_manual != null &&
@@ -329,13 +325,39 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
           )}
         </div>
       </div>
+      <h3 title={ORIENTATION_HELP}>Orientation de la caméra</h3>
+      <p className="small-text muted section-help">Où regarde le centre de l'image, par rapport au sens de déplacement (casque, caméra mal montée). Ne change pas le cap.</p>
+      <div className="orientation-box small-text">
+        <CapOrientationDiagram heading={shown} yaw={photo.yaw_offset} />
+        <div>
+          <div>
+            {photo.yaw_offset ? (
+              <>
+                Centre de l'image à <strong>{photo.yaw_offset > 0 ? '+' : ''}{photo.yaw_offset}°</strong> du sens de déplacement
+                {Math.abs(photo.yaw_offset) >= 170 ? ' (caméra à l\'envers)' : photo.yaw_offset > 0 ? ' (vers la droite)' : ' (vers la gauche)'}
+              </>
+            ) : (
+              <>Centre de l'image <strong>dans le sens de déplacement</strong> (0°)</>
+            )}
+          </div>
+          <div className="muted">
+            <span className="cap-key blue" /> cap · <span className="cap-key orange" /> centre de l'image
+          </div>
+          <div className="muted">Pour la corriger : tournez la vue vers l'avant puis « 🧭 Fixer le sens de déplacement » dans la visionneuse.</div>
+          {photo.yaw_offset ? (
+            <button className="small" onClick={() => api.setYaw(projectId, { photo_ids: [photo.id] }, null).then((r) => onChanged(r.undo), (e) => onError(e.message))}>
+              Remettre à 0°
+            </button>
+          ) : null}
+        </div>
+      </div>
       {range && (
         <section className="range-card small-text">
           <header>
             Plage {range[0] + 1} → {range[1] + 1} · {range[1] - range[0] + 1} photos
           </header>
           <div className="form-row">
-            <span>Caps</span>
+            <span title={CAP_HELP}>Cap</span>
             <span>
               <input className="num" type="number" step="0.5" value={rangeValue} onChange={(e) => setRangeValue(e.target.value)} aria-label="Angle (°)" />°
               <span className="btn-group">
@@ -358,7 +380,7 @@ function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onVie
             </span>
           </div>
           <div className="form-row">
-            <span>Orientation</span>
+            <span title={ORIENTATION_HELP}>Orientation</span>
             <YawRotate projectId={projectId} target={{ start_idx: range[0], end_idx: range[1] }} what="les photos de la plage" onDone={(u) => onChanged(u)} onError={onError} />
           </div>
         </section>
@@ -1150,8 +1172,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         label: r[0] === r[1] ? 'Recaler cette photo sur OpenStreetMap…' : `Recaler ces ${r[1] - r[0] + 1} photos sur OpenStreetMap…`,
         onClick: () => setSnapOpen({ scope: 'custom', sequenceId: inSeq, bounds: r }),
       },
-      { label: `Décalage du cap ${these}…`, onClick: () => setValueDlg({ kind: 'offset', range: r }) },
-      { label: `Orientation ${these}…`, onClick: () => setValueDlg({ kind: 'yaw', range: r }) },
+      { label: `Décalage du cap (sens de déplacement) ${these}…`, onClick: () => setValueDlg({ kind: 'offset', range: r }) },
+      { label: `Orientation de la caméra ${these}…`, onClick: () => setValueDlg({ kind: 'yaw', range: r }) },
     ]
     if (!isPnx && photos.slice(r[0], r[1] + 1).every((p) => p.sequence_id == null))
       items.push({
@@ -1626,15 +1648,15 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       )}
       {valueDlg && (
         <ValueDialog
-          title={`${valueDlg.kind === 'offset' ? 'Décalage du cap' : 'Orientation'} : photos ${valueDlg.range[0] + 1} → ${valueDlg.range[1] + 1}`}
-          label={valueDlg.kind === 'offset' ? 'Décalage ajouté aux caps calculés' : 'Angle ajouté à l\'orientation de chaque photo'}
+          title={`${valueDlg.kind === 'offset' ? 'Décalage du cap' : 'Orientation de la caméra'} : photos ${valueDlg.range[0] + 1} → ${valueDlg.range[1] + 1}`}
+          label={valueDlg.kind === 'offset' ? 'Décalage ajouté aux caps calculés (sens de déplacement)' : 'Angle ajouté à l\'orientation de chaque photo (centre de l\'image)'}
           initial={valueDlg.kind === 'offset' ? '0' : '180'}
           unit="°"
           applyLabel="Appliquer"
           help={
             valueDlg.kind === 'offset'
-              ? 'Remplace le décalage déjà posé sur ces photos ; 0 le retire. Les caps manuels ne changent pas. Ctrl+Z annule.'
-              : 'Caméra mal alignée sur le casque, ou à l\'envers (180°). Le fichier JPEG n\'est pas tourné. Ctrl+Z annule.'
+              ? 'Le cap est la direction dans laquelle on avance (flèches de navigation). Remplace le décalage déjà posé sur ces photos ; 0 le retire. Les caps manuels ne changent pas. L\'orientation de la caméra ne change pas. Ctrl+Z annule.'
+              : 'L\'orientation est l\'angle entre le centre de l\'image et le sens de déplacement : caméra mal alignée sur le casque, ou à l\'envers (180°). Le cap ne change pas ; le fichier JPEG n\'est pas tourné. Ctrl+Z annule.'
           }
           onCancel={() => setValueDlg(null)}
           onApply={(v) => {
