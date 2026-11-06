@@ -73,7 +73,10 @@ Le nom du projet sert à nommer les dossiers exportés (`<nom>_1`, `<nom>_2`…)
 corrections. Supprimer un projet ne touche pas aux photos.
 
 **Importer** (bouton de la barre d'outils) : choisir un ou plusieurs dossiers ; les sous-dossiers sont parcourus
-(`100GOPRO`, `101GOPRO`…). Une photo déjà importée n'est pas importée deux fois. L'import lit les EXIF puis crée les
+(`100GOPRO`, `101GOPRO`…). Pour naviguer : clic sur une ligne pour entrer dans le sous-dossier, clic sur un élément
+du chemin (en haut) ou ↑ pour remonter, ou chemin saisi puis *Ouvrir* ; *+ Ajouter* (ou *Ajouter ce dossier*) le met
+dans la liste à importer. Les photos du dossier ouvert sont affichées en gris sous les sous-dossiers, pour information
+(l'import se fait par dossier). Une photo déjà importée n'est pas importée deux fois. L'import lit les EXIF puis crée les
 miniatures en tâche de fond : la carte est utilisable avant la fin.
 
 Onglet **Bilan** : nombre de photos, période, anomalies détectées :

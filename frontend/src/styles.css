@@ -352,8 +352,41 @@ select {
   padding: 6px 8px;
   border-bottom: 1px solid var(--border);
 }
-.fs-head .mono {
+.fs-crumbs {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fs-crumbs .link {
+  font: inherit;
+}
+.fs-error {
+  margin: 6px 8px;
+}
+.fs-list .fs-dir {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.fs-list .fs-file {
+  padding: 1px 6px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: default;
+  user-select: none;
+}
+.fs-list .fs-dir:hover {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
 }
 .fs-list,
 .chosen {
@@ -366,6 +399,7 @@ select {
 .fs-list li,
 .chosen li {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 3px 0;

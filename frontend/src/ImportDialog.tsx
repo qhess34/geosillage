@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, FsListing } from './api'
+import FsBrowser from './FsBrowser'
 
 interface Props {
   projectId: string
@@ -77,33 +78,26 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
           <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="/chemin/vers/les/photos" />
           <button type="submit">Ouvrir</button>
         </form>
-        {listing && (
-          <div className="fs">
-            <div className="fs-head">
-              <button disabled={!listing.parent} onClick={() => listing.parent && go(listing.parent)} title="Dossier parent">
-                ↑
-              </button>
-              <span className="mono ellipsis">{listing.path}</span>
-              <span className="muted">{listing.jpeg_count} JPEG ici</span>
-              <button className="primary" onClick={() => add(listing.path)}>
-                Ajouter ce dossier
-              </button>
-            </div>
-            <ul className="fs-list">
-              {listing.dirs.map((d) => (
-                <li key={d}>
-                  <button className="link" onClick={() => go(`${listing.path}/${d}`)}>
-                    📁 {d}
-                  </button>
-                  <button className="small" onClick={() => add(`${listing.path}/${d}`)}>
-                    + Ajouter
-                  </button>
-                </li>
-              ))}
-              {!listing.dirs.length && <li className="muted">Aucun sous-dossier</li>}
-            </ul>
-          </div>
-        )}
+        <FsBrowser
+          listing={listing}
+          error={error}
+          onGo={go}
+          headExtra={
+            listing && (
+              <>
+                <span className="muted" style={{ whiteSpace: 'nowrap' }}>{listing.jpeg_count} JPEG ici</span>
+                <button className="primary" onClick={() => add(listing.path)}>
+                  Ajouter ce dossier
+                </button>
+              </>
+            )
+          }
+          rowExtra={(path) => (
+            <button className="small" onClick={() => add(path)}>
+              + Ajouter
+            </button>
+          )}
+        />
         {chosen.length > 0 && (
           <div>
             <h3>Dossiers à importer</h3>
@@ -119,7 +113,6 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
             </ul>
           </div>
         )}
-        {error && <p className="error">{error}</p>}
         <div className="actions">
           <button onClick={onClose}>Annuler</button>
           <button className="primary" disabled={!chosen.length || busy} onClick={start}>
