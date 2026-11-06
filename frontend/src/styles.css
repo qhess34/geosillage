@@ -1475,3 +1475,37 @@ a.button-link:hover {
 .sync-runs .row {
   align-items: center;
 }
+
+/* Photo tab: heading (direction of travel) and orientation of the camera, side by side */
+.section-help {
+  margin: -6px 0 8px;
+}
+.orientation-box {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.orientation-box > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.orientation-box button {
+  align-self: flex-start;
+}
+.cap-diagram {
+  flex: none;
+  color: var(--text);
+}
+.cap-key {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  vertical-align: middle;
+}
+.cap-key.blue {
+  background: #1d4ed8;
+}
+.cap-key.orange {
+  background: repeating-linear-gradient(90deg, #ea580c 0 3px, transparent 3px 5px);
+}
