@@ -87,8 +87,10 @@ Pour limiter le temps et les tokens consommés par une tâche :
   par correctif ; une PR à part seulement pour un changement important ou risqué.
 - **Se fier aux tests plutôt qu'aux captures** : `e2e` (« 10 passed ») et pytest suffisent pour un comportement.
   Une capture seulement pour une mise en page nouvelle, **recadrée** sur la zone modifiée.
-- **Captures du guide (`tools/captures.sh`) : uniquement quand l'utilisateur le demande.** Un écran du guide qui
-  change sans demande : le signaler à la fin de la tâche, sans régénérer.
+- **Captures du guide (`tools/captures.sh`) : uniquement quand l'utilisateur le demande.** Une PR qui change un
+  écran montré dans le guide ne régénère pas : elle ajoute la ou les captures concernées (nom, changement, numéro de
+  PR) à l'issue ouverte « Mettre à jour les captures du guide » (label `documentation`), ou la crée si aucune n'est
+  ouverte. La PR qui régénère les captures ferme l'issue (« Closes #… »).
 - **Lire peu de journaux** : du CI, seulement l'issue des vérifications ; le journal d'un job seulement s'il échoue,
   limité aux dernières lignes. Idem pour les sorties locales (`tail`, `grep`).
 - Chercher (`grep -n`, carte rapide ci-dessus) plutôt que lire un gros fichier en entier.
