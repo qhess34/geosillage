@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FLAGS, PhotoRow, QualityIssue, seqColor, Sequence } from './api'
 import { fmtTime } from './format'
 
@@ -12,6 +12,38 @@ interface Props {
   warnings?: QualityIssue[] // points to check (stops, spacing…): amber marks above the strip
   thumbUrl?: (photoId: number) => string // hover bubble: thumbnail of the photo under the pointer
   storageKey?: string // zoom / scroll remembered under this key (reopening the project)
+  hideExcluded?: boolean // excluded photos left out of the strip (the « Exclues » box of the map is unticked)
+  bubbleWarnings?: QualityIssue[] // internal: warnings in photo indexes for the hover bubble
+}
+
+// Excluded photos hidden: the strip shows only the others, one column each; indexes are translated both ways
+export default function Timeline(props: Props) {
+  const { photos, hideExcluded, selectedIdx, range, warnings, onPick, onContextMenu } = props
+  const map = useMemo(() => {
+    if (!hideExcluded || !photos.some((p) => p.excluded)) return null
+    const shown = photos.filter((p) => !p.excluded)
+    const pos: number[] = []
+    let k = 0
+    for (const p of photos) {
+      pos.push(Math.max(0, Math.min(k, shown.length - 1))) // an excluded photo: the next one shown
+      if (!p.excluded) k++
+    }
+    return { shown, pos }
+  }, [photos, hideExcluded])
+  if (!map) return <TimelineStrip {...props} />
+  const P = (i: number) => map.pos[i] ?? 0
+  return (
+    <TimelineStrip
+      {...props}
+      photos={map.shown}
+      selectedIdx={selectedIdx != null ? P(selectedIdx) : null}
+      range={range ? [P(range[0]), P(range[1])] : null}
+      warnings={warnings?.map((w) => ({ ...w, start_idx: P(w.start_idx), end_idx: P(w.end_idx) }))}
+      bubbleWarnings={warnings}
+      onPick={(i, ext) => map.shown[i] && onPick(map.shown[i].idx, ext)}
+      onContextMenu={onContextMenu && ((i, x, y) => map.shown[i] && onContextMenu(map.shown[i].idx, x, y))}
+    />
+  )
 }
 
 // Chronological strip: one column per photo (x = index), coloured by sequence.
@@ -20,7 +52,7 @@ interface Props {
 const DRAG_PX = 8 // minimal horizontal movement for a drag to select a range
 const MIN_SPAN = 20 // photos visible at the maximal zoom
 
-export default function Timeline({ photos, sequences, selectedIdx, range, onPick, onContextMenu, warnings, thumbUrl, storageKey }: Props) {
+function TimelineStrip({ photos, sequences, selectedIdx, range, onPick, onContextMenu, warnings, thumbUrl, storageKey, bubbleWarnings }: Props) {
   const [hover, setHover] = useState<{ idx: number; x: number } | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const dragging = useRef(false)
@@ -195,7 +227,7 @@ export default function Timeline({ photos, sequences, selectedIdx, range, onPick
       }}
       onPointerUp={() => (dragging.current = false)}
     />
-      {hover && photos[hover.idx] && <HoverBubble p={photos[hover.idx]} x={hover.x} sequences={sequences} warnings={warnings} thumbUrl={thumbUrl} />}
+      {hover && photos[hover.idx] && <HoverBubble p={photos[hover.idx]} x={hover.x} sequences={sequences} warnings={bubbleWarnings ?? warnings} thumbUrl={thumbUrl} />}
       <div className="timeline-zoom small-text">
         <div className="zoom-buttons">
         <button className="small" onClick={() => zoomAt(1.6, center)} disabled={!zoomed} title="Dézoomer (molette sur la timeline)" aria-label="Dézoomer la timeline">

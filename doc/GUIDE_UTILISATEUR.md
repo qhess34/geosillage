@@ -142,7 +142,7 @@ séquences ont été corrigées depuis leur import ou leur dernier envoi).
   flèche montre le cap de chaque photo ; la photo courante est en jaune, et sa flèche tourne avec la direction
   regardée dans la visionneuse. Clic sur une pastille : aller à la photo ; Maj+clic : sélectionner une plage.
   - *Suivre* (coché par défaut) : la carte suit la photo courante ; décoché, elle reste fixe, *◎ Centrer* recentre.
-  - *Exclues* : afficher les photos exclues (masquées par défaut).
+  - *Exclues* : afficher les photos exclues sur la carte et dans la timeline (masquées par défaut).
 - Les **réglages d'affichage de la carte** sont dans ses contrôles, en haut à droite : *Panoramax* (couverture
   déjà publiée, ci-dessous), fond de carte, *Centrer*, *Suivre*, *Exclues*.
 - **Fond de carte** (liste des contrôles de la carte) : OpenStreetMap, Esri (satellite), **Satellite IGN Ortho** (France,
@@ -213,7 +213,8 @@ séquence est d'abord créée autour d'elle, puis coupée : il suffit d'appuyer 
 suivante ; appuyer plusieurs fois exclut une série. Si la photo exclue était le *Début* en cours, le début passe à
 la suivante. Avec une plage sélectionnée (et pas de début en cours), `X` exclut **toute la plage, après
 confirmation** (le nombre de photos est indiqué). Les photos exclues :
-- sont masquées sur la carte et sautées par `←` `→` (case *Exclues* pour les revoir) ;
+- sont masquées sur la carte et dans la timeline, et sautées par `←` `→` (case *Exclues* pour les revoir ; la
+  timeline les montre alors comme des trous) ;
 - n'entrent dans aucune séquence et ne sont jamais exportées ;
 - ne sont pas supprimées du disque. Pour en réintégrer une : cocher *Exclues*, aller dessus (ou cliquer son trou
   dans la timeline), `Maj+X`. Pour annuler une exclusion récente : `Ctrl+Z`.

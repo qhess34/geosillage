@@ -1446,6 +1446,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             warnings={quality}
             thumbUrl={(id) => api.thumbUrl(projectId, id)}
             storageKey={`pss-timeline-${projectId}`}
+            hideExcluded={!showExcluded}
           />
           {ctx && <ContextMenu x={ctx.x} y={ctx.y} {...ctxItems()} onClose={() => setCtx(null)} />}
         </div>
