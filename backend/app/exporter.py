@@ -139,18 +139,20 @@ def _move_files(pid: str, items: list[dict]) -> None:
     for it in todo:
         if os.path.exists(it["dest"]) and it["dest"] not in {x["path"] for x in todo}:
             raise ExportError(f"Un fichier existe déjà : {it['dest']}")
+    # One short transaction per file, never around the move itself: between two mounted folders a move is a copy
+    # (seconds per 360° photo), and holding the database lock meanwhile made every edit fail (« database is locked »)
     with db.open_project(pid) as conn:
         for phase in ("tmp", "final"):
-            with db.transaction(conn):
-                for it in todo:
-                    src = it["path"]
-                    dst = str(Path(it["dest"]).parent / f".pss-move-{it['id']}.tmp") if phase == "tmp" else it["dest"]
-                    shutil.move(src, dst)
+            for it in todo:
+                src = it["path"]
+                dst = str(Path(it["dest"]).parent / f".pss-move-{it['id']}.tmp") if phase == "tmp" else it["dest"]
+                shutil.move(src, dst)
+                with db.transaction(conn):
                     if it["moved_from"] is None:
                         it["moved_from"] = src
                         conn.execute("UPDATE photo SET moved_from=? WHERE id=? AND moved_from IS NULL", (src, it["id"]))
                     conn.execute("UPDATE photo SET path=? WHERE id=?", (dst, it["id"]))
-                    it["path"] = dst
+                it["path"] = dst
 
 
 def run(

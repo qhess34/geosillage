@@ -73,3 +73,5 @@ passent.
 - MapLibre : `zoom` au premier niveau des expressions ; pas de `null` dans les filtres ; `setStyle(…, {diff:false})`.
 - Interface : les photos sont rechargées après chaque action ; un raccourci pressé juste après voit l'ancien état.
 - Docker : après un changement, l'utilisateur doit reconstruire (`docker compose up -d --build`).
+- SQLite : jamais d'opération longue (déplacement de fichier, réseau, ExifTool) dans `db.transaction` : le verrou
+  bloque toutes les modifications (« database is locked » au bout de 30 s, renvoyé en 503 avec un message clair).
