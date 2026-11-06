@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from . import db
 
 # new columns go at the end: operations journaled before they existed only restore the columns they knew
-PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset", "heading_offset"]
+PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset", "heading_offset", "heading_kept"]
 SEQ_COLS = ["id", "name", "heading_offset", "created_at", "modified_at"]
 MAX_OPS = 200
 
@@ -54,10 +54,15 @@ def undoable(conn, label: str):
         )
 
 
+# columns that do not change what is exported (a sequence is not marked « à réexporter » for them)
+NOT_EXPORTED = {PHOTO_COLS.index("heading_kept")}
+
+
 def affected_sequences(data: dict) -> set[int]:
     """Sequences whose content an operation changed (photos leaving / joining / edited, or the sequence row)."""
     k = PHOTO_COLS.index("sequence_id")
-    ids = {v for _, b, a in data["photos"] for v in (b[k], a[k]) if v is not None}
+    exported = lambda row: [v for i, v in enumerate(row) if i not in NOT_EXPORTED]  # noqa: E731
+    ids = {v for _, b, a in data["photos"] if exported(b) != exported(a) for v in (b[k], a[k]) if v is not None}
     before = {s[0]: s[:4] for s in data["seq_before"]}
     ids |= {s[0] for s in data["seq_after"] if before.get(s[0]) != s[:4]}
     return ids

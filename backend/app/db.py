@@ -187,6 +187,11 @@ MIGRATIONS = [
         WHERE sequence_id IS NOT NULL;
     UPDATE sequence SET heading_offset = 0;
     """,
+    """
+    -- « Ignorer » on a heading to check: the manual heading confirmed by the user (computed heading wrong, e.g. GPS
+    -- lost); the check comes back if the manual heading changes
+    ALTER TABLE photo ADD COLUMN heading_kept REAL;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

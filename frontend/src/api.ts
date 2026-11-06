@@ -447,6 +447,9 @@ export const api = {
   ) => req<{ moved: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/osm/snap/apply`, body),
   // blocks of photos without a position, with the positioned photos before / after them
   quality: (id: string) => req<QualityIssue[]>('GET', `/api/projects/${id}/quality`),
+  // headings to check that are right (computed heading wrong, GPS lost): no longer reported while unchanged
+  ignoreHeadings: (id: string, photo_ids: number[], ignore = true) =>
+    req<{ changed: number; issues: QualityIssue[]; undo: UndoState }>('POST', `/api/projects/${id}/quality/ignore-headings`, { photo_ids, ignore }),
   missingPositions: (id: string) => req<MissingRun[]>('GET', `/api/projects/${id}/positions/missing`),
   exports: (id: string) => req<ExportRecord[]>('GET', `/api/projects/${id}/exports`),
   thumbUrl: (id: string, photo: number) => `/api/projects/${id}/photos/${photo}/thumb`,

@@ -38,9 +38,21 @@ def _merge(kind: str, flagged: list, detail) -> list[dict]:
     return out
 
 
+def keep_headings(conn, photo_ids: list[int], keep: bool = True) -> int:
+    """« Ignorer » a heading to check: the manual heading is right, the computed one is not (GPS lost…). The manual
+    heading is copied to heading_kept (an editable column: in the undo journal); changing it later makes the check
+    come back. keep=False: reported again."""
+    ph = ",".join("?" * len(photo_ids))
+    if keep:
+        sql = f"UPDATE photo SET heading_kept = heading_manual WHERE id IN ({ph}) AND heading_manual IS NOT NULL"
+    else:
+        sql = f"UPDATE photo SET heading_kept = NULL WHERE id IN ({ph}) AND heading_kept IS NOT NULL"
+    return conn.execute(sql, photo_ids).rowcount
+
+
 def check(conn) -> list[dict]:
     rows = conn.execute(
-        f"""SELECT p.id, p.idx, p.ts, p.flags, p.gps_dop, p.heading_manual, p.heading_auto, p.sequence_id,
+        f"""SELECT p.id, p.idx, p.ts, p.flags, p.gps_dop, p.heading_manual, p.heading_auto, p.heading_kept, p.sequence_id,
                    {_positioned_sql()} AS placed, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon
             FROM photo p WHERE p.excluded = 0 AND p.flags & {UNUSABLE} = 0 ORDER BY p.idx"""
     ).fetchall()
@@ -85,7 +97,8 @@ def check(conn) -> list[dict]:
             return 0.0
         return abs((r["heading_manual"] - r["heading_auto"] + 180) % 360 - 180)
 
-    heads = [(pos, r) for pos, r in enumerate(rows) if head_diff(r) > HEADING_DIFF]
+    # headings the user chose to keep (computed heading wrong, e.g. GPS lost): not reported while unchanged
+    heads = [(pos, r) for pos, r in enumerate(rows) if head_diff(r) > HEADING_DIFF and r["heading_kept"] != r["heading_manual"]]
     issues += _merge("heading", heads, lambda rs: f"cap manuel à plus de {HEADING_DIFF:.0f}° du cap calculé (jusqu'à {max(head_diff(x) for x in rs):.0f}°)")
 
     issues.sort(key=lambda i: (i["start_idx"], KINDS.index(i["kind"])))
