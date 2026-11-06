@@ -138,38 +138,28 @@ def runs(conn) -> list[dict]:
     ).fetchall()
     out: list[dict] = []
     cur: dict | None = None
-    pending_manual: list = []  # hand-corrected photos waiting to know which lot they belong to
-
-    def close():
-        nonlocal cur
-        if cur:
-            out.append(cur)
-        cur = None
+    pending: list = []  # hand-corrected photos waiting to know which lot they belong to: the one that follows
 
     for r in rows:
         if r["pos_method"] in positions.MANUAL_METHODS:
-            pending_manual.append(r)
+            pending.append(r)
             continue
         key = round(r["time_offset"], 1) if r["pos_method"] == "time" and r["time_offset"] is not None else None
         if cur is None or cur["offset_s"] != key:
-            close()
-            start = pending_manual[0]["idx"] if pending_manual and not out else r["idx"]
-            cur = {"offset_s": key, "start_idx": start, "end_idx": r["idx"], "count": 0, "manual": 0}
-            if pending_manual and not out:  # leading hand-corrected photos join the first lot
-                cur["count"] += len(pending_manual)
-                cur["manual"] += len(pending_manual)
-                pending_manual = []
-        if pending_manual:  # hand-corrected photos inside or between lots: attached to the lot they precede
-            cur["count"] += len(pending_manual)
-            cur["manual"] += len(pending_manual)
-            pending_manual = []
+            if cur:
+                out.append(cur)
+            # a lot starts at the first photo it holds, hand-corrected photos before it included
+            cur = {"offset_s": key, "start_idx": (pending[0] if pending else r)["idx"], "end_idx": r["idx"], "count": 0, "manual": 0}
+        cur["count"] += len(pending) + 1
+        cur["manual"] += len(pending)
         cur["end_idx"] = r["idx"]
-        cur["count"] += 1
-    if pending_manual:
+        pending = []
+    if pending:  # hand-corrected photos at the end: in the last lot (or a lot of their own if there is none)
         if cur is None:
-            cur = {"offset_s": None, "start_idx": pending_manual[0]["idx"], "end_idx": pending_manual[-1]["idx"], "count": 0, "manual": 0}
-        cur["end_idx"] = pending_manual[-1]["idx"]
-        cur["count"] += len(pending_manual)
-        cur["manual"] += len(pending_manual)
-    close()
+            cur = {"offset_s": None, "start_idx": pending[0]["idx"], "end_idx": pending[-1]["idx"], "count": 0, "manual": 0}
+        cur["end_idx"] = pending[-1]["idx"]
+        cur["count"] += len(pending)
+        cur["manual"] += len(pending)
+    if cur:
+        out.append(cur)
     return out

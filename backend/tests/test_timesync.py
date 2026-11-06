@@ -180,3 +180,25 @@ def test_sync_runs_by_offset(project):
     after = [r for r in client.get(f"/api/projects/{pid}/timesync/runs").json() if r["offset_s"] is not None]
     assert [r["offset_s"] for r in after] == [1.0, 1.9] and after[1]["manual"] == 1
     assert after[1]["count"] == synced[1]["count"]
+
+
+def test_sync_runs_hand_corrected_photo_between_lots(project):
+    """A photo corrected by hand between two lots belongs to the following lot, which starts at it."""
+    client, pid = project
+    client.post(f"/api/projects/{pid}/timesync/apply", json={"offset_s": 1.0, "scope": "all"})
+    runs = client.get(f"/api/projects/{pid}/timesync/runs").json()
+    first = runs[0]["start_idx"]
+    with db.open_project(pid) as conn:
+        ids = [r[0] for r in conn.execute("SELECT id FROM photo WHERE excluded = 0 AND idx >= ? ORDER BY idx LIMIT 5", (first,))]
+        idx = [conn.execute("SELECT idx FROM photo WHERE id=?", (i,)).fetchone()[0] for i in ids]
+        conn.execute("UPDATE photo SET time_offset=1.9 WHERE id IN (?, ?)", (ids[3], ids[4]))
+        conn.execute("UPDATE photo SET time_offset=1.9 WHERE idx > ? AND pos_method = 'time'", (idx[4],))
+        conn.execute("UPDATE photo SET pos_method='manual', time_offset=NULL WHERE id=?", (ids[2],))
+    runs = [r for r in client.get(f"/api/projects/{pid}/timesync/runs").json() if r["offset_s"] is not None]
+    a, b = runs[0], runs[1]
+    assert (a["offset_s"], a["end_idx"], a["manual"]) == (1.0, idx[1], 0)
+    assert (b["offset_s"], b["start_idx"], b["manual"]) == (1.9, idx[2], 1)  # starts at the hand-corrected photo
+    # every photo of the ride belongs to exactly one lot (ranges contiguous, no hole)
+    allr = client.get(f"/api/projects/{pid}/timesync/runs").json()
+    assert all(x["end_idx"] < y["start_idx"] for x, y in zip(allr, allr[1:]))
+    assert a["end_idx"] < b["start_idx"] == idx[2]

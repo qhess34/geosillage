@@ -394,6 +394,7 @@ export const api = {
     id: string,
     body: { offset_s: number; scope: 'all' | 'sequence' | 'range' | 'from'; sequence_id?: number; start_idx?: number; end_idx?: number; keep_manual: boolean },
   ) => req<{ changed: number; kept_manual: number; uncovered: number; undo: UndoState }>('POST', `/api/projects/${id}/timesync/apply`, body),
+  syncRuns: (id: string) => req<SyncRun[]>('GET', `/api/projects/${id}/timesync/runs`),
   syncPoints: (id: string) => req<{ points: SyncPoint[]; last_offset_s: number | null }>('GET', `/api/projects/${id}/timesync/points`),
   saveSyncPoints: (id: string, points: SyncPoint[]) => req<{ points: SyncPoint[] }>('PUT', `/api/projects/${id}/timesync/points`, points),
   excludePhotos: (id: string, target: { photo_ids?: number[]; start_idx?: number; end_idx?: number }, excluded = true) =>
@@ -445,7 +446,6 @@ export const api = {
     body: { start_idx: number; end_idx: number; segments: { start_idx: number; end_idx: number; way_id: number }[]; keep_manual: boolean },
   ) => req<{ moved: number; skipped: number; undo: UndoState }>('POST', `/api/projects/${id}/osm/snap/apply`, body),
   // blocks of photos without a position, with the positioned photos before / after them
-  syncRuns: (id: string) => req<SyncRun[]>('GET', `/api/projects/${id}/timesync/runs`),
   quality: (id: string) => req<QualityIssue[]>('GET', `/api/projects/${id}/quality`),
   missingPositions: (id: string) => req<MissingRun[]>('GET', `/api/projects/${id}/positions/missing`),
   exports: (id: string) => req<ExportRecord[]>('GET', `/api/projects/${id}/exports`),
