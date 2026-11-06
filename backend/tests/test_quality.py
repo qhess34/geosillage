@@ -118,4 +118,9 @@ def test_thresholds_are_project_settings(project):  # noqa: F811
     client.patch(f"/api/projects/{pid}", json={"settings": {"stop_min": 5}})
     assert not [i for i in stops() if i["start_idx"] == 30]  # 4 photos < 5
     assert client.get(f"/api/projects/{pid}").json()["settings"]["stop_min"] == 5
-    assert client.patch(f"/api/projects/{pid}", json={"settings": {"stop_min": 1}}).status_code == 422
+    r = client.patch(f"/api/projects/{pid}", json={"settings": {"stop_min": 1, "dop_max": 99, "spacing_m": "loin", "heading_diff": 200}})
+    assert r.status_code == 422
+    msg = r.json()["detail"]
+    assert "Input should" not in msg and "stop_min" not in msg  # in French, with the user's names
+    assert "nombre de photos d'un arrêt : au moins 2" in msg and "précision GPS (DOP) : au plus 50" in msg and "grand écart (m) : nombre attendu" in msg
+    assert "écart de cap (°) : au plus 180" in msg and "180.0" not in msg

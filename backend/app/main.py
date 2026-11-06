@@ -56,6 +56,33 @@ class SettingsIn(BaseModel):
     heading_diff: float | None = Field(default=None, ge=10, le=180)
 
 
+# Names of the settings and wording of their limits in error messages (shown to the user)
+SETTING_LABELS = {
+    "gap_seconds": "durée d'une interruption (s)",
+    "jump_speed_ms": "vitesse d'un saut GPS (m/s)",
+    "jump_min_m": "distance d'un saut GPS (m)",
+    "heading_min_m": "distance minimale du cap (m)",
+    "heading_window_s": "fenêtre de temps du cap (s)",
+    "stop_m": "distance d'un arrêt (m)",
+    "stop_min": "nombre de photos d'un arrêt",
+    "spacing_m": "grand écart (m)",
+    "dop_max": "précision GPS (DOP)",
+    "heading_diff": "écart de cap (°)",
+}
+_LIMITS = {"greater_than_equal": ("ge", "au moins"), "greater_than": ("gt", "plus de"), "less_than_equal": ("le", "au plus"), "less_than": ("lt", "moins de")}
+
+
+def _setting_error(x: dict) -> str:
+    name = SETTING_LABELS.get(str(x["loc"][-1]) if x.get("loc") else "", str(x.get("loc", ["réglage"])[-1]))
+    if x["type"] in _LIMITS:
+        key, words = _LIMITS[x["type"]]
+        limit = x.get("ctx", {}).get(key)
+        return f"{name} : {words} {limit:g}" if isinstance(limit, (int, float)) else f"{name} : {words} {limit}"
+    if x["type"] == "extra_forbidden":
+        return f"{name} : réglage inconnu"
+    return f"{name} : nombre attendu"
+
+
 class ImportIn(BaseModel):
     paths: list[str] = Field(min_length=1)
 
@@ -102,8 +129,8 @@ def project_update(pid: str, body: dict):
         if "settings" in body:
             try:
                 s = SettingsIn(**body["settings"]).model_dump(exclude_none=True)
-            except ValidationError as e:  # a value out of range: refused, not a server error
-                raise HTTPException(422, "Réglage invalide : " + "; ".join(f"{'.'.join(map(str, x['loc']))} : {x['msg']}" for x in e.errors()))
+            except ValidationError as e:  # a value out of range: refused (in French), not a server error
+                raise HTTPException(422, "Réglage invalide : " + " ; ".join(_setting_error(x) for x in e.errors()))
             db.set_meta(conn, "settings", {**(db.get_meta(conn, "settings", {}) or {}), **s})
             analysis.run(conn)
             headings.recompute(conn)
