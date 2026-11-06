@@ -414,7 +414,7 @@ plus *Suivant (N)*. L'encadré disparaît quand on quitte ces photos ou avec ✕
 automatiquement** ; `N` / `Maj+N` passent au point suivant / précédent (avec aussi les sauts GPS, les photos sans
 position et les photos non classées). Pour un arrêt, **Comparer** (ou un clic sur l'étape *Doublons et arrêts*)
 affiche ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
-regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder, puis *Exclure n photos*
+regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder (*Tout désélectionner* pour partir de zéro, *Tout garder* pour tout recocher), puis *Exclure n photos*
 (une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
 listés dans la même fenêtre (étape *Correction GPS*), les photos non classées avec l'étape *Séquences*.
 

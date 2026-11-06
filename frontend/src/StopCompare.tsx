@@ -112,6 +112,9 @@ export default function StopCompare({
           <button className="link small-text" onClick={() => setKeep(new Set(list.map((p) => p.id)))}>
             Tout garder
           </button>
+          <button className="link small-text" onClick={() => setKeep(new Set())} title="Tout décocher, puis cocher la ou les photos à garder">
+            Tout désélectionner
+          </button>
           <span className="spacer" />
           <button onClick={() => focus && onGo(focus.idx)} disabled={!focus} title="Fermer et aller à cette photo dans l'écran principal">
             Aller à cette photo
