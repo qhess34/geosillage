@@ -4,10 +4,12 @@
   "description": "Tests d'interface (Playwright) : l'application complète (serveur + interface construite) sur une sortie simulée",
   "scripts": {
     "test": "playwright test --trace off",
-    "test:trace": "playwright test --trace on"
+    "test:trace": "playwright test --trace on",
+    "typecheck": "tsc -p ."
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "typescript": "^5.6.3"
   }
 }

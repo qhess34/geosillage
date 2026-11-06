@@ -80,7 +80,7 @@ jobs:
         working-directory: e2e
         env:
           PYTHON: python
-        run: npx tsc -p . && npx playwright test --trace off
+        run: npm run typecheck && npx playwright test --trace off
       - name: Rapport (en cas d'échec)
         if: failure()
         uses: actions/upload-artifact@v4
