@@ -1310,6 +1310,13 @@ input.coord {
   margin: 6px 0 8px;
   line-height: 1.45;
 }
+.check-card.fixed {
+  border-color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+}
+.check-card .check-precise {
+  font-weight: 600;
+}
 .check-card .dot {
   display: inline-block;
   width: 9px;
