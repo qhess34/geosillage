@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, FLAG_LABELS, FLAGS, Job, PhotoDetail, PhotoRow, Project, QualityIssue, SeqState, Sequence, UndoState } from './api'
-import { Basemap, BUILTIN_BASEMAPS, loadCustomBasemaps, saveCustomBasemaps } from './basemaps'
+import { BUILTIN_BASEMAPS } from './basemaps'
+import { useCustomBasemaps } from './useCustomBasemaps'
+import SettingsDialog from './SettingsDialog'
 import ExportTab from './ExportTab'
 import { fmtCoord, fmtDistance, fmtDuration, fmtSize, fmtTime } from './format'
 import HeadingDial from './HeadingDial'
@@ -18,7 +20,7 @@ import { AddBasemap, Confirm, ValueDialog } from './Dialogs'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
-import { AGE_CLASSES, loadOverlay, OverlaySettings, PANORAMAX_PRESETS, saveOverlay } from './panoramaxLayer'
+import { AGE_CLASSES, loadOverlay, OverlaySettings, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
 import ContextMenu, { MenuItem } from './ContextMenu'
@@ -96,34 +98,7 @@ function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDon
   )
 }
 
-function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => void; onError: (m: string) => void }) {
-  const [minM, setMinM] = useState(String(p.settings.heading_min_m))
-  const [win, setWin] = useState(String(p.settings.heading_window_s))
-  const save = () =>
-    api
-      .updateProject(p.id, { settings: { heading_min_m: Number(minM), heading_window_s: Number(win) } })
-      .then(onSaved, (e) => onError(e.message))
-  return (
-    <div className="small-text">
-      <h4>Calcul du cap</h4>
-      <p className="muted">
-        Le cap d'une photo est la direction vers le premier point suivant situé à au moins cette distance (cherché dans la
-        fenêtre de temps). Les caps manuels ne sont jamais recalculés.
-      </p>
-      <div className="row wrap">
-        <label>
-          Distance min. <input className="num" type="number" min={1} max={100} value={minM} onChange={(e) => setMinM(e.target.value)} /> m
-        </label>
-        <label>
-          Fenêtre <input className="num" type="number" min={1} max={120} value={win} onChange={(e) => setWin(e.target.value)} /> s
-        </label>
-        <button className="small" onClick={save}>
-          Enregistrer et recalculer
-        </button>
-      </div>
-    </div>
-  )
-}
+
 
 function Summary({ p }: { p: Project }) {
   const s = p.summary
@@ -166,49 +141,6 @@ function metersBetween(lat0: number, lon0: number, lat1: number, lon1: number): 
 }
 function shifted(lat: number, lon: number, east: number, north: number): { lat: number; lon: number } {
   return { lat: lat + north / M_PER_DEG, lon: lon + east / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)) }
-}
-
-
-function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o: OverlaySettings) => void }) {
-  const [url, setUrl] = useState(overlay.url)
-  return (
-    <div className="small-text">
-      <h3>Surcouche Panoramax</h3>
-      <p className="muted">
-        Photos 360° déjà publiées affichées par le bouton « Panoramax » de la barre d'outils : toutes les instances
-        (méta-catalogue) ou une seule instance.
-      </p>
-      <div className="row wrap">
-        {PANORAMAX_PRESETS.map((p) => (
-          <label key={p.url}>
-            <input
-              type="radio"
-              name="pnx-source"
-              checked={overlay.url === p.url}
-              onChange={() => {
-                setUrl(p.url)
-                onSave({ ...overlay, url: p.url })
-              }}
-            />{' '}
-            {p.label}
-          </label>
-        ))}
-      </div>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault()
-          const u = url.trim().replace(/\/+$/, '')
-          if (/^https?:\/\//.test(u)) onSave({ ...overlay, url: u })
-        }}
-      >
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.example.org" aria-label="Autre instance Panoramax" />
-        <button className="small" type="submit">
-          Enregistrer
-        </button>
-      </form>
-    </div>
-  )
 }
 
 function SeqButtons({
@@ -732,6 +664,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [showHelp, setShowHelp] = useState(false)
   const [confirmExclude, setConfirmExclude] = useState<{ range: [number, number]; n: number } | null>(null)
   const [addingBasemap, setAddingBasemap] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   // heading offset / orientation of a series of photos (context menu)
   const [valueDlg, setValueDlg] = useState<{ kind: 'offset' | 'yaw'; range: [number, number] } | null>(null)
   const [issuesStep, setIssuesStep] = useState<IssueStep | null>(null) // list of things to fix of a step (floating window)
@@ -744,7 +677,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [syncDragged, setSyncDragged] = useState<{ photoId: number; offset: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [custom, setCustom] = useState<Basemap[]>(loadCustomBasemaps)
+  const { custom, add: addBasemap, remove: removeBasemap } = useCustomBasemaps()
   const basemaps = useMemo(() => [...BUILTIN_BASEMAPS, ...custom], [custom])
   const [basemapId, setBasemapId] = useState(() => {
     try {
@@ -1086,7 +1019,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg || confirmInterp) return
+      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg || confirmInterp || showSettings) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl && e.key.toLowerCase() === 'z') {
         undoRedo(e.shiftKey ? 'redo' : 'undo')
@@ -1165,7 +1098,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, confirmInterp])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, confirmInterp, showSettings])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
@@ -1306,6 +1239,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </button>
         <span className="spacer" />
         {notice && <div className="toast small-text">✓ {notice}</div>}
+        <button onClick={() => setShowSettings(true)} title="Réglages : surcouche Panoramax, fonds de carte ajoutés, calcul du cap">
+          ⚙ Réglages
+        </button>
         <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">
           ?
         </button>
@@ -1598,7 +1534,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <>
                 <Summary p={project} />
-                <OverlayUrl overlay={overlay} onSave={setOverlay} />
                 <div className="row wrap">
                   {!isPnx && (
                     <button className="small" onClick={() => api.checkFiles(projectId).then(refresh)} title="Signaler les fichiers sources introuvables">
@@ -1612,16 +1547,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   )}
                 </div>
                 <RideHeadings projectId={projectId} onDone={(u) => afterHeadingChange(u)} onError={fail} />
-                <HeadingSettings
-                  key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`}
-                  p={project}
-                  onSaved={() => {
-                    setNotice('Caps recalculés')
-                    lastPhotosKey.current = ''
-                    refresh()
-                  }}
-                  onError={fail}
-                />
                 {project.source_dirs.length > 0 && (
                   <>
                     <h3>Dossiers sources</h3>
@@ -1674,6 +1599,25 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           </p>
         </Confirm>
       )}
+      {showSettings && (
+        <SettingsDialog
+          project={project}
+          overlay={overlay}
+          onOverlay={setOverlay}
+          custom={custom}
+          onRemoveBasemap={(id) => {
+            removeBasemap(id)
+            if (basemapId === id) chooseBasemap('osm')
+          }}
+          onHeadingsSaved={() => {
+            setNotice('Caps recalculés')
+            lastPhotosKey.current = ''
+            refresh()
+          }}
+          onError={fail}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
       {valueDlg && (
         <ValueDialog
           title={`${valueDlg.kind === 'offset' ? 'Décalage du cap' : 'Orientation'} : photos ${valueDlg.range[0] + 1} → ${valueDlg.range[1] + 1}`}
@@ -1705,10 +1649,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         <AddBasemap
           onCancel={() => setAddingBasemap(false)}
           onAdd={(name, url, attribution) => {
-            const b: Basemap = { id: `custom-${Date.now()}`, name, url, attribution, maxzoom: 19, custom: true }
-            const list = [...custom, b]
-            setCustom(list)
-            saveCustomBasemaps(list)
+            const b = addBasemap(name, url, attribution)
             setAddingBasemap(false)
             chooseBasemap(b.id)
           }}

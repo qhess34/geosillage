@@ -442,6 +442,10 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
   carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
 - `Timeline` : bulle au survol (`HoverBubble`), zoom gardé sous `pss-timeline-<projet>` si le nombre de photos n'a
   pas changé ; photo et onglet gardés sous `pss-view-<projet>`.
+- `SettingsDialog.tsx` (bouton ⚙ Réglages, avec `OverlayUrl` et `HeadingSettings`) : surcouche Panoramax, fonds XYZ
+  ajoutés (hook `useCustomBasemaps` : ajout / retrait, retrait confirmé),
+  calcul du cap du projet (`HeadingSettings`) ; le *Bilan* ne garde que le bilan, la maintenance et les corrections
+  sur toute la sortie.
 - `Dialogs.tsx` : `Confirm` (Entrée / Échap) et `AddBasemap` ; plus aucun `window.confirm` / `prompt`.
 - `JobBar` : temps restant d'après la vitesse observée depuis l'ouverture ; notification (`Notification`) à la fin
   d'une tâche de plus de 10 s si la fenêtre est cachée et l'autorisation donnée.

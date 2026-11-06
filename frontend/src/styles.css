@@ -972,6 +972,24 @@ input.coord {
   margin: 0;
 }
 
+/* Settings dialog */
+.modal.settings h3 {
+  margin-top: 18px;
+}
+.settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.settings-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
 /* List of things to fix of a step (floating window over the map, moved by its title bar) */
 .issues-modal {
   /* on the right, under the map controls: the photo reached stays visible at the centre of the map */
