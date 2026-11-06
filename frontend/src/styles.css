@@ -1106,13 +1106,15 @@ input.coord {
 .stop-preview {
   margin: 0 0 10px;
 }
-.stop-preview img {
+.stop-thumb {
   display: block;
   width: 100%;
-  height: min(38vh, 420px);
-  object-fit: contain;
-  border-radius: 6px;
-  background: #111;
+  padding: 0;
+  border: none;
+  background: none;
+}
+.stop-grid li.shown {
+  box-shadow: 0 0 0 2px #facc15;
 }
 .stop-grid {
   list-style: none;

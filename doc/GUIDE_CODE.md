@@ -421,7 +421,8 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 
 ## Confort de l'interface
 
-- `StopCompare.tsx` : photos d'un arrêt côte à côte, exclusion des non gardées en un appel `excludePhotos`.
+- `StopCompare.tsx` : photos d'un arrêt côte à côte, la vignette cliquée dans `Viewer360` (orientation lue par
+  `api.photo`), exclusion des non gardées en un appel `excludePhotos`.
 - `N` / `Maj+N` (`checkPoints` dans `ProjectView`) : points à vérifier, sauts GPS non corrigés, photos sans position,
   photos non classées, triés par index.
 - `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`) ; pastille de sélection (`.selection-chip`) ;
