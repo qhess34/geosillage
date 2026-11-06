@@ -31,6 +31,29 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 | `frontend/src/ProjectView.tsx` | écran principal : état, barre d'outils, onglets, raccourcis clavier |
 | `frontend/src/*.tsx`, `*.ts` | carte (`PhotoMap`), timeline, visionneuse 360°, onglets, surcouche Panoramax, API (`api.ts`) |
 
+## Carte rapide : où modifier quoi
+
+| Fonction | Serveur | Interface | Tests |
+|---|---|---|---|
+| Import, miniatures, sélecteur de dossiers / fichiers | `importer.py`, `main.py` (`/api/fs`) | `ImportDialog`, `FsBrowser`, `FolderPicker` | `test_import`, e2e `files` |
+| Séquences (D / F, couper, fusionner, limites) | `core/sequences.py`, `routes_edit.py` | `SequencesTab`, `ProjectView` (raccourcis) | `test_export`, e2e `edits` |
+| Exclusion, annuler / rétablir | `undo.py`, `routes_edit.py` | `ProjectView`, `Timeline` (`hideExcluded`) | e2e `edits` |
+| Synchro (retard GPS) | `core/timesync.py` | `SyncTab`, `timesync.ts`, `PhotoMap` (marqueur, aperçu) | `test_timesync` |
+| Trace GPX (référence synchro, recalage sur la ligne) | `core/gpx.py`, routes `/gpx` | `Gpx.tsx` | `test_gpx`, e2e `gpx` |
+| Positions (glisser, interpolation, report) | `core/positions.py` | `ProjectView`, `PhotoMap` (mode Positions) | `test_positions_sources` |
+| Recalage OSM | `core/osm.py` | `OsmSnapPanel` | `test_osm` |
+| Caps et orientation | `core/headings.py` | `ProjectView` (onglet Photo), `HeadingDial`, `CapOrientation`, `YawRotate`, `Viewer360` | `test_headings` |
+| Points à vérifier (arrêts, écarts, DOP, caps, sans cap…) | `core/quality.py`, `core/analysis.py` | `issues.ts` (textes, liste), `IssuesPanel`, `CheckCard`, `StepBar` | `test_quality`, e2e `issues` |
+| Arrêts (ajuster, comparer, exclure) | — | `StopRangeEditor`, `StopCompare` | e2e `issues` |
+| Réglages (seuils, cap, surcouche) | `config.DEFAULT_SETTINGS`, `main.SettingsIn` | `SettingsDialog` | e2e `edits` |
+| Export, EXIF | `exporter.py`, `exif/` | `ExportTab` | `test_export` |
+| Publication / projet Panoramax | `panoramax.py`, `routes_publish.py` | `Publication`, `SendTab`, `PublishedEdit`, `NewPanoramaxProject` | `test_publish` |
+| Carte, fonds, surcouche Panoramax, légende | — | `PhotoMap`, `basemaps.ts`, `panoramaxLayer.ts`, `MapLegend` | — |
+
+Commandes : `cd backend && ../.venv/bin/python -m pytest -q` (~75 s) · `cd frontend && npm run build` ·
+`cd e2e && npm test` (~20 s, après la construction) · captures du guide : `tools/captures.sh` (plusieurs minutes, seulement
+si un écran montré change). `ProjectView.tsx` est long (~1 800 lignes) : chercher (`grep -n`) plutôt que le lire en entier.
+
 ## Règles
 
 - **Ne jamais perdre une photo ni une valeur d'origine.** Les sources ne sont modifiées que par l'export en modes
