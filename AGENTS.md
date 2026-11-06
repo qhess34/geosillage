@@ -28,7 +28,7 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 | `backend/app/exporter.py`, `exif/` | export, modification/restauration des sources, lecture/écriture ExifTool |
 | `backend/app/panoramax.py`, `routes_publish.py` | connexion à une instance Panoramax (lien de validation), publication par séquence |
 | `backend/tests/` | pytest (photos simulées par `tools/make_samples.py`) |
-| `frontend/src/ProjectView.tsx` | écran principal : état, barre d'outils, onglets, raccourcis clavier |
+| `frontend/src/ProjectView.tsx` | écran principal : état, barre d'outils, carte, timeline, onglets ; s'appuie sur `shortcuts.ts` (raccourcis), `useIssues.ts` (points à vérifier), `contextMenuItems.ts` (clic droit), `PhotoTab`, `SummaryTab`, `ProjectDialogs`, `JobBar` |
 | `frontend/src/*.tsx`, `*.ts` | carte (`PhotoMap`), timeline, visionneuse 360°, onglets, surcouche Panoramax, API (`api.ts`) |
 
 ## Carte rapide : où modifier quoi
@@ -36,14 +36,16 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 | Fonction | Serveur | Interface | Tests |
 |---|---|---|---|
 | Import, miniatures, sélecteur de dossiers / fichiers | `importer.py`, `main.py` (`/api/fs`) | `ImportDialog`, `FsBrowser`, `FolderPicker` | `test_import`, e2e `files` |
-| Séquences (D / F, couper, fusionner, limites) | `core/sequences.py`, `routes_edit.py` | `SequencesTab`, `ProjectView` (raccourcis) | `test_export`, e2e `edits` |
-| Exclusion, annuler / rétablir | `undo.py`, `routes_edit.py` | `ProjectView`, `Timeline` (`hideExcluded`) | e2e `edits` |
+| Séquences (D / F, couper, fusionner, limites) | `core/sequences.py`, `routes_edit.py` | `SequencesTab`, `shortcuts.ts`, `PhotoTab` (`SeqButtons`) | `test_export`, e2e `edits` |
+| Exclusion, annuler / rétablir | `undo.py`, `routes_edit.py` | `shortcuts.ts`, `ProjectDialogs` (confirmation), `Timeline` (`hideExcluded`) | e2e `edits` |
+| Raccourcis clavier, aide `?` | — | `shortcuts.ts` (`useShortcuts`, `SHORTCUTS`), `ProjectDialogs` (`HelpDialog`) | e2e `navigation`, `edits` |
+| Menu contextuel (clic droit : recalage, cap, orientation, séquence) | — | `contextMenuItems.ts`, `ProjectDialogs` (`RangeValueDialog`) | — |
 | Synchro (retard GPS) | `core/timesync.py` | `SyncTab`, `timesync.ts`, `PhotoMap` (marqueur, aperçu) | `test_timesync` |
 | Trace GPX (référence synchro, recalage sur la ligne) | `core/gpx.py`, routes `/gpx` | `Gpx.tsx` | `test_gpx`, e2e `gpx` |
-| Positions (glisser, interpolation, report) | `core/positions.py` | `ProjectView`, `PhotoMap` (mode Positions) | `test_positions_sources` |
+| Positions (glisser, interpolation, report) | `core/positions.py` | `ProjectView` (report), `PhotoTab`, `PhotoMap` (mode Positions) | `test_positions_sources` |
 | Recalage OSM | `core/osm.py` | `OsmSnapPanel` | `test_osm` |
-| Caps et orientation | `core/headings.py` | `ProjectView` (onglet Photo), `HeadingDial`, `CapOrientation`, `YawRotate`, `Viewer360` | `test_headings` |
-| Points à vérifier (arrêts, écarts, DOP, caps, sans cap…) | `core/quality.py`, `core/analysis.py` | `issues.ts` (textes, liste), `IssuesPanel`, `CheckCard`, `StepBar` | `test_quality`, e2e `issues` |
+| Caps et orientation | `core/headings.py` | `PhotoTab`, `SummaryTab` (toute la sortie), `HeadingDial`, `CapOrientation`, `YawRotate`, `Viewer360` | `test_headings` |
+| Points à vérifier (arrêts, écarts, DOP, caps, sans cap…) | `core/quality.py`, `core/analysis.py` | `issues.ts` (textes, liste), `useIssues.ts`, `IssuesPanel`, `CheckCard`, `StepBar` | `test_quality`, e2e `issues` |
 | Arrêts (ajuster, comparer, exclure) | — | `StopRangeEditor`, `StopCompare` | e2e `issues` |
 | Réglages (seuils, cap, surcouche) | `config.DEFAULT_SETTINGS`, `main.SettingsIn` | `SettingsDialog` | e2e `edits` |
 | Export, EXIF | `exporter.py`, `exif/` | `ExportTab` | `test_export` |
@@ -52,7 +54,7 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 
 Commandes : `cd backend && ../.venv/bin/python -m pytest -q` (~75 s) · `cd frontend && npm run build` ·
 `cd e2e && npm test` (~20 s, après la construction) · captures du guide : `tools/captures.sh` (plusieurs minutes, seulement
-si un écran montré change). `ProjectView.tsx` est long (~1 800 lignes) : chercher (`grep -n`) plutôt que le lire en entier.
+si un écran montré change). `ProjectView.tsx` est long (~1 000 lignes) : chercher (`grep -n`) plutôt que le lire en entier ; raccourcis, onglets Photo / Bilan, menu contextuel et points à vérifier sont dans leurs propres fichiers.
 
 ## Règles
 
