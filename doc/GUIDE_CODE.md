@@ -317,7 +317,7 @@ atomique) ; `GET /api/panoramax` ne renvoie jamais le jeton (décision : pas de 
 Docker). **Publication** (tâche `publish`) : par séquence, fichiers du dernier export (`report.items` : photo →
 fichier exporté, écrit par `exporter.run` ; un export plus ancien sans cette liste, ou une séquence « à
 réexporter », est réexporté d'abord avec les mêmes réglages) ; `POST /api/upload_sets` (`title`, `no_split`,
-`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans la section « Publier sur Panoramax » de l'onglet Export et envoi (`PublishPanel.tsx` : `usePublishOptions`,
+`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans la section « Publier sur Panoramax » de l'onglet Export et envoi (`Publication.tsx` : `usePublishOptions`,
 `PublishOptionsPanel`, bouton `PublishButton` sur chaque séquence exportée) (`transport` walk / bike / car comme sur le site
 Panoramax, plus attributs libres `clé=valeur` ; validées par `normalize_semantics`, absentes si aucune ; les
 dernières utilisées sont gardées dans `panoramax.json` et renvoyées par `GET /api/panoramax`) ;
@@ -364,7 +364,7 @@ relaie `sd.jpg` (`?hd=1` : `hd.jpg`, lien « Original »), avec le jeton pour le
 limites / suppression de séquences, l'export, le réexport, les sources et la publication. Interface : `isPnx` dans
 `ProjectView` (pas d'*Importer*, de *Couper*, de *Début/Fin* ni des touches D/F/C ; onglet *Envoyer* =
 `SendTab.tsx`), `SequencesTab` (`pnx`), `NewPanoramaxProject.tsx` (accueil), `PnxConnection` (dans
-`PublishPanel.tsx`, partagé). Tests : `test_publish.py` (`FakeAccount`).
+`Publication.tsx`, partagé). Tests : `test_publish.py` (`FakeAccount`).
 
 ## Réexport
 

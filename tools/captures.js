@@ -35,7 +35,7 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   await shot('08-export');
 
   // satellite IGN for sync and positions
-  await p.selectOption('.toolbar select', 'ign-ortho'); await wait(1000);
+  await p.selectOption('select[aria-label="Fond de carte"]', 'ign-ortho'); await wait(1000);
   await p.click('.tab:has-text("Synchro")'); await wait(1500);
   await go(150); await p.evaluate(() => window.__pssMap.zoomTo(18, { duration: 0 })); await tiles();
   await shot('05-synchro');
@@ -63,7 +63,7 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   if (await p.locator('.modal').count()) await p.keyboard.press('?');
 
   // Panoramax overlay (real data from the meta-catalogue)
-  await p.selectOption('.toolbar select', 'osm'); await wait(800);
+  await p.selectOption('select[aria-label="Fond de carte"]', 'osm'); await wait(800);
   await go(250); await p.click('button:has-text("Panoramax")'); await wait();
   await p.evaluate(() => window.__pssMap.jumpTo({ zoom: 16.5 })); await tiles(); await wait(2500);
   const pt = await p.evaluate(() => { const m = window.__pssMap; const fs = m.queryRenderedFeatures({ layers: ['pnx-pictures'] }); const r = m.getContainer().getBoundingClientRect();

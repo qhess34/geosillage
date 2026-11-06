@@ -26,7 +26,7 @@ post $A/timesync/apply '{"offset_s":1.5,"scope":"all","keep_manual":true}'
 post $A/headings/yaw '{"sequence_id":2,"add":20}'                           # camera badly aligned on the helmet
 post $A/export "{\"out_dir\":\"$EXPORTS_DIR\",\"sequence_ids\":[1,2]}"
 until curl -sf $A | "$PY" -c 'import sys,json;sys.exit(any(j["state"]=="running" for j in json.load(sys.stdin)["jobs"]))'; do sleep 2; done
-post $A/sequences/2 '{"heading_offset":2}' PATCH                            # sequence 2: « à réexporter »
+post $A/headings/offset '{"start_idx":121,"end_idx":201,"value":2}'       # sequence 2: « à réexporter »
 mkdir -p "$WORK/png" && node tools/captures.js "$WORK/png" "http://127.0.0.1:$PORT/"
 "$PY" -I - "$WORK/png" doc/images <<'PYEOF'
 import os, sys

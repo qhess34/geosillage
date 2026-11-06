@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
-import { PUBLICATION_STATES, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './PublishPanel'
+import { PUBLICATION_STATES, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './Publication'
 
 interface Props {
   projectId: string

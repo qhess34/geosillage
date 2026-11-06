@@ -407,7 +407,7 @@ listés dans la même fenêtre (étape *Correction GPS*), les photos non classé
 
 ## 8. Exporter
 
-Onglet **Export** :
+Onglet **Export et envoi** :
 
 1. **Dossier de destination** (*Parcourir…*), prérempli avec celui du dernier export. Avec Docker : sous
    `/exports` pour une copie.
@@ -428,8 +428,8 @@ Onglet **Export** :
 5. *Exporter*. La tâche s'affiche en bas de l'écran.
 
 
-![Onglet Export](images/08-export.webp)
-*Onglet *Export* : mode, dossier, séquences à exporter (la séquence 1, déjà exportée et inchangée, est décochée) et options.*
+![Onglet Export et envoi](images/08-export.webp)
+*Onglet *Export et envoi* : mode, dossier, séquences (la séquence 1, déjà exportée et inchangée, est décochée ; les séquences exportées ont leur bouton *⇪ Publier*) et options.*
 
 Résultat : un dossier par séquence, `<nom du projet>_1`, `_2`… dans l'ordre de la sortie, avec les photos renommées
 `0001_GSAC….JPG`, `0002_…`. Chaque photo reçoit :

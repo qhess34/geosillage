@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, PanoramaxStatus, PnxSequence } from './api'
-import { PnxConnection } from './PublishPanel'
+import { PnxConnection } from './Publication'
 
 // Home page: project made of sequences already published on Panoramax (to correct them and send the corrections)
 export default function NewPanoramaxProject({ onCreated, onCancel }: { onCreated: (id: string) => void; onCancel: () => void }) {

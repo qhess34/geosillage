@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
-import { PUBLICATION_STATES, viewerUrl } from './PublishPanel'
+import { PUBLICATION_STATES, viewerUrl } from './Publication'
 import PublishedEdit from './PublishedEdit'
 
 interface Props {
