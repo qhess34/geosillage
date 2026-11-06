@@ -356,7 +356,7 @@ def test_yaw_sign_migration(project):
         flip = next(i for i, m in enumerate(db.MIGRATIONS) if "yaw_offset = CASE" in m)
         conn.execute(f"PRAGMA user_version={flip}")
         # later migrations are replayed too: the columns they add are dropped first
-        conn.executescript("ALTER TABLE sequence DROP COLUMN modified_at; ALTER TABLE photo DROP COLUMN pitch_orig; ALTER TABLE photo DROP COLUMN roll_orig; ALTER TABLE photo DROP COLUMN heading_offset")
+        conn.executescript("ALTER TABLE sequence DROP COLUMN modified_at; ALTER TABLE photo DROP COLUMN pitch_orig; ALTER TABLE photo DROP COLUMN roll_orig; ALTER TABLE photo DROP COLUMN heading_offset; ALTER TABLE photo DROP COLUMN heading_kept")
         db.migrate(conn)
         got = [conn.execute("SELECT yaw_offset FROM photo WHERE id=?", (ph[i]["id"],)).fetchone()[0] for i in range(3)]
     assert got == [-30, -180, 170]
@@ -449,9 +449,9 @@ def test_sequence_offsets_move_to_their_photos(project):
     client, pid, _, seqs = project
     with db.open_project(pid) as conn:
         conn.execute("UPDATE sequence SET heading_offset=7 WHERE id=?", (seqs[0]["id"],))
-        last = len(db.MIGRATIONS) - 1
+        last = next(i for i, m in enumerate(db.MIGRATIONS) if "ADD COLUMN heading_offset" in m)
         conn.execute(f"PRAGMA user_version={last}")
-        conn.executescript("ALTER TABLE photo DROP COLUMN heading_offset")
+        conn.executescript("ALTER TABLE photo DROP COLUMN heading_offset; ALTER TABLE photo DROP COLUMN heading_kept")
         db.migrate(conn)
         offs = {r[0] for r in conn.execute("SELECT heading_offset FROM photo WHERE sequence_id=?", (seqs[0]["id"],))}
         others = {r[0] for r in conn.execute("SELECT heading_offset FROM photo WHERE sequence_id IS NOT ? ", (seqs[0]["id"],))}

@@ -428,10 +428,12 @@ class IgnoreHeadingsIn(BaseModel):
 
 @router.post("/quality/ignore-headings")
 def quality_ignore_headings(pid: str, body: IgnoreHeadingsIn):
-    """Headings to check that the user keeps (computed heading wrong, e.g. GPS lost); returns the new points to check."""
+    """Headings to check that the user keeps (computed heading wrong, e.g. GPS lost), undoable; returns the new
+    points to check and the undo state."""
     with db.open_project(pid) as conn:
-        n = quality.ignore_headings(conn, body.photo_ids, body.ignore)
-        return {"changed": n, "issues": quality.check(conn)}
+        with undo.undoable(conn, "Cap gardé" if body.ignore else "Cap à nouveau signalé"):
+            n = quality.keep_headings(conn, body.photo_ids, body.ignore)
+        return {"changed": n, "issues": quality.check(conn), "undo": undo.state(conn)}
 
 
 @router.get("/positions/missing")

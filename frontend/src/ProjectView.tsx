@@ -965,16 +965,17 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     if (focusPoint && (!current || current.idx < focusPoint.start || current.idx > focusPoint.end)) setFocusPoint(null)
   }, [current, focusPoint])
 
-  // Actions of the card of the Photo tab on the photos of the issue being corrected (exclusion: confirmed first)
   // « Ignorer » headings to check: the manual heading is right (computed one wrong, GPS lost); points recomputed
   const ignoreHeadings = useCallback(
     (ids: number[]) =>
       api.ignoreHeadings(projectId, ids).then((res) => {
         setQuality(res.issues)
-        setNotice('Cap gardé : il n\'est plus signalé (tant qu\'il ne change pas)')
+        afterHeadingChange(res.undo)
+        setNotice('Cap gardé : il n\'est plus signalé tant qu\'il ne change pas — Ctrl+Z pour annuler')
       }, (er) => setError(er.message)),
-    [projectId],
+    [projectId, afterHeadingChange],
   )
+  // Actions of the card of the Photo tab on the photos of the issue being corrected (exclusion: confirmed first)
   const fixIssue = useCallback(
     (what: CheckAction) => {
       if (!focusPoint) return

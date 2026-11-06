@@ -389,7 +389,7 @@ Les problèmes sont aussi marqués **en orange en haut de la timeline** :
 - **Précision GPS faible** : la caméra indique une position peu précise (DOP > 5) ; vérifier la position sur la carte ;
 - **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?). Si c'est le cap
   calculé qui est faux (perte du GPS : la trace ne donne plus la bonne direction), **Ignorer** (dans la fenêtre *À
-  corriger* ou l'encadré de l'onglet *Photo*) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas.
+  corriger* ou l'encadré de l'onglet *Photo*) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas (`Ctrl+Z` annule).
 
 L'onglet *Photo* sélectionne alors les photos concernées et affiche en haut un encadré
 **« À corriger »** : quel est le problème, comment le corriger, et les boutons utiles (*Corriger la position (M)*,
