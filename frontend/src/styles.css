@@ -547,6 +547,16 @@ button.icon {
   padding: 0 4px;
   color: var(--muted);
 }
+.export-list li.export-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.export-row-actions {
+  flex: none;
+  align-items: center;
+}
 .export-list li,
 .export-history li {
   padding: 4px 0;

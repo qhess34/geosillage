@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
+import { PUBLICATION_STATES, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './Publication'
 
 interface Props {
   projectId: string
@@ -55,6 +56,8 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
   const [confirm, setConfirm] = useState<null | 'export' | 'restore' | 'trash'>(null)
   const [history, setHistory] = useState<ExportRecord[]>([])
   const running = jobs.some((j) => ['export', 'restore_sources', 'trash'].includes(j.kind) && j.state === 'running')
+  const publishing = jobs.some((j) => j.kind === 'publish' && j.state === 'running')
+  const pub = usePublishOptions() // options of the « Publier » buttons of the exported sequences
 
   useEffect(() => {
     api.exports(projectId).then(setHistory, () => undefined)
@@ -118,7 +121,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           </div>
         </>
       )}
-      <h3>Séquences à exporter</h3>
+      <h3>Séquences</h3>
       {sequences.length > 0 && (
         <div className="row wrap small-text">
           {sequences.some((s) => !s.needs_export) && (
@@ -136,20 +139,38 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
         <p className="muted small-text">Aucune séquence.</p>
       ) : (
         <ul className="export-list">
-          {sequences.map((s, i) => (
-            <li key={s.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={isTicked(s)}
-                  onChange={() => setOverrides(new Map(overrides).set(s.id, !isTicked(s)))}
-                />{' '}
-                <span className="chip" style={{ background: seqColor(sequences, s.id) }} /> {i + 1} · {s.name}{' '}
-                <span className="muted">({s.count} photos)</span>{' '}
-                {s.last_export ? (s.needs_export ? <span className="badge warn-text">à réexporter</span> : <span className="badge">exportée</span>) : null}
-              </label>
-            </li>
-          ))}
+          {sequences.map((s, i) => {
+            const p = s.last_publication
+            return (
+              <li key={s.id} className="export-row">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={isTicked(s)}
+                    onChange={() => setOverrides(new Map(overrides).set(s.id, !isTicked(s)))}
+                  />{' '}
+                  <span className="chip" style={{ background: seqColor(sequences, s.id) }} /> {i + 1} · {s.name}{' '}
+                  <span className="muted">({s.count} photos)</span>{' '}
+                  {s.last_export ? (s.needs_export ? <span className="badge warn-text">à réexporter</span> : <span className="badge">exportée</span>) : null}{' '}
+                  {p && (
+                    <span className={`badge ${p.state === 'error' || p.state === 'uploading' || s.changed_since_publication ? 'warn-text' : ''}`} title={p.message ?? p.instance}>
+                      {s.changed_since_publication ? 'modifiée depuis la publication' : `${PUBLICATION_STATES[p.state]} le ${new Date(p.ts * 1000).toLocaleDateString('fr-FR')}`}
+                    </span>
+                  )}
+                </label>
+                {s.last_export && (
+                  <span className="row export-row-actions">
+                    {p?.first_picture_id && (
+                      <a className="button-link small" href={viewerUrl(p.instance, p.first_picture_id)} target="_blank" rel="noreferrer">
+                        Voir ↗
+                      </a>
+                    )}
+                    <PublishButton projectId={projectId} s={s} o={pub} running={publishing} onStarted={onStarted} onError={onError} />
+                  </span>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
       <label className="small-text option-line">
@@ -255,7 +276,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
         </div>
       )}
 
-      <p className="small-text muted">Publication sur Panoramax des séquences exportées : onglet <strong>Envoi</strong>.</p>
+      <PublishOptionsPanel o={pub} projectId={projectId} sequences={sequences} running={publishing} onStarted={onStarted} onError={onError} />
 
       {history.length > 0 && (
         <>

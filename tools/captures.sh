@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$PWD PY=$PWD/.venv/bin/python PORT=${PORT:-8767}
 PHOTOS_DIR=${PHOTOS_DIR:-/photos} EXPORTS_DIR=${EXPORTS_DIR:-/exports}
-WORK=$(mktemp -d) && trap 'kill $SERVER 2>/dev/null; rm -rf "$WORK"' EXIT
+WORK=$(mktemp -d) && trap 'kill $SERVER 2>/dev/null || true; rm -rf "$WORK"' EXIT
 mkdir -p "$PHOTOS_DIR" "$EXPORTS_DIR"
 [ -d "$PHOTOS_DIR/Sortie_14_juin" ] || "$PY" tools/make_samples.py "$PHOTOS_DIR/Sortie_14_juin" --count 400 --width 2048 --seed 7
 (cd backend && PSS_DATA_DIR="$WORK/data" PSS_DEFAULT_DIR="$PHOTOS_DIR" "$ROOT/.venv/bin/uvicorn" app.main:app --port "$PORT" >"$WORK/log" 2>&1) &
@@ -26,7 +26,7 @@ post $A/timesync/apply '{"offset_s":1.5,"scope":"all","keep_manual":true}'
 post $A/headings/yaw '{"sequence_id":2,"add":20}'                           # camera badly aligned on the helmet
 post $A/export "{\"out_dir\":\"$EXPORTS_DIR\",\"sequence_ids\":[1,2]}"
 until curl -sf $A | "$PY" -c 'import sys,json;sys.exit(any(j["state"]=="running" for j in json.load(sys.stdin)["jobs"]))'; do sleep 2; done
-post $A/sequences/2 '{"heading_offset":2}' PATCH                            # sequence 2: « à réexporter »
+post $A/headings/offset '{"start_idx":121,"end_idx":201,"value":2}'       # sequence 2: « à réexporter »
 mkdir -p "$WORK/png" && node tools/captures.js "$WORK/png" "http://127.0.0.1:$PORT/"
 "$PY" -I - "$WORK/png" doc/images <<'PYEOF'
 import os, sys

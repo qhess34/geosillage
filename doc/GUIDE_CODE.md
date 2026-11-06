@@ -30,7 +30,7 @@ backend/app/
 frontend/src/
   main.tsx         routage (#/p/<id>), thème clair/sombre/auto
   ProjectList.tsx  création, ouverture, suppression (avec confirmation) des projets
-  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export, Envoi, Bilan ; projet Panoramax : pas d'Export), barre d'étapes (`StepBar.tsx`), raccourcis clavier
+  ProjectView.tsx  barre d'outils, carte + timeline, onglets (Photo, Séquences, Synchro, Export et envoi, Bilan ; projet Panoramax : Envoi au lieu d'Export), barre d'étapes (`StepBar.tsx`), raccourcis clavier
   PhotoMap.tsx     MapLibre : une source GeoJSON (points colorés par séquence + trace), flèches de cap (SDF), plage, sélection
   Timeline.tsx     bande chronologique (canvas) : couleur par séquence, anomalies, interruptions, sélection de plage
   HeadingDial.tsx  cadran de cap (glisser, Maj = pas de 5°)
@@ -317,7 +317,9 @@ atomique) ; `GET /api/panoramax` ne renvoie jamais le jeton (décision : pas de 
 Docker). **Publication** (tâche `publish`) : par séquence, fichiers du dernier export (`report.items` : photo →
 fichier exporté, écrit par `exporter.run` ; un export plus ancien sans cette liste, ou une séquence « à
 réexporter », est réexporté d'abord avec les mêmes réglages) ; `POST /api/upload_sets` (`title`, `no_split`,
-`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans l'onglet Envoi (`transport` walk / bike / car comme sur le site
+`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans la section « Publier sur Panoramax » de l'onglet Export et envoi (`Publication.tsx` : `usePublishOptions`,
+`PublishOptionsPanel` avec « Publier les n séquences exportées non publiées » en un seul `api.publish(ids)`, bouton
+`PublishButton` sur chaque séquence exportée) (`transport` walk / bike / car comme sur le site
 Panoramax, plus attributs libres `clé=valeur` ; validées par `normalize_semantics`, absentes si aucune ; les
 dernières utilisées sont gardées dans `panoramax.json` et renvoyées par `GET /api/panoramax`) ;
 jamais `relative_heading`) ; envoi des fichiers (3 en parallèle, `POST …/files`, 409 `existing_item` = déjà reçu) ;
@@ -363,7 +365,7 @@ relaie `sd.jpg` (`?hd=1` : `hd.jpg`, lien « Original »), avec le jeton pour le
 limites / suppression de séquences, l'export, le réexport, les sources et la publication. Interface : `isPnx` dans
 `ProjectView` (pas d'*Importer*, de *Couper*, de *Début/Fin* ni des touches D/F/C ; onglet *Envoyer* =
 `SendTab.tsx`), `SequencesTab` (`pnx`), `NewPanoramaxProject.tsx` (accueil), `PnxConnection` (dans
-`PublishPanel.tsx`, partagé). Tests : `test_publish.py` (`FakeAccount`).
+`Publication.tsx`, partagé). Tests : `test_publish.py` (`FakeAccount`).
 
 ## Réexport
 

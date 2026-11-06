@@ -104,7 +104,7 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
 │ (Panoramax · fond · Centrer · Suivre · …)    │ Photo · Séquences · Synchro  │
-│                                              │ Export · Envoi · Bilan       │
+│                                              │ Export et envoi · Bilan      │
 ├──────────────────────────────────────────────┤                              │
 │ timeline (toute la sortie)                   │                              │
 └──────────────────────────────────────────────┴──────────────────────────────┘
@@ -126,7 +126,7 @@ commencée) ; l'étape de l'onglet ouvert est encadrée. Au survol, le détail ;
 | Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | fenêtre *À corriger* : problèmes, cause, correction ; un clic sur une photo y va (*Bilan* quand tout est vert) |
 | Séquences | photos ni dans une séquence, ni exclues | fenêtre *À corriger* (photos non classées) ; onglet *Séquences* quand tout est vert |
 | Export | séquences pas encore exportées, ou à réexporter | *Export* |
-| Envoi | séquences pas encore publiées, modifiées depuis, ou envoi interrompu | *Envoi* |
+| Envoi | séquences pas encore publiées, modifiées depuis, ou envoi interrompu | *Export et envoi* (projet Panoramax : *Envoi*) |
 
 Dans un projet Panoramax : Import Panoramax · Synchro · Doublons et arrêts · Correction GPS · Envoi (orange quand des
 séquences ont été corrigées depuis leur import ou leur dernier envoi).
@@ -407,7 +407,7 @@ listés dans la même fenêtre (étape *Correction GPS*), les photos non classé
 
 ## 8. Exporter
 
-Onglet **Export** :
+Onglet **Export et envoi** :
 
 1. **Dossier de destination** (*Parcourir…*), prérempli avec celui du dernier export. Avec Docker : sous
    `/exports` pour une copie.
@@ -428,8 +428,8 @@ Onglet **Export** :
 5. *Exporter*. La tâche s'affiche en bas de l'écran.
 
 
-![Onglet Export](images/08-export.webp)
-*Onglet *Export* : mode, dossier, séquences à exporter (la séquence 1, déjà exportée et inchangée, est décochée) et options.*
+![Onglet Export et envoi](images/08-export.webp)
+*Onglet *Export et envoi* : mode, dossier, séquences (la séquence 1, déjà exportée et inchangée, est décochée ; les séquences exportées ont leur bouton *⇪ Publier*) et options.*
 
 Résultat : un dossier par séquence, `<nom du projet>_1`, `_2`… dans l'ordre de la sortie, avec les photos renommées
 `0001_GSAC….JPG`, `0002_…`. Chaque photo reçoit :
@@ -454,7 +454,11 @@ seule séquence avec le dossier, le mode et les options de son dernier export.
 
 ## 9. Publier sur Panoramax
 
-### Depuis l'application (onglet *Envoi*)
+### Depuis l'application (onglet *Export et envoi*)
+
+La publication se fait une fois la séquence exportée : section **Publier sur Panoramax** en bas de l'onglet pour la
+connexion et les options, puis bouton **⇪ Publier** sur la ligne de la séquence, ou **⇪ Publier les n séquences
+exportées non publiées** pour toutes à la fois.
 
 1. **Instance** : adresse de l'instance Panoramax (par défaut `https://panoramax.openstreetmap.fr` ; IGN ou autre
    possible), puis *Changer*.
@@ -462,19 +466,23 @@ seule séquence avec le dossier, le mode et les options de son dernier export.
    l'instance avec son compte habituel, puis revenir et cliquer *J'ai validé, vérifier* : « ✓ Connecté … en tant que
    … ». Aucun mot de passe n'est saisi dans l'application ; l'accès obtenu reste sur votre machine (dans le dossier
    des projets, lisible par vous seul) et n'est jamais affiché. *Se déconnecter* l'efface.
-3. **Cocher les séquences** à publier (seules les séquences déjà exportées sont proposées), choisir la
-   **visibilité** (*Tout le monde*, ou *Moi seulement* pour un essai, modifiable ensuite sur Panoramax).
+3. Choisir la **visibilité** (*Tout le monde*, ou *Moi seulement* pour un essai, modifiable ensuite sur Panoramax).
 4. **Attributs de la séquence** (facultatifs, « sémantique » Panoramax) : le **mode de déplacement** (*À pied*,
    *Vélo*, *Voiture* — attribut `transport`, comme sur le site de Panoramax —, ou *Autre / non précisé* : pas
    d'attribut), et d'autres attributs libres, un par ligne au format `clé=valeur` (ex. `hashtag=gravel`). Ils sont
-   copiés sur la séquence Panoramax et reproposés au prochain envoi. Puis *Publier* et confirmer.
+   copiés sur la séquence Panoramax et reproposés au prochain envoi.
+5. Sur la ligne d'une séquence exportée : **⇪ Publier** (*Reprendre l'envoi* s'il a été interrompu, *Republier* si
+   elle est déjà en ligne : cela crée une nouvelle séquence Panoramax), puis confirmer.
+   Pour en publier plusieurs d'un coup : **⇪ Publier les n séquences exportées non publiées** (section *Publier sur
+   Panoramax*) — une seule confirmation, qui liste les séquences, l'instance, la visibilité et les attributs ; elles
+   sont envoyées l'une après l'autre (reprise des envois interrompus comprise).
 
 Chaque séquence est envoyée depuis le dossier de son dernier export, comme **une seule séquence Panoramax** (ni
 redécoupée, ni dédoublonnée). Une séquence modifiée depuis son export est d'abord réexportée. L'avancement s'affiche
 en bas de l'écran ; après l'envoi, Panoramax traite les photos (floutage) : la publication est terminée quand la
 séquence est prête. Un envoi interrompu (réseau coupé…) reprend où il s'était arrêté en relançant la publication.
 
-Ensuite, onglets *Séquences* et *Envoi* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
+Ensuite, onglets *Séquences* et *Export et envoi* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
 sur le site de l'instance) ; *modifiée depuis la publication* si la séquence a changé depuis (corrections à
 envoyer : voir ci-dessous).
 
