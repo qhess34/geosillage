@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, PhotoDetail, PhotoRow, Sequence, SyncPoint, SyncRun } from './api'
+import { useEffect, useMemo, useState } from 'react'
+import { api, MANUAL_METHODS, PhotoDetail, PhotoRow, Sequence, SyncPoint, SyncRun } from './api'
 import Viewer360 from './Viewer360'
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
   onApplied: () => void
   onNotice: (m: string) => void
   onError: (m: string) => void
+  onPreviewIds: (ids: Set<number> | null) => void // photos the preview shows moving (null: all)
 }
 
 type Scope = 'all' | 'sequence' | 'range' | 'from'
@@ -27,7 +28,7 @@ function median(v: number[]): number {
 
 const fmt = (o: number) => `${o >= 0 ? '+' : ''}${o.toFixed(1)} s`
 
-export default function SyncTab({ projectId, photo, photos, sequences, range, offset, dragged, onOffset, onGo, onApplied, onNotice, onError }: Props) {
+export default function SyncTab({ onPreviewIds, projectId, photo, photos, sequences, range, offset, dragged, onOffset, onGo, onApplied, onNotice, onError }: Props) {
   const [points, setPoints] = useState<SyncPoint[]>([])
   // First sync: the whole ride; later ones: from the current photo on (the GPS delay can change during a ride,
   // and earlier photos must not be moved again nor marked for re-export). The user's choice wins.
@@ -71,6 +72,21 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
     return true
   }
   const scoped = points.filter(inScope)
+  // Preview on the map: exactly the photos « Appliquer » would move (scope, and corrected positions kept or not)
+  const preview = useMemo(() => {
+    const inRange = (p: PhotoRow) =>
+      scope === 'all' ||
+      (scope === 'from' && photo != null && p.idx >= photo.idx) ||
+      (scope === 'sequence' && seq != null && p.sequence_id === seq.id) ||
+      (scope === 'range' && range != null && p.idx >= range[0] && p.idx <= range[1])
+    // photos without a time are skipped by the synchronisation (timesync.apply) and have no point on the map
+    const moved = photos.filter((p) => p.ts != null && inRange(p) && !(keepManual && p.pos_method != null && MANUAL_METHODS.includes(p.pos_method)))
+    return { ids: scope === 'all' && !keepManual ? null : new Set(moved.map((p) => p.id)), count: moved.length }
+  }, [scope, photo, seq, range, photos, keepManual])
+  useEffect(() => {
+    onPreviewIds(preview.ids)
+  }, [preview, onPreviewIds])
+  useEffect(() => () => onPreviewIds(null), [onPreviewIds])
   const med = scoped.length ? median(scoped.map((p) => p.offset_s)) : null
   const spread = points.length > 1 ? Math.max(...points.map((p) => p.offset_s)) - Math.min(...points.map((p) => p.offset_s)) : 0
 
@@ -228,6 +244,9 @@ export default function SyncTab({ projectId, photo, photos, sequences, range, of
           <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} /> Garder les positions corrigées à la main
         </label>
       </fieldset>
+      <p className="small-text muted">
+        Aperçu sur la carte (points orange) : les {preview.count} photo(s) que « Appliquer » déplacerait.
+      </p>
       <div className="actions">
         <button className="primary" disabled={offset == null || (scope === 'sequence' && !seq) || (scope === 'range' && !range) || (scope === 'from' && !photo)} onClick={apply}>
           Appliquer {offset == null ? '' : fmt(offset)}
