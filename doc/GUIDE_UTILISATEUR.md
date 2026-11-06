@@ -385,7 +385,8 @@ Onglet *Bilan*, section **Points à vérifier**, et marques **orange en haut de 
 *Voir* ouvre l'onglet *Photo* sur la première photo et sélectionne les photos concernées. **Rien n'est modifié
 automatiquement** ; `N` / `Maj+N` passent au point suivant / précédent (avec aussi les sauts GPS, les photos sans
 position et les photos non classées). Pour un arrêt, **Comparer** (ou un clic sur l'étape *Doublons et arrêts*)
-affiche ses photos côte à côte, avec un aperçu en grand au survol : cocher celles à garder, puis *Exclure n photos*
+affiche ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
+regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder, puis *Exclure n photos*
 (une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
 signalés à part (anomalies, *Photos sans position*).
 
