@@ -45,13 +45,13 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; one: string; cause: 
   spacing: {
     title: 'Grands écarts',
     one: 'Grand écart',
-    cause: 'plus de 25 m entre deux photos qui se suivent : position fausse, photos manquantes ou vitesse élevée.',
+    cause: 'grande distance entre deux photos qui se suivent (seuil réglable dans ⚙ Réglages) : position fausse, photos manquantes ou vitesse élevée.',
     fix: 'vérifier sur la vue satellite et corriger la position si l\'une des deux est fausse ; sinon, rien à faire.',
   },
   gps_dop: {
     title: 'Précision GPS faible',
     one: 'Précision GPS faible',
-    cause: 'la caméra indique une position peu précise (DOP > 5).',
+    cause: 'la caméra indique une position peu précise (DOP au-dessus du seuil réglable dans ⚙ Réglages).',
     fix: 'comparer avec la vue satellite et corriger la position si elle est décalée.',
   },
   heading: {

@@ -392,6 +392,9 @@ Les problèmes sont aussi marqués **en orange en haut de la timeline** :
   calculé qui est faux (perte du GPS : la trace ne donne plus la bonne direction), **Ignorer** (dans la fenêtre *À
   corriger* ou l'encadré de l'onglet *Photo*) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas (`Ctrl+Z` annule).
 
+Les valeurs ci-dessus sont celles par défaut : elles se règlent pour chaque projet dans **⚙ Réglages**, section
+*Points à vérifier* (nombre de photos et distance d'un arrêt, grand écart, DOP, écart de cap).
+
 L'onglet *Photo* sélectionne alors les photos concernées et affiche en haut un encadré
 **« À corriger »** : quel est le problème, comment le corriger, et les boutons utiles (*Corriger la position (M)*,
 *Interpoler entre les voisines*, *Revenir au cap calculé*, *Comparer les photos*, *Créer une séquence*, *Exclure*),

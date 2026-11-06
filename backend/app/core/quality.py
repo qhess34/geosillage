@@ -12,11 +12,8 @@ from .. import db
 from . import geo
 from .positions import UNUSABLE, _positioned_sql
 
-STOP_M = 2.0  # displacement between consecutive photos below this: not moving
-STOP_MIN = 3  # ...over at least this many photos
-SPACING_M = 25.0
-DOP_MAX = 5.0
-HEADING_DIFF = 90.0
+# Thresholds: project settings stop_m, stop_min, spacing_m, dop_max, heading_diff (defaults in config.DEFAULT_SETTINGS,
+# set in the Settings dialog)
 
 KINDS = ("stop", "spacing", "gps_dop", "heading")
 
@@ -51,6 +48,9 @@ def keep_headings(conn, photo_ids: list[int], keep: bool = True) -> int:
 
 
 def check(conn) -> list[dict]:
+    st = db.get_settings(conn)
+    stop_m, stop_min, spacing_m = st["stop_m"], int(st["stop_min"]), st["spacing_m"]
+    dop_max, heading_diff = st["dop_max"], st["heading_diff"]
     rows = conn.execute(
         f"""SELECT p.id, p.idx, p.ts, p.flags, p.gps_dop, p.heading_manual, p.heading_auto, p.heading_kept, p.sequence_id,
                    {_positioned_sql()} AS placed, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon
@@ -64,7 +64,7 @@ def check(conn) -> list[dict]:
     far: list = []
 
     def close_stop():
-        if len(stop) >= STOP_MIN:
+        if len(stop) >= stop_min:
             dur = (stop[-1]["ts"] - stop[0]["ts"]) if stop[0]["ts"] is not None and stop[-1]["ts"] is not None else None
             issues.append(_run("stop", stop, f"{len(stop)} photos au même endroit" + (f" pendant {dur:.0f} s" if dur else "")))
         stop.clear()
@@ -78,18 +78,18 @@ def check(conn) -> list[dict]:
         # photos excluded in between: a hole chosen by the user, not reported
         broken = prev is None or r["flags"] & db.GAP_BEFORE or r["idx"] - prev["idx"] > 1 and any(prev["idx"] < i < r["idx"] for i in excluded)
         d = None if broken else geo.distance(prev["lat"], prev["lon"], r["lat"], r["lon"])
-        if d is not None and d < STOP_M:
+        if d is not None and d < stop_m:
             if not stop:
                 stop.append(prev)
             stop.append(r)
         else:
             close_stop()
-        if d is not None and d > SPACING_M:
+        if d is not None and d > spacing_m:
             issues.append(_run("spacing", [prev, r], f"{d:.0f} m d'écart", meters=round(d)))
         prev = r
     close_stop()
 
-    dop = [(pos, r) for pos, r in enumerate(rows) if r["gps_dop"] is not None and r["gps_dop"] > DOP_MAX]
+    dop = [(pos, r) for pos, r in enumerate(rows) if r["gps_dop"] is not None and r["gps_dop"] > dop_max]
     issues += _merge("gps_dop", dop, lambda rs: f"précision GPS faible (DOP jusqu'à {max(x['gps_dop'] for x in rs):.1f})")
 
     def head_diff(r):
@@ -98,8 +98,8 @@ def check(conn) -> list[dict]:
         return abs((r["heading_manual"] - r["heading_auto"] + 180) % 360 - 180)
 
     # headings the user chose to keep (computed heading wrong, e.g. GPS lost): not reported while unchanged
-    heads = [(pos, r) for pos, r in enumerate(rows) if head_diff(r) > HEADING_DIFF and r["heading_kept"] != r["heading_manual"]]
-    issues += _merge("heading", heads, lambda rs: f"cap manuel à plus de {HEADING_DIFF:.0f}° du cap calculé (jusqu'à {max(head_diff(x) for x in rs):.0f}°)")
+    heads = [(pos, r) for pos, r in enumerate(rows) if head_diff(r) > heading_diff and r["heading_kept"] != r["heading_manual"]]
+    issues += _merge("heading", heads, lambda rs: f"cap manuel à plus de {heading_diff:.0f}° du cap calculé (jusqu'à {max(head_diff(x) for x in rs):.0f}°)")
 
     issues.sort(key=lambda i: (i["start_idx"], KINDS.index(i["kind"])))
     return issues

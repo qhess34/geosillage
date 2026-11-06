@@ -1626,6 +1626,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             lastPhotosKey.current = ''
             refresh()
           }}
+          onQualitySaved={() => {
+            api.project(projectId).then(setProject, () => undefined)
+            api.quality(projectId).then(setQuality, (e) => setError(e.message))
+            setNotice('Seuils enregistrés : points à vérifier recalculés')
+          }}
           onError={fail}
           onClose={() => setShowSettings(false)}
         />

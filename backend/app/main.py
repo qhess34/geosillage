@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from . import config, db, exporter, importer, jobs, panoramax, routes_edit, routes_publish, undo
 from .core import analysis, headings
@@ -49,6 +49,11 @@ class SettingsIn(BaseModel):
     jump_min_m: float | None = Field(default=None, ge=0)
     heading_min_m: float | None = Field(default=None, gt=0, le=100)
     heading_window_s: float | None = Field(default=None, gt=0, le=120)
+    stop_m: float | None = Field(default=None, gt=0, le=50)
+    stop_min: int | None = Field(default=None, ge=2, le=100)
+    spacing_m: float | None = Field(default=None, gt=0, le=1000)
+    dop_max: float | None = Field(default=None, gt=0, le=50)
+    heading_diff: float | None = Field(default=None, ge=10, le=180)
 
 
 class ImportIn(BaseModel):
@@ -95,7 +100,10 @@ def project_update(pid: str, body: dict):
                 raise HTTPException(400, "Nom vide")
             db.set_meta(conn, "name", name)
         if "settings" in body:
-            s = SettingsIn(**body["settings"]).model_dump(exclude_none=True)
+            try:
+                s = SettingsIn(**body["settings"]).model_dump(exclude_none=True)
+            except ValidationError as e:  # a value out of range: refused, not a server error
+                raise HTTPException(422, "Réglage invalide : " + "; ".join(f"{'.'.join(map(str, x['loc']))} : {x['msg']}" for x in e.errors()))
             db.set_meta(conn, "settings", {**(db.get_meta(conn, "settings", {}) or {}), **s})
             analysis.run(conn)
             headings.recompute(conn)

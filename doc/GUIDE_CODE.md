@@ -468,9 +468,10 @@ de la photo à garder dans un arrêt revient à l'utilisateur). Seule exception 
 manuel dans `photo.heading_kept` (colonne éditable de `undo.PHOTO_COLS`, annulable) ; le point n'est plus signalé tant
 que `heading_kept = heading_manual`. `heading_kept` est dans `undo.NOT_EXPORTED` : il ne rend pas une séquence
 « à réexporter ». Photos non exclues et utilisables, dans l'ordre :
-`stop` (≥ `STOP_MIN` photos consécutives à moins de `STOP_M` les unes des autres), `spacing` (> `SPACING_M` entre deux
-photos consécutives, pas à travers une interruption, un saut GPS ni des photos exclues), `gps_dop` (> `DOP_MAX`),
-`heading` (cap manuel à plus de `HEADING_DIFF` du cap calculé) ; photos consécutives regroupées en tronçons
+`stop` (≥ `stop_min` photos consécutives à moins de `stop_m` les unes des autres), `spacing` (> `spacing_m` entre deux
+photos consécutives, pas à travers une interruption, un saut GPS ni des photos exclues), `gps_dop` (> `dop_max`),
+`heading` (cap manuel à plus de `heading_diff` du cap calculé) ; seuils = réglages du projet (`config.DEFAULT_SETTINGS`, `SettingsIn`, section *Points à vérifier* de ⚙ Réglages) ;
+photos consécutives regroupées en tronçons
 `{kind, start_idx, end_idx, count, detail}`. Interface : rechargé à chaque rechargement des photos (`ProjectView`),
 marques orange en haut de la `Timeline` (`warnings`) et section du *Bilan* (`QualityChecks`). Tests :
 `test_quality.py`.
