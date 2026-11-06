@@ -1573,3 +1573,53 @@ a.button-link:hover {
 .cap-key.orange {
   background: repeating-linear-gradient(90deg, #ea580c 0 3px, transparent 3px 5px);
 }
+
+/* photos of a stop, adjustable before comparing (card of the Photo tab) */
+.stop-range {
+  margin: 6px 0 8px;
+}
+.stop-range-list {
+  list-style: none;
+  margin: 4px 0 2px;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.stop-range-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 4px;
+}
+.stop-range-list li.in {
+  background: rgba(37, 99, 235, 0.09);
+}
+.stop-range-list li.out {
+  opacity: 0.7;
+}
+.stop-range-list li.current {
+  box-shadow: inset 3px 0 0 #facc15;
+}
+.stop-range-list li.excluded .stop-range-go > span:first-child {
+  text-decoration: line-through;
+}
+.stop-range-go {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr auto 4.5em auto;
+  gap: 8px;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.stop-range-go:hover {
+  color: var(--accent);
+}
+.stop-range-go > span:nth-child(3) {
+  text-align: right;
+}

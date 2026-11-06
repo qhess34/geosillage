@@ -413,9 +413,11 @@ L'onglet *Photo* sélectionne alors les photos concernées et affiche en haut un
 *Interpoler entre les voisines*, *Revenir au cap calculé*, *Comparer les photos*, *Créer une séquence*, *Exclure*),
 plus *Suivant (N)*. L'encadré disparaît quand on quitte ces photos ou avec ✕. **Rien n'est modifié
 automatiquement** ; `N` / `Maj+N` passent au point suivant / précédent (avec aussi les sauts GPS, les photos sans
-position et les photos non classées). Pour un arrêt, **Comparer** (ou un clic sur l'étape *Doublons et arrêts*)
-affiche ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
-regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder (*Tout désélectionner* pour partir de zéro, *Tout garder* pour tout recocher), puis *Exclure n photos*
+position et les photos non classées). Pour un arrêt, la carte liste d'abord ses photos (avec 3 voisines de chaque côté : heure, distance depuis la
+précédente) : *Début* / *Fin* ◀ ▶, *+ Ajouter* ou *− Retirer* ajustent les photos de l'arrêt, toujours contiguës et
+sélectionnées sur la carte et la timeline ; un clic sur une ligne montre la photo. **Comparer ces n photos**
+affiche ensuite ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
+regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder (*Tout désélectionner* pour partir de zéro, *Tout garder* pour tout recocher ; aucune cochée : toutes sont exclues), puis *Exclure n photos*
 (une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
 listés dans la même fenêtre (étape *Correction GPS*), les photos non classées avec l'étape *Séquences*.
 

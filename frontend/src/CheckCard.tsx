@@ -1,4 +1,5 @@
 import { PhotoDetail } from './api'
+import StopRangeEditor from './StopRangeEditor'
 import { Issue, ISSUE_TEXT, issueDetail, MISSING_EDGE_FIX } from './issues'
 
 export type CheckAction = 'interpolate' | 'clear-headings' | 'ignore-headings' | 'create-sequence' | 'exclude'
@@ -18,6 +19,7 @@ export default function CheckCard({
   onAction,
   onNext,
   onClose,
+  stopEditor,
 }: {
   issue: Issue // as it was when reached (for the text); `fixed` when it has disappeared since
   fixed: boolean
@@ -31,6 +33,7 @@ export default function CheckCard({
   onAction: (what: CheckAction) => void
   onNext: () => void
   onClose: () => void
+  stopEditor?: React.ComponentProps<typeof StopRangeEditor> // stop: photos of the stop, adjustable before comparing
 }) {
   const t = ISSUE_TEXT[issue.kind]
   const where = issue.end > issue.start ? `photos ${issue.start + 1} → ${issue.end + 1}` : `photo ${issue.start + 1}`
@@ -106,7 +109,7 @@ export default function CheckCard({
     ),
     stop: (
       <button className="small primary" onClick={onCompare}>
-        Comparer les photos
+        Comparer {stopEditor ? `ces ${stopEditor.range[1] - stopEditor.range[0] + 1} photos` : 'les photos'}
       </button>
     ),
     unclassified: (
@@ -137,6 +140,7 @@ export default function CheckCard({
         <br />
         <strong>Correction :</strong> {issue.kind === 'missing' && !interpolable ? MISSING_EDGE_FIX : t.fix}
       </p>
+      {issue.kind === 'stop' && stopEditor && <StopRangeEditor {...stopEditor} />}
       <div className="row wrap">
         {actions[issue.kind]}
         <span className="spacer" />
