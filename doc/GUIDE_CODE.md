@@ -424,6 +424,9 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 - `StopCompare.tsx` : photos d'un arrêt côte à côte, exclusion des non gardées en un appel `excludePhotos`.
 - `N` / `Maj+N` (`checkPoints` dans `ProjectView`) : points à vérifier, sauts GPS non corrigés, photos sans position,
   photos non classées, triés par index.
+  Chaque `CheckPoint` a un `kind` ; `focusOn` y va et l'explique dans `CheckCard` (haut de l'onglet Photo : problème,
+  marche à suivre, actions) ; `focusFirst(kinds)` sert à l'étape *Correction GPS* ; la carte est retirée quand la
+  photo courante sort de `start..end`.
 - `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`) ; pastille de sélection (`.selection-chip`) ;
   carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
 - `Timeline` : bulle au survol (`HoverBubble`), zoom gardé sous `pss-timeline-<projet>` si le nombre de photos n'a

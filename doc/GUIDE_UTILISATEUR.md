@@ -119,7 +119,7 @@ commencée) ; l'étape de l'onglet ouvert est encadrée. Au survol, le détail ;
 | Import | — (gris tant qu'aucune photo) | *Bilan* |
 | Synchro | — (grise tant qu'aucun décalage n'est appliqué ; verte avec le décalage et le nombre de photos placées) | *Synchro* |
 | Doublons et arrêts | des arrêts restent à trier (les fichiers identiques sont écartés à l'import) | premier arrêt, photos sélectionnées |
-| Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | premier point (*Bilan* pour les photos sans position, ou quand tout est vert) |
+| Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | le point où l'on est, ou le suivant, **expliqué** en haut de l'onglet *Photo* (*Bilan* quand tout est vert) |
 | Séquences | photos ni dans une séquence, ni exclues | *Séquences* |
 | Export | séquences pas encore exportées, ou à réexporter | *Export* |
 | Envoi | séquences pas encore publiées, modifiées depuis, ou envoi interrompu | *Envoi* |
@@ -377,7 +377,10 @@ Onglet *Bilan*, section **Points à vérifier**, et marques **orange en haut de 
 - **Précision GPS faible** : la caméra indique une position peu précise (DOP > 5) ; vérifier la position sur la carte ;
 - **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?).
 
-*Voir* ouvre l'onglet *Photo* sur la première photo et sélectionne les photos concernées. **Rien n'est modifié
+*Voir* ouvre l'onglet *Photo* sur la première photo, sélectionne les photos concernées et affiche en haut un encadré
+**« À corriger »** : quel est le problème, comment le corriger, et les boutons utiles (*Corriger la position (M)*,
+*Interpoler entre les voisines*, *Revenir au cap calculé*, *Comparer les photos*, *Créer une séquence*, *Exclure*),
+plus *Suivant (N)*. L'encadré disparaît quand on quitte ces photos ou avec ✕. **Rien n'est modifié
 automatiquement** ; `N` / `Maj+N` passent au point suivant / précédent (avec aussi les sauts GPS, les photos sans
 position et les photos non classées). Pour un arrêt, **Comparer** (ou un clic sur l'étape *Doublons et arrêts*)
 affiche ses photos côte à côte, avec un aperçu en grand au survol : cocher celles à garder, puis *Exclure n photos*

@@ -24,8 +24,8 @@ export default function StepBar({
   quality,
   tab,
   onTab,
-  onShow,
   onCompare,
+  onFocus,
 }: {
   project: Project
   photos: PhotoRow[]
@@ -33,13 +33,13 @@ export default function StepBar({
   quality: QualityIssue[]
   tab: StepTab
   onTab: (t: StepTab) => void
-  onShow: (range: [number, number]) => void // select photos and open the Photo tab
   onCompare: (range: [number, number]) => void // photos of a stop side by side
+  // go to the first point of these kinds and explain it (card on the Photo tab); false if there is none
+  onFocus: (kinds: ('missing' | 'jump' | 'spacing' | 'gps_dop' | 'heading')[]) => boolean
 }) {
   const pnx = project.kind === 'panoramax'
   const usable = photos.filter((p) => !p.excluded && !(p.flags & UNUSABLE))
-  const show = (i: { start_idx: number; end_idx: number }) => onShow([i.start_idx, i.end_idx])
-  const steps: Step[] = []
+    const steps: Step[] = []
 
   // 1. Import
   steps.push({
@@ -95,15 +95,10 @@ export default function StepBar({
     sub: gpsParts.length ? gpsParts.join(' · ') : 'rien à signaler',
     help:
       'Positions (M), photos sans position, recalage OSM, caps. ' +
-      (gpsParts.length ? 'Clic : le premier point (photos sans position : Bilan).' : 'Plus rien n\'est signalé.'),
-    go: () =>
-      missing.length
-        ? onTab('summary')
-        : jumps.length
-          ? onShow([jumps[0].idx, jumps[0].idx])
-          : gpsPoints.length
-            ? show(gpsPoints[0])
-            : onTab('summary'),
+      (gpsParts.length ? 'Clic : le premier point à corriger, expliqué en haut de l\'onglet Photo.' : 'Plus rien n\'est signalé.'),
+    go: () => {
+      if (!onFocus(['missing', 'jump', 'spacing', 'gps_dop', 'heading'])) onTab('summary')
+    },
   })
 
   if (!pnx) {
