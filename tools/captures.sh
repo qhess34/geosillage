@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$PWD PY=$PWD/.venv/bin/python PORT=${PORT:-8767}
 PHOTOS_DIR=${PHOTOS_DIR:-/photos} EXPORTS_DIR=${EXPORTS_DIR:-/exports}
-WORK=$(mktemp -d) && trap 'kill $SERVER 2>/dev/null; rm -rf "$WORK"' EXIT
+WORK=$(mktemp -d) && trap 'kill $SERVER 2>/dev/null || true; rm -rf "$WORK"' EXIT
 mkdir -p "$PHOTOS_DIR" "$EXPORTS_DIR"
 [ -d "$PHOTOS_DIR/Sortie_14_juin" ] || "$PY" tools/make_samples.py "$PHOTOS_DIR/Sortie_14_juin" --count 400 --width 2048 --seed 7
 (cd backend && PSS_DATA_DIR="$WORK/data" PSS_DEFAULT_DIR="$PHOTOS_DIR" "$ROOT/.venv/bin/uvicorn" app.main:app --port "$PORT" >"$WORK/log" 2>&1) &
