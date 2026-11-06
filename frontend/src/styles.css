@@ -740,6 +740,21 @@ input.coord {
   box-shadow: 0 0 0 2px #111827, 0 2px 6px rgb(0 0 0 / 0.4);
   cursor: grab;
 }
+/* direction looked at in the viewer (the marker is rotated, the arrow points up in it) */
+.sync-arrow {
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  transform: translateX(-50%);
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 16px solid #facc15;
+  filter: drop-shadow(0 0 1.5px #111827) drop-shadow(0 0 1px #111827);
+  pointer-events: none;
+}
+.sync-marker.no-arrow .sync-arrow {
+  display: none;
+}
 
 .viewer-wrap {
   position: relative;

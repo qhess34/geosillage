@@ -1312,7 +1312,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             follow={follow}
             centerTick={centerTick}
             snapPreview={snapPreview}
-            viewAzimuth={tab === 'photo' && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
+            viewAzimuth={(tab === 'photo' || tab === 'sync') && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
+            viewYaw={tab === 'sync' ? viewYaw : 0}
             onSyncOffset={onSyncOffset}
             onSelect={(id, extend) => {
               const p = photos.find((x) => x.id === id)
@@ -1523,6 +1524,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'sync' && (
               <SyncTab
                 onPreviewIds={setSyncIds}
+                onView={setViewYaw}
                 projectId={projectId}
                 photo={detail}
                 photos={photos}

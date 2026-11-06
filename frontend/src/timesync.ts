@@ -32,6 +32,16 @@ export function positionAt(track: Track, t: number, maxExtra = 5): [number, numb
   return null
 }
 
+// Direction of travel on the track at time t (degrees from north), from the positions 1 s before and after
+export function bearingAt(track: Track, t: number): number | null {
+  const a = positionAt(track, t - 1)
+  const b = positionAt(track, t + 1)
+  if (!a || !b || (a[0] === b[0] && a[1] === b[1])) return null
+  const y = Math.sin((b[1] - a[1]) * rad) * Math.cos(b[0] * rad)
+  const x = Math.cos(a[0] * rad) * Math.sin(b[0] * rad) - Math.sin(a[0] * rad) * Math.cos(b[0] * rad) * Math.cos((b[1] - a[1]) * rad)
+  return ((Math.atan2(y, x) / rad) % 360 + 360) % 360
+}
+
 // Project a point on the track near the photo time; returns the offset and the snapped position
 export function snap(track: Track, photoTs: number, lat: number, lon: number, windowS = 30): { offset: number; lat: number; lon: number } | null {
   const k = R * rad
