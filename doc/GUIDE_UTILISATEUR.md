@@ -242,7 +242,9 @@ a été prise. On mesure ce retard une fois et on l'applique à toute la sortie.
 3. Faire glisser le **marqueur orange** sur la carte jusqu'à l'endroit réel de la photo : il ne peut aller que
    **le long de la trace**, et le décalage en secondes s'affiche ; les photos se décalent en aperçu (points
    orange) : exactement celles que *Appliquer* déplacerait, selon la portée choisie (toute la sortie, à partir de
-   cette photo, séquence, plage) et la case *Garder les positions corrigées à la main*.
+   cette photo, séquence, plage) et la case *Garder les positions corrigées à la main*. La flèche jaune du
+   marqueur montre la direction regardée dans la visionneuse (sens de la trace à cet endroit + vue) : tourner la
+   vue vers un repère et vérifier que la flèche pointe dessus sur la carte.
 4. Vérifier sur d'autres photos (`←` `→`). Enregistrer des **points de calage** sur plusieurs repères : la médiane
    est proposée.
 5. *Appliquer* à toute la sortie (proposé par défaut pour la première synchronisation), à la séquence, à une plage,

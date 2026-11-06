@@ -15,6 +15,7 @@ interface Props {
   onApplied: () => void
   onNotice: (m: string) => void
   onError: (m: string) => void
+  onView: (yawDeg: number) => void // direction looked at in the viewer, relative to the front (map arrows)
   onPreviewIds: (ids: Set<number> | null) => void // photos the preview shows moving (null: all)
 }
 
@@ -28,7 +29,7 @@ function median(v: number[]): number {
 
 const fmt = (o: number) => `${o >= 0 ? '+' : ''}${o.toFixed(1)} s`
 
-export default function SyncTab({ onPreviewIds, projectId, photo, photos, sequences, range, offset, dragged, onOffset, onGo, onApplied, onNotice, onError }: Props) {
+export default function SyncTab({ onView, onPreviewIds, projectId, photo, photos, sequences, range, offset, dragged, onOffset, onGo, onApplied, onNotice, onError }: Props) {
   const [points, setPoints] = useState<SyncPoint[]>([])
   // First sync: the whole ride; later ones: from the current photo on (the GPS delay can change during a ride,
   // and earlier photos must not be moved again nor marked for re-export). The user's choice wins.
@@ -117,7 +118,7 @@ export default function SyncTab({ onPreviewIds, projectId, photo, photos, sequen
     <div className="sync">
       {photo ? (
         <>
-          <Viewer360 thumbUrl={api.thumbUrl(projectId, photo.id)} imageUrl={api.imageUrl(projectId, photo.id)} alt={photo.filename} height={260} yaw={photo.yaw_offset} pitch={photo.pitch_orig} roll={photo.roll_orig} />
+          <Viewer360 thumbUrl={api.thumbUrl(projectId, photo.id)} imageUrl={api.imageUrl(projectId, photo.id)} alt={photo.filename} height={260} yaw={photo.yaw_offset} pitch={photo.pitch_orig} roll={photo.roll_orig} onView={onView} />
           <div className="photo-title">
             <strong>{photo.filename}</strong>
             <span className="muted">

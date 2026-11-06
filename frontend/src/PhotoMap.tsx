@@ -5,7 +5,7 @@ import { FLAGS, PhotoRow, seqColor, Sequence } from './api'
 import { Basemap } from './basemaps'
 import type { SnapPreview } from './OsmSnapPanel'
 import { addOverlay, bindOverlayTooltip, OverlaySettings, updateOverlay } from './panoramaxLayer'
-import { positionAt, snap, Track } from './timesync'
+import { bearingAt, positionAt, snap, Track } from './timesync'
 
 interface Props {
   photos: PhotoRow[]
@@ -17,6 +17,7 @@ interface Props {
   // time synchronisation mode; ids: photos the offset would move (scope chosen in the Synchro tab), null = all
   sync: { track: Track; offset: number | null; ids: Set<number> | null } | null
   viewAzimuth?: number | null // direction looked at in the 360° viewer: the selected arrow follows it
+  viewYaw?: number // the same, relative to the direction of travel: the sync marker's arrow follows it
   overlay: OverlaySettings // photos already published on Panoramax
   follow: boolean // move the map to keep the selected photo visible while navigating
   centerTick: number // incremented to center the map on the selected photo once
@@ -153,11 +154,23 @@ function arrowImage(): ImageData {
   return g.getImageData(0, 0, s, s)
 }
 
-export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, overlay, follow, centerTick, snapPreview, onSelect, onMove, onSyncOffset, onContextMenu }: Props) {
+export default function PhotoMap({ photos, sequences, basemap, selectedId, range, editMode, sync, viewAzimuth, viewYaw = 0, overlay, follow, centerTick, snapPreview, onSelect, onMove, onSyncOffset, onContextMenu }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<MlMap | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
   const syncMarker = useRef<maplibregl.Marker | null>(null)
+  const viewYawRef = useRef(viewYaw)
+  viewYawRef.current = viewYaw
+  // arrow of the sync marker: direction of travel on the track at the photo time shifted by the offset, plus the
+  // direction looked at in the viewer
+  const orientSync = (t: number | null) => {
+    const mk = syncMarker.current
+    const track = latest.current.sync?.track
+    if (!mk) return
+    const b = t != null && track ? bearingAt(track, t) : null
+    mk.getElement().classList.toggle('no-arrow', b == null)
+    if (b != null) mk.setRotation(b + viewYawRef.current)
+  }
   const dragging = useRef(false)
   const ready = useRef(false)
   const fitted = useRef(false)
@@ -453,9 +466,12 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     if (!start) return
     const el = document.createElement('div')
     el.className = 'sync-marker'
+    el.innerHTML = '<span class="sync-arrow"></span>'
     el.title = 'Glisser le long de la trace jusqu\'à l\'élément visible sur la photo'
-    const mk = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([start[1], start[0]]).addTo(m)
+    const mk = new maplibregl.Marker({ element: el, draggable: true, rotationAlignment: 'map' }).setLngLat([start[1], start[0]]).addTo(m)
     let last: number | null = null
+    syncMarker.current = mk
+    orientSync(ts + (s.offset ?? 0))
     mk.on('dragstart', () => (dragging.current = true))
     mk.on('drag', () => {
       const ll = mk.getLngLat()
@@ -463,6 +479,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
       if (!sn) return
       mk.setLngLat([sn.lon, sn.lat])
       last = sn.offset
+      orientSync(ts + sn.offset)
       latest.current.onSyncOffset(sn.offset, false)
     })
     mk.on('dragend', () => {
@@ -483,7 +500,14 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     if (!p || p.ts == null) return
     const pos = positionAt(syncTrack, p.ts + syncOffset)
     if (pos) mk.setLngLat([pos[1], pos[0]])
+    orientSync(p.ts + syncOffset)
   }, [syncOffset, syncTrack])
+  useEffect(() => {
+    const p = latest.current.photos.find((x) => x.id === latest.current.selectedId)
+    const off = latest.current.sync?.offset
+    orientSync(p?.ts != null ? p.ts + (off ?? 0) : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewYaw])
 
   // Edit mode: a draggable marker on the selected photo
   useEffect(() => {
