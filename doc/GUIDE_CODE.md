@@ -243,6 +243,10 @@ de la photo (pour ne pas s'accrocher à un autre passage dans la même rue) ; d�
 instant de la photo. Le navigateur fait la même projection (`timesync.ts`, projection plane locale) pour l'aperçu
 pendant le glisser, puis demande la valeur au backend au relâchement.
 
+Aperçu : `SyncTab` calcule les photos que la portée choisie déplacerait (sans les corrections à la main si elles
+sont gardées, comme `positions.MANUAL_METHODS`) et les passe à la carte (`sync.ids`) ; seules ces photos ont un
+point orange.
+
 Lots (`timesync.runs`, `GET …/timesync/runs`) : photos consécutives (non exclues, utilisables) de même
 `time_offset` arrondi au dixième (`pos_method = 'time'`), sinon « non synchronisées » ; les photos corrigées à la
 main (`MANUAL_METHODS`) ne coupent pas un lot, elles y sont comptées (`manual`). Affiché dans l'onglet *Synchro*.
@@ -459,7 +463,10 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
 ## Points à vérifier (contrôle qualité)
 
 `core/quality.py`, `GET /api/projects/{id}/quality` : calcul à la demande, rien n'est écrit ni modifié (le choix
-de la photo à garder dans un arrêt revient à l'utilisateur). Photos non exclues et utilisables, dans l'ordre :
+de la photo à garder dans un arrêt revient à l'utilisateur). Seule exception : « Ignorer » un cap à vérifier (`POST …/quality/ignore-headings`) copie le cap
+manuel dans `photo.heading_kept` (colonne éditable de `undo.PHOTO_COLS`, annulable) ; le point n'est plus signalé tant
+que `heading_kept = heading_manual`. `heading_kept` est dans `undo.NOT_EXPORTED` : il ne rend pas une séquence
+« à réexporter ». Photos non exclues et utilisables, dans l'ordre :
 `stop` (≥ `STOP_MIN` photos consécutives à moins de `STOP_M` les unes des autres), `spacing` (> `SPACING_M` entre deux
 photos consécutives, pas à travers une interruption, un saut GPS ni des photos exclues), `gps_dop` (> `DOP_MAX`),
 `heading` (cap manuel à plus de `HEADING_DIFF` du cap calculé) ; photos consécutives regroupées en tronçons

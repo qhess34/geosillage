@@ -817,7 +817,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     if (tab !== 'sync') return
     api.track(projectId).then((t) => setTrack(t.runs), (e) => setError(e.message))
   }, [tab, projectId, photoCount])
-  const sync = useMemo(() => (tab === 'sync' && track ? { track, offset: syncOffset } : null), [tab, track, syncOffset])
+  // photos the offset would move (scope of the Synchro tab): only they are previewed on the map
+  const [syncIds, setSyncIds] = useState<Set<number> | null>(null)
+  const sync = useMemo(() => (tab === 'sync' && track ? { track, offset: syncOffset, ids: syncIds } : null), [tab, track, syncOffset, syncIds])
   const onSyncOffset = useCallback(
     (offset: number, final: boolean) => {
       setSyncOffset(offset)
@@ -965,6 +967,16 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     if (focusPoint && (!current || current.idx < focusPoint.start || current.idx > focusPoint.end)) setFocusPoint(null)
   }, [current, focusPoint])
 
+  // « Ignorer » headings to check: the manual heading is right (computed one wrong, GPS lost); points recomputed
+  const ignoreHeadings = useCallback(
+    (ids: number[]) =>
+      api.ignoreHeadings(projectId, ids).then((res) => {
+        setQuality(res.issues)
+        afterHeadingChange(res.undo)
+        setNotice('Cap gardé : il n\'est plus signalé tant qu\'il ne change pas — Ctrl+Z pour annuler')
+      }, (er) => setError(er.message)),
+    [projectId, afterHeadingChange],
+  )
   // Actions of the card of the Photo tab on the photos of the issue being corrected (exclusion: confirmed first)
   const fixIssue = useCallback(
     (what: CheckAction) => {
@@ -972,6 +984,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       const r: [number, number] = [focusPoint.start, focusPoint.end]
       const kept = photos.slice(r[0], r[1] + 1).filter((p) => !p.excluded)
       if (what === 'exclude') return setConfirmExclude({ range: r, n: kept.length })
+      if (what === 'ignore-headings') return ignoreHeadings(kept.map((p) => p.id))
       if (what === 'interpolate')
         return api.positionsBatch(projectId, { photo_ids: kept.map((p) => p.id), mode: 'interpolate' }).then((res) => {
           if (!res.changed) setError('Impossible d\'interpoler : pas de photo positionnée avant et après')
@@ -987,7 +1000,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         .createSequence(projectId, r[0], r[1])
         .then((st) => applyState({ ...st, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` }), (er) => setError(er.message))
     },
-    [focusPoint, photos, projectId, afterHeadingChange, applyState],
+    [focusPoint, photos, projectId, afterHeadingChange, applyState, ignoreHeadings],
   )
   // « Interpoler tous les trous possibles » (list of things to fix): every hole with a positioned photo before and
   // after; a bulk action, confirmed first
@@ -1380,6 +1393,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               current={focusPoint}
               duplicates={project.summary.duplicates}
               onPick={focusOn}
+              onIgnore={(i) => ignoreHeadings(photos.slice(i.start, i.end + 1).filter((p) => !p.excluded).map((p) => p.id))}
               onClose={closeIssues}
               onInterpolateAll={askInterpolateAll}
             />
@@ -1497,6 +1511,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             )}
             {tab === 'sync' && (
               <SyncTab
+                onPreviewIds={setSyncIds}
                 projectId={projectId}
                 photo={detail}
                 photos={photos}

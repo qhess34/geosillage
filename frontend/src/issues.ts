@@ -58,7 +58,7 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; one: string; cause: 
     title: 'Caps à vérifier',
     one: 'Cap à vérifier',
     cause: 'cap saisi à la main très différent du cap calculé depuis la trace.',
-    fix: 'revenir au cap calculé si c\'est une erreur de saisie.',
+    fix: 'revenir au cap calculé si c\'est une erreur de saisie ; si c\'est le cap calculé qui est faux (perte du GPS), ignorer.',
   },
   unclassified: {
     title: 'Photos non classées',

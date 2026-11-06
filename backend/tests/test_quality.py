@@ -2,6 +2,8 @@
 
 from app import db
 
+from .test_import import wait_jobs
+
 from .test_positions_sources import project, rows  # noqa: F401  (fixture)
 
 
@@ -70,3 +72,33 @@ def test_hole_left_by_excluded_photos_is_not_a_spacing(project):  # noqa: F811
     client.post(f"/api/projects/{pid}/photos/exclude", json={"photo_ids": ids, "excluded": True})
     sp = [i for i in client.get(f"/api/projects/{pid}/quality").json() if i["kind"] == "spacing"]
     assert not any(i["start_idx"] < ps[115]["idx"] < i["end_idx"] for i in sp)
+
+
+def test_heading_to_check_can_be_ignored_until_changed(project, tmp_path):  # noqa: F811
+    """GPS lost: the computed heading is wrong, the manual one right. « Ignorer » hides the point while the manual
+    heading stays the same."""
+    client, pid, _, _ = project
+    _clean(pid)
+    ps = [r for r in rows_of(pid) if not r["flags"]]
+    target = ps[40]["id"]
+    with db.open_project(pid) as conn:
+        auto = conn.execute("SELECT heading_auto FROM photo WHERE id=?", (target,)).fetchone()[0]
+    client.put(f"/api/projects/{pid}/photos/{target}/heading", json={"value": (auto + 170) % 360})
+    heading = lambda: [i for i in client.get(f"/api/projects/{pid}/quality").json() if i["kind"] == "heading"]  # noqa: E731
+    assert len(heading()) == 1
+    client.post(f"/api/projects/{pid}/export", json={"out_dir": str(tmp_path / "out")})
+    wait_jobs(client, pid)
+    r = client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target]}).json()
+    assert r["changed"] == 1 and not [i for i in r["issues"] if i["kind"] == "heading"] and not heading()
+    assert r["undo"]["undo"] == "Cap gardé"
+    client.post(f"/api/projects/{pid}/undo")  # Ctrl+Z: reported again
+    assert len(heading()) == 1
+    client.post(f"/api/projects/{pid}/redo")
+    assert not heading()
+    # keeping a heading does not change what is exported: no sequence becomes « à réexporter » because of it
+    assert not any(s["needs_export"] for s in client.get(f"/api/projects/{pid}/sequences").json()["sequences"])
+    client.put(f"/api/projects/{pid}/photos/{target}/heading", json={"value": (auto + 160) % 360})  # changed: back
+    assert len(heading()) == 1
+    client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target]})
+    client.post(f"/api/projects/{pid}/quality/ignore-headings", json={"photo_ids": [target], "ignore": False})
+    assert len(heading()) == 1

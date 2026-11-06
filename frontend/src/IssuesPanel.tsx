@@ -17,6 +17,7 @@ export default function IssuesPanel({
   current,
   duplicates,
   onPick,
+  onIgnore,
   onInterpolateAll,
   onClose,
 }: {
@@ -25,6 +26,7 @@ export default function IssuesPanel({
   current: Issue | null // the item being corrected (highlighted)
   duplicates: number // identical files set aside on import (nothing to do)
   onPick: (i: Issue) => void
+  onIgnore: (i: Issue) => void // headings to check: the manual heading is right
   onInterpolateAll?: () => void
   onClose: () => void
 }) {
@@ -76,11 +78,16 @@ export default function IssuesPanel({
               {list.map((i) => {
                 const on = current != null && sameIssue(current, i)
                 return (
-                  <li key={`${i.kind}-${i.start}`}>
+                  <li key={`${i.kind}-${i.start}`} className="row">
                     <button className={`issue-item${on ? ' current' : ''}`} onClick={() => onPick(i)} title="Aller à cette photo (carte et onglet Photo)">
                       <span>{where(i)}</span>
                       <span className="muted">{issueDetail(i)}</span>
                     </button>
+                    {i.kind === 'heading' && (
+                      <button className="small" onClick={() => onIgnore(i)} title="Le cap saisi est le bon (cap calculé faux, perte du GPS) : ne plus le signaler">
+                        Ignorer
+                      </button>
+                    )}
                   </li>
                 )
               })}

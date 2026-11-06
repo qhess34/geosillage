@@ -236,8 +236,9 @@ a été prise. On mesure ce retard une fois et on l'applique à toute la sortie.
 2. Trouver une photo où l'on voit un repère net, visible aussi sur la vue satellite (passage piéton, angle de
    bâtiment, ligne d'arrêt). Agrandir la photo (molette).
 3. Faire glisser le **marqueur orange** sur la carte jusqu'à l'endroit réel de la photo : il ne peut aller que
-   **le long de la trace**, et le décalage en secondes s'affiche ; toutes les photos se décalent en aperçu (points
-   orange).
+   **le long de la trace**, et le décalage en secondes s'affiche ; les photos se décalent en aperçu (points
+   orange) : exactement celles que *Appliquer* déplacerait, selon la portée choisie (toute la sortie, à partir de
+   cette photo, séquence, plage) et la case *Garder les positions corrigées à la main*.
 4. Vérifier sur d'autres photos (`←` `→`). Enregistrer des **points de calage** sur plusieurs repères : la médiane
    est proposée.
 5. *Appliquer* à toute la sortie (proposé par défaut pour la première synchronisation), à la séquence, à une plage,
@@ -387,7 +388,9 @@ Les problèmes sont aussi marqués **en orange en haut de la timeline** :
 - **Grands écarts** : plus de 25 m entre deux photos qui se suivent (vitesse, photos manquantes, position fausse).
   Un trou laissé par des photos que vous avez exclues n'est pas signalé ;
 - **Précision GPS faible** : la caméra indique une position peu précise (DOP > 5) ; vérifier la position sur la carte ;
-- **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?).
+- **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?). Si c'est le cap
+  calculé qui est faux (perte du GPS : la trace ne donne plus la bonne direction), **Ignorer** (dans la fenêtre *À
+  corriger* ou l'encadré de l'onglet *Photo*) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas (`Ctrl+Z` annule).
 
 L'onglet *Photo* sélectionne alors les photos concernées et affiche en haut un encadré
 **« À corriger »** : quel est le problème, comment le corriger, et les boutons utiles (*Corriger la position (M)*,
