@@ -1,4 +1,5 @@
 import { FLAGS, PhotoRow, Project, QualityIssue, Sequence } from './api'
+import { isPlaced, isUsable } from './issues'
 
 // Progress of the ride, step by step: import → GPS delay (sync) → duplicates and stops → GPS correction → sequences → export → upload.
 // Computed from what the interface already has (photos, sequences, points to check); a click opens the right place.
@@ -13,8 +14,6 @@ interface Step {
   go: () => void
 }
 
-const UNUSABLE = FLAGS.DUPLICATE | FLAGS.UNREADABLE | FLAGS.MISSING_FILE
-const placed = (p: PhotoRow) => p.lat != null || (p.lat_orig != null && !(p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD)))
 const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`
 
 export default function StepBar({
@@ -24,8 +23,8 @@ export default function StepBar({
   quality,
   tab,
   onTab,
-  onShow,
   onCompare,
+  onFocus,
 }: {
   project: Project
   photos: PhotoRow[]
@@ -33,12 +32,12 @@ export default function StepBar({
   quality: QualityIssue[]
   tab: StepTab
   onTab: (t: StepTab) => void
-  onShow: (range: [number, number]) => void // select photos and open the Photo tab
   onCompare: (range: [number, number]) => void // photos of a stop side by side
+  // go to the first point of these kinds and explain it (card on the Photo tab); false if there is none
+  onFocus: (kinds: ('missing' | 'jump' | 'spacing' | 'gps_dop' | 'heading')[]) => boolean
 }) {
   const pnx = project.kind === 'panoramax'
-  const usable = photos.filter((p) => !p.excluded && !(p.flags & UNUSABLE))
-  const show = (i: { start_idx: number; end_idx: number }) => onShow([i.start_idx, i.end_idx])
+  const usable = photos.filter(isUsable)
   const steps: Step[] = []
 
   // 1. Import
@@ -80,7 +79,7 @@ export default function StepBar({
   })
 
   // 4. GPS correction: positions, GPS jumps, points to check about positions and headings
-  const missing = usable.filter((p) => !placed(p))
+  const missing = usable.filter((p) => !isPlaced(p))
   const jumps = usable.filter((p) => p.flags & FLAGS.GPS_JUMP && p.pos_method == null)
   const gpsPoints = quality.filter((q) => q.kind !== 'stop')
   const gpsParts = [
@@ -95,15 +94,10 @@ export default function StepBar({
     sub: gpsParts.length ? gpsParts.join(' · ') : 'rien à signaler',
     help:
       'Positions (M), photos sans position, recalage OSM, caps. ' +
-      (gpsParts.length ? 'Clic : le premier point (photos sans position : Bilan).' : 'Plus rien n\'est signalé.'),
-    go: () =>
-      missing.length
-        ? onTab('summary')
-        : jumps.length
-          ? onShow([jumps[0].idx, jumps[0].idx])
-          : gpsPoints.length
-            ? show(gpsPoints[0])
-            : onTab('summary'),
+      (gpsParts.length ? 'Clic : le premier point à corriger, expliqué en haut de l\'onglet Photo.' : 'Plus rien n\'est signalé.'),
+    go: () => {
+      if (!onFocus(['missing', 'jump', 'spacing', 'gps_dop', 'heading'])) onTab('summary')
+    },
   })
 
   if (!pnx) {

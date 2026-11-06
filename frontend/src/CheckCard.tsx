@@ -1,0 +1,138 @@
+import { PhotoDetail } from './api'
+import { Issue, ISSUE_TEXT, issueDetail, MISSING_EDGE_FIX } from './issues'
+
+export type CheckAction = 'interpolate' | 'clear-headings' | 'create-sequence' | 'exclude'
+
+// Card on top of the Photo tab: what is wrong on these photos (cause), how to fix it, the useful actions. When the
+// issue is no longer in the list (fixed: interpolated, heading restored, sequence created…), it says so.
+export default function CheckCard({
+  issue,
+  fixed,
+  index,
+  total,
+  detail,
+  editMode,
+  interpolable,
+  onPositions,
+  onCompare,
+  onAction,
+  onNext,
+  onClose,
+}: {
+  issue: Issue // as it was when reached (for the text); `fixed` when it has disappeared since
+  fixed: boolean
+  index: number // rank in the list (when not fixed)
+  total: number
+  detail: PhotoDetail | null
+  editMode: boolean
+  interpolable: boolean // photos without a position: a positioned photo before and after
+  onPositions: () => void
+  onCompare: () => void
+  onAction: (what: CheckAction) => void
+  onNext: () => void
+  onClose: () => void
+}) {
+  const t = ISSUE_TEXT[issue.kind]
+  const where = issue.end > issue.start ? `photos ${issue.start + 1} → ${issue.end + 1}` : `photo ${issue.start + 1}`
+  const next = (
+    <button className="small" onClick={onNext} title="Point suivant à vérifier (N)">
+      Suivant (N) →
+    </button>
+  )
+  if (fixed)
+    return (
+      <section className="check-card fixed small-text" role="status">
+        <header>
+          <strong>Corrigé ✓ : {t.one}</strong>
+          <span className="muted">{where}</span>
+          <button className="small icon" onClick={onClose} title="Fermer" aria-label="Fermer">
+            ✕
+          </button>
+        </header>
+        <div className="row wrap">
+          <span className="spacer" />
+          {next}
+        </div>
+      </section>
+    )
+
+  const positions = (
+    <button className={editMode ? 'small primary' : 'small'} onClick={onPositions} title="Mode Positions (M) : glisser le point violet de la photo sur la carte">
+      ✥ {editMode ? 'Mode Positions actif' : 'Corriger la position (M)'}
+    </button>
+  )
+  // what this issue is precisely, on these photos
+  const precise: Partial<Record<Issue['kind'], string | null>> = {
+    spacing: `${issueDetail(issue)} entre les photos ${issue.start + 1} et ${issue.end + 1}.`,
+    gps_dop: issue.detail,
+    stop: issue.detail,
+    heading:
+      detail?.heading_manual != null && detail.heading_auto != null
+        ? `Cap saisi ${detail.heading_manual.toFixed(0)}°, calculé ${detail.heading_auto.toFixed(0)}°.`
+        : issue.detail,
+  }
+  const actions: Record<Issue['kind'], React.ReactNode> = {
+    jump: positions,
+    spacing: positions,
+    gps_dop: positions,
+    missing: (
+      <>
+        {interpolable && (
+          <button className="small primary" onClick={() => onAction('interpolate')}>
+            Interpoler entre les voisines
+          </button>
+        )}
+        {positions}
+        {!interpolable && (
+          <button className="small" onClick={() => onAction('exclude')}>
+            Exclure ces photos
+          </button>
+        )}
+      </>
+    ),
+    heading: (
+      <button className="small primary" onClick={() => onAction('clear-headings')}>
+        Revenir au cap calculé
+      </button>
+    ),
+    stop: (
+      <button className="small primary" onClick={onCompare}>
+        Comparer les photos
+      </button>
+    ),
+    unclassified: (
+      <>
+        <button className="small primary" onClick={() => onAction('create-sequence')}>
+          Créer une séquence avec ces photos
+        </button>
+        <button className="small" onClick={() => onAction('exclude')}>
+          Exclure ces photos
+        </button>
+      </>
+    ),
+  }
+  return (
+    <section className="check-card small-text" role="status">
+      <header>
+        <strong>À corriger : {t.one}</strong>
+        <span className="muted">
+          {where} · {index + 1}/{total}
+        </span>
+        <button className="small icon" onClick={onClose} title="Fermer" aria-label="Fermer">
+          ✕
+        </button>
+      </header>
+      {precise[issue.kind] && <p className="check-precise">{precise[issue.kind]}</p>}
+      <p>
+        <strong>Cause :</strong> {t.cause}
+        <br />
+        <strong>Correction :</strong> {issue.kind === 'missing' && !interpolable ? MISSING_EDGE_FIX : t.fix}
+      </p>
+      <div className="row wrap">
+        {actions[issue.kind]}
+        <span className="spacer" />
+        {next}
+      </div>
+    </section>
+  )
+}

@@ -1289,6 +1289,44 @@ input.coord {
 .range-card > header {
   font-weight: 600;
 }
+/* Photo tab: what is wrong on the photos reached from the step bar, N or the Bilan, and how to fix it */
+.check-card {
+  border: 1px solid #d97706;
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: rgba(217, 119, 6, 0.07);
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.check-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.check-card > header .muted {
+  margin-left: auto;
+}
+.check-card p {
+  margin: 6px 0 8px;
+  line-height: 1.45;
+}
+.check-card.fixed {
+  border-color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+}
+.check-card .check-precise {
+  font-weight: 600;
+}
+.check-card .dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.check-card .dot.red {
+  background: #dc2626;
+}
 .form-row {
   display: grid;
   grid-template-columns: 7.5em 1fr;

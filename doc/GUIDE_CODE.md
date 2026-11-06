@@ -429,6 +429,12 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
   `api.photo`), exclusion des non gardées en un appel `excludePhotos`.
 - `N` / `Maj+N` (`checkPoints` dans `ProjectView`) : points à vérifier, sauts GPS non corrigés, photos sans position,
   photos non classées, triés par index.
+  `issues.ts` : type `Issue` (`kind`, `start`, `end`, `count`, `detail` du backend, `meters`), `computeIssues`, la
+  table unique des textes `ISSUE_TEXT` (titre, nom, cause, correction), prédicats partagés `isUsable` / `isPlaced`.
+  `focusOn` y va et l'explique dans `CheckCard.tsx` (haut de l'onglet Photo : précision, cause, correction, actions ;
+  `fixIssue` pour les actions, exclusion confirmée) ; le point est recherché dans la liste à chaque rendu : disparu =
+  « Corrigé ✓ ». `focusFirst(kinds)` sert à l'étape *Correction GPS* ; l'encadré est retiré quand la photo courante
+  sort de `start..end`.
 - `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`) ; pastille de sélection (`.selection-chip`) ;
   carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
 - `Timeline` : bulle au survol (`HoverBubble`), zoom gardé sous `pss-timeline-<projet>` si le nombre de photos n'a

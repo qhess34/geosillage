@@ -9,6 +9,8 @@ import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
 import PublishPanel from './PublishPanel'
 import StepBar from './StepBar'
+import CheckCard, { CheckAction } from './CheckCard'
+import { canInterpolate, computeIssues, Issue, ISSUE_TEXT, issueDetail, sameIssue } from './issues'
 import StopCompare from './StopCompare'
 import MapLegend from './MapLegend'
 import { AddBasemap, Confirm, ValueDialog } from './Dialogs'
@@ -165,21 +167,10 @@ function shifted(lat: number, lon: number, east: number, north: number): { lat: 
   return { lat: lat + north / M_PER_DEG, lon: lon + east / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)) }
 }
 
-// Photos without a position, by block, with the positioned photos before / after them (Bilan tab)
-const QUALITY: Record<QualityIssue['kind'], { title: string; one: string; help: string }> = {
-  stop: {
-    title: 'Arrêts',
-    one: 'Arrêt',
-    help: "Plusieurs photos au même endroit (feu rouge, pause). Gardez la ou les meilleures — pas forcément la première — et excluez les autres (X).",
-  },
-  spacing: { title: 'Grands écarts', one: 'Grand écart', help: 'Plus de 25 m entre deux photos qui se suivent : vitesse élevée, photos manquantes ou position à vérifier.' },
-  gps_dop: { title: 'Précision GPS faible', one: 'Précision GPS faible', help: 'Le GPS de la caméra signale une position peu précise (DOP > 5) : vérifiez la position sur la carte.' },
-  heading: { title: 'Caps à vérifier', one: 'Cap à vérifier', help: 'Cap saisi à la main très différent du cap calculé depuis la trace : erreur de saisie ?' },
-}
 
 // Points to check before publishing, also marked in amber on the timeline. Nothing is changed automatically.
 function QualityChecks({ issues, onShow, onCompare }: { issues: QualityIssue[]; onShow: (r: [number, number]) => void; onCompare: (r: [number, number]) => void }) {
-  const kinds = (Object.keys(QUALITY) as QualityIssue['kind'][]).filter((k) => issues.some((i) => i.kind === k))
+  const kinds = (['stop', 'spacing', 'gps_dop', 'heading'] as QualityIssue['kind'][]).filter((k) => issues.some((i) => i.kind === k))
   return (
     <div className="small-text quality">
       <h3>Points à vérifier ({issues.length})</h3>
@@ -193,9 +184,11 @@ function QualityChecks({ issues, onShow, onCompare }: { issues: QualityIssue[]; 
             return (
               <details key={k} open={list.length <= 5}>
                 <summary>
-                  <strong>{QUALITY[k].title}</strong> ({list.length})
+                  <strong>{ISSUE_TEXT[k].title}</strong> ({list.length})
                 </summary>
-                <p className="muted">{QUALITY[k].help}</p>
+                <p className="muted">
+                  <strong>Cause :</strong> {ISSUE_TEXT[k].cause} <strong>Correction :</strong> {ISSUE_TEXT[k].fix}
+                </p>
                 <ul className="missing-list">
                   {list.map((i) => (
                     <li key={`${k}-${i.start_idx}`}>
@@ -225,6 +218,7 @@ function QualityChecks({ issues, onShow, onCompare }: { issues: QualityIssue[]; 
   )
 }
 
+// Photos without a position, by block, with the positioned photos before / after them (Bilan tab)
 function MissingPositions({
   projectId,
   photos,
@@ -895,6 +889,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const lastPhotosKey = useRef('')
 
   const byIdx = photos
+  const goIdxRef = useRef<(idx: number) => void>(() => undefined)
   const restored = useRef(false)
   useEffect(() => {
     if (restored.current || !photos.length) return
@@ -925,36 +920,33 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     else setQuality([])
   }, [projectId, photos])
   const reloadPhotos = useCallback(async () => setPhotos(await api.photos(projectId)), [projectId])
-  // Everything to check, in the order of the ride (N / Shift+N): points to check, uncorrected GPS jumps, photos
-  // without a position, unclassified photos
-  const checkPoints = useMemo(() => {
-    const out: { start: number; end: number; label: string }[] = quality.map((q) => ({
-      start: q.start_idx,
-      end: q.end_idx,
-      label: `${QUALITY[q.kind].one} : ${q.detail}`,
-    }))
-    const usable = (p: PhotoRow) => !p.excluded && !(p.flags & (FLAGS.DUPLICATE | FLAGS.UNREADABLE | FLAGS.MISSING_FILE))
-    const placed = (p: PhotoRow) => p.lat != null || (p.lat_orig != null && !(p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD)))
-    const runs = (test: (p: PhotoRow) => boolean, label: (n: number) => string) => {
-      let start = -1
-      photos.forEach((p, i) => {
-        const hit = usable(p) && test(p)
-        if (hit && start < 0) start = i
-        const last = i === photos.length - 1
-        if (start >= 0 && (!hit || last)) {
-          const end = hit ? i : i - 1
-          out.push({ start, end, label: label(end - start + 1) })
-          start = -1
-        }
-      })
-    }
-    photos.forEach((p) => {
-      if (usable(p) && p.flags & FLAGS.GPS_JUMP && p.pos_method == null) out.push({ start: p.idx, end: p.idx, label: 'Saut GPS non corrigé' })
-    })
-    runs((p) => !placed(p), (n) => `${n} photo(s) sans position`)
-    if (!isPnx) runs((p) => p.sequence_id == null, (n) => `${n} photo(s) non classée(s)`)
-    return out.sort((a, b) => a.start - b.start || a.end - b.end)
-  }, [quality, photos, isPnx])
+  // Everything to check, in the order of the ride (N / Shift+N, step bar, Bilan, card of the Photo tab)
+  const checkPoints = useMemo(() => computeIssues(quality, photos, isPnx), [quality, photos, isPnx])
+  // The point being corrected: shown as a card on top of the Photo tab (what is wrong, how to fix it)
+  // The issue being corrected, as reached; looked up again in the list at each render: gone = fixed
+  const [focusPoint, setFocusPoint] = useState<Issue | null>(null)
+  const focusLive = focusPoint ? checkPoints.find((c) => sameIssue(c, focusPoint)) ?? null : null
+  const focusOn = useCallback(
+    (c: Issue) => {
+      goIdxRef.current(c.start)
+      setSeqStart(null)
+      setRange(c.end > c.start ? [c.start, c.end] : null)
+      setFocusPoint(c)
+      setTab('photo')
+    },
+    [],
+  )
+  // first point of these kinds after the current photo (from the start of the ride if none after)
+  const focusFirst = useCallback(
+    (kinds: Issue['kind'][]) => {
+      const list = checkPoints.filter((c) => kinds.includes(c.kind))
+      const i = current?.idx ?? -1
+      const c = list.find((x) => x.end >= i) ?? list[0] // the point the current photo is in, or the next one
+      if (c) focusOn(c)
+      return !!c
+    },
+    [checkPoints, current, focusOn],
+  )
 
   const refresh = useCallback(async () => {
     try {
@@ -1072,6 +1064,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     },
     [byIdx],
   )
+  goIdxRef.current = goIdx
 
   // Last position correction made by hand (east / north m), and the photo that holds it now (moved by hand, or
   // carried to with →) with its expected position: the rows may not be reloaded yet when → is pressed right away
@@ -1171,6 +1164,41 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     [projectId, applyState],
   )
 
+  useEffect(() => {
+    if (focusPoint && (!current || current.idx < focusPoint.start || current.idx > focusPoint.end)) setFocusPoint(null)
+  }, [current, focusPoint])
+
+  // Actions of the card of the Photo tab on the photos of the issue being corrected (exclusion: confirmed first)
+  const fixIssue = useCallback(
+    (what: CheckAction) => {
+      if (!focusPoint) return
+      const r: [number, number] = [focusPoint.start, focusPoint.end]
+      const kept = photos.slice(r[0], r[1] + 1).filter((p) => !p.excluded)
+      if (what === 'exclude') return setConfirmExclude({ range: r, n: kept.length })
+      if (what === 'interpolate')
+        return api.positionsBatch(projectId, { photo_ids: kept.map((p) => p.id), mode: 'interpolate' }).then((res) => {
+          if (!res.changed) setError('Impossible d\'interpoler : pas de photo positionnée avant et après')
+          else setNotice(`${res.changed} photo(s) placée(s) entre les voisines — Ctrl+Z pour annuler`)
+          afterHeadingChange(res.undo)
+        }, (er) => setError(er.message))
+      if (what === 'clear-headings')
+        return api.headingRange(projectId, r[0], r[1], 'clear').then((res) => {
+          afterHeadingChange(res.undo)
+          setNotice('Cap calculé rétabli — Ctrl+Z pour annuler')
+        }, (er) => setError(er.message))
+      return api
+        .createSequence(projectId, r[0], r[1])
+        .then((st) => applyState({ ...st, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` }), (er) => setError(er.message))
+    },
+    [focusPoint, photos, projectId, afterHeadingChange, applyState],
+  )
+  const nextIssue = useCallback(() => {
+    if (!focusPoint) return
+    const c = checkPoints.find((x) => x.start > focusPoint.end) ?? checkPoints.find((x) => x.start > focusPoint.start)
+    if (c) focusOn(c)
+    else setNotice('Plus aucun point à vérifier après celui-ci')
+  }, [focusPoint, checkPoints, focusOn])
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1236,10 +1264,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           setNotice(list.length ? (e.shiftKey ? 'Aucun point à vérifier avant cette photo' : 'Aucun point à vérifier après cette photo') : 'Rien à vérifier')
         } else {
           const c = list[k]
-          goIdx(c.start)
-          setSeqStart(null)
-          setRange(c.end > c.start ? [c.start, c.end] : null)
-          setNotice(`${k + 1}/${list.length} · photos ${c.start + 1}${c.end > c.start ? ` → ${c.end + 1}` : ''} · ${c.label}`)
+          focusOn(c)
+          setNotice(`${k + 1}/${list.length} · photos ${c.start + 1}${c.end > c.start ? ` → ${c.end + 1}` : ''} · ${ISSUE_TEXT[c.kind].one} : ${issueDetail(c)}`)
         }
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)
@@ -1256,7 +1282,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
@@ -1409,11 +1435,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         tab={tab}
         onTab={setTab}
         onCompare={setStopCompare}
-        onShow={(r) => {
-          goIdx(r[0])
-          setRange(r[1] > r[0] ? r : null)
-          setTab('photo')
-        }}
+        onFocus={focusFirst}
       />
       {error && (
         <div className="error banner" onClick={() => setError(null)}>
@@ -1587,6 +1609,22 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             ))}
           </nav>
           <div className="tab-body">
+            {tab === 'photo' && focusPoint && (
+              <CheckCard
+                issue={focusLive ?? focusPoint}
+                fixed={!focusLive}
+                index={focusLive ? checkPoints.indexOf(focusLive) : -1}
+                total={checkPoints.length}
+                detail={detail}
+                editMode={editMode}
+                interpolable={canInterpolate(focusPoint, photos)}
+                onPositions={() => setEditMode(true)}
+                onCompare={() => setStopCompare([focusPoint.start, focusPoint.end])}
+                onAction={fixIssue}
+                onNext={nextIssue}
+                onClose={() => setFocusPoint(null)}
+              />
+            )}
             {tab === 'photo' &&
               (detail ? (
                 <PhotoTab
@@ -1670,6 +1708,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   issues={quality}
                   onCompare={setStopCompare}
                   onShow={(r) => {
+                    const c = checkPoints.find((x) => x.start === r[0] && x.end === r[1])
+                    if (c) return focusOn(c)
                     goIdx(r[0])
                     setRange(r[1] > r[0] ? r : null)
                     setTab('photo')
