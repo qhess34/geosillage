@@ -36,12 +36,34 @@ export type PublishOptions = ReturnType<typeof usePublishOptions>
 
 // Section « Publier sur Panoramax » of the Export tab: connection and options; each exported sequence has its own
 // « Publier » button in the list above
-export function PublishOptionsPanel({ o, onError }: { o: PublishOptions; onError: (msg: string) => void }) {
+export function PublishOptionsPanel({
+  o,
+  projectId,
+  sequences,
+  running,
+  onStarted,
+  onError,
+}: {
+  o: PublishOptions
+  projectId: string
+  sequences: Sequence[]
+  running: boolean // a publication is in progress
+  onStarted: () => void
+  onError: (msg: string) => void
+}) {
+  // exported sequences not (fully) on Panoramax yet: never published, or upload interrupted / failed
+  const pending = sequences.filter((s) => s.last_export && s.last_publication?.state !== 'ready' && s.last_publication?.state !== 'processing')
+  const [confirmAll, setConfirmAll] = useState(false)
+  const publishAll = () => {
+    setConfirmAll(false)
+    api.publish(projectId, pending.map((s) => s.id), o.visibility, o.semantics).then(onStarted, (e) => onError(e.message))
+  }
   return (
     <div className="publish small-text">
       <h3>Publier sur Panoramax</h3>
       <p className="muted">
-        Une fois une séquence exportée, « Publier » sur sa ligne l'envoie telle qu'exportée (dossier de son dernier export), comme{' '}
+        Une fois une séquence exportée, « Publier » sur sa ligne (ou « Publier les n séquences… » ci-dessous pour toutes celles
+        qui ne sont pas encore en ligne) l'envoie telle qu'exportée (dossier de son dernier export), comme{' '}
         <strong>une seule</strong> séquence Panoramax : ni redécoupée, ni dédoublonnée. Une séquence modifiée depuis son export est
         d'abord réexportée ; un envoi interrompu reprend où il s'était arrêté.
       </p>
@@ -77,6 +99,34 @@ export function PublishOptionsPanel({ o, onError }: { o: PublishOptions; onError
               Ils sont copiés sur la séquence Panoramax et reproposés au prochain envoi.
             </p>
           </fieldset>
+          <div className="actions">
+            <button
+              className="primary"
+              disabled={!pending.length || running || o.parsed.bad.length > 0}
+              title={pending.length ? '' : 'Toutes les séquences exportées sont déjà publiées'}
+              onClick={() => setConfirmAll(true)}
+            >
+              {running ? 'Publication en cours…' : `⇪ Publier les ${pending.length} séquence(s) exportée(s) non publiée(s)`}
+            </button>
+          </div>
+          {confirmAll && (
+            <Confirm title={`Publier ${pending.length} séquence(s) ?`} confirmLabel="Publier" onCancel={() => setConfirmAll(false)} onConfirm={publishAll}>
+              <p>
+                Sur <strong>{o.st!.instance.replace(/^https?:\/\//, '')}</strong>,{' '}
+                {o.visibility === 'anyone' ? 'visibles par tout le monde' : 'visibles par vous seulement'}
+                {o.semantics.length ? <>, avec {o.semantics.map((t) => `${t.key}=${t.value}`).join(', ')}</> : ', sans attribut'}. Envoyées
+                l'une après l'autre ; une séquence modifiée depuis son export est d'abord réexportée.
+              </p>
+              <ul className="small-text">
+                {pending.map((s) => (
+                  <li key={s.id}>
+                    {s.name} ({s.count} photos){s.last_publication?.state === 'uploading' ? ' — reprise de l\'envoi interrompu' : ''}
+                    {s.needs_export ? ' — réexportée d\'abord' : ''}
+                  </li>
+                ))}
+              </ul>
+            </Confirm>
+          )}
         </>
       )}
     </div>

@@ -276,7 +276,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
         </div>
       )}
 
-      <PublishOptionsPanel o={pub} onError={onError} />
+      <PublishOptionsPanel o={pub} projectId={projectId} sequences={sequences} running={publishing} onStarted={onStarted} onError={onError} />
 
       {history.length > 0 && (
         <>

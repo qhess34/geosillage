@@ -456,8 +456,9 @@ seule séquence avec le dossier, le mode et les options de son dernier export.
 
 ### Depuis l'application (onglet *Export et envoi*)
 
-La publication se fait séquence par séquence, une fois exportée : section **Publier sur Panoramax** en bas de
-l'onglet pour la connexion et les options, puis bouton **⇪ Publier** sur la ligne de la séquence.
+La publication se fait une fois la séquence exportée : section **Publier sur Panoramax** en bas de l'onglet pour la
+connexion et les options, puis bouton **⇪ Publier** sur la ligne de la séquence, ou **⇪ Publier les n séquences
+exportées non publiées** pour toutes à la fois.
 
 1. **Instance** : adresse de l'instance Panoramax (par défaut `https://panoramax.openstreetmap.fr` ; IGN ou autre
    possible), puis *Changer*.
@@ -472,6 +473,9 @@ l'onglet pour la connexion et les options, puis bouton **⇪ Publier** sur la li
    copiés sur la séquence Panoramax et reproposés au prochain envoi.
 5. Sur la ligne d'une séquence exportée : **⇪ Publier** (*Reprendre l'envoi* s'il a été interrompu, *Republier* si
    elle est déjà en ligne : cela crée une nouvelle séquence Panoramax), puis confirmer.
+   Pour en publier plusieurs d'un coup : **⇪ Publier les n séquences exportées non publiées** (section *Publier sur
+   Panoramax*) — une seule confirmation, qui liste les séquences, l'instance, la visibilité et les attributs ; elles
+   sont envoyées l'une après l'autre (reprise des envois interrompus comprise).
 
 Chaque séquence est envoyée depuis le dossier de son dernier export, comme **une seule séquence Panoramax** (ni
 redécoupée, ni dédoublonnée). Une séquence modifiée depuis son export est d'abord réexportée. L'avancement s'affiche

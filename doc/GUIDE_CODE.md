@@ -318,7 +318,8 @@ Docker). **Publication** (tâche `publish`) : par séquence, fichiers du dernier
 fichier exporté, écrit par `exporter.run` ; un export plus ancien sans cette liste, ou une séquence « à
 réexporter », est réexporté d'abord avec les mêmes réglages) ; `POST /api/upload_sets` (`title`, `no_split`,
 `no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans la section « Publier sur Panoramax » de l'onglet Export et envoi (`Publication.tsx` : `usePublishOptions`,
-`PublishOptionsPanel`, bouton `PublishButton` sur chaque séquence exportée) (`transport` walk / bike / car comme sur le site
+`PublishOptionsPanel` avec « Publier les n séquences exportées non publiées » en un seul `api.publish(ids)`, bouton
+`PublishButton` sur chaque séquence exportée) (`transport` walk / bike / car comme sur le site
 Panoramax, plus attributs libres `clé=valeur` ; validées par `normalize_semantics`, absentes si aucune ; les
 dernières utilisées sont gardées dans `panoramax.json` et renvoyées par `GET /api/panoramax`) ;
 jamais `relative_heading`) ; envoi des fichiers (3 en parallèle, `POST …/files`, 409 `existing_item` = déjà reçu) ;
