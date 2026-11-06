@@ -754,6 +754,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   // The issue being corrected (card on top of the Photo tab), as reached; looked up again in the list at each
   // render: gone = fixed
   const [focusPoint, setFocusPoint] = useState<Issue | null>(null)
+  // stop being corrected: its photos, widened or narrowed by hand before comparing them
+  const [stopAdj, setStopAdj] = useState<[number, number] | null>(null)
   const focusLive = focusPoint ? checkPoints.find((c) => sameIssue(c, focusPoint)) ?? null : null
   const focusOn = useCallback(
     (c: Issue) => {
@@ -761,6 +763,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       setSeqStart(null)
       setRange(c.end > c.start ? [c.start, c.end] : null)
       setFocusPoint(c)
+      setStopAdj(c.kind === 'stop' ? [c.start, c.end] : null)
       setTab('photo')
       setCenterTick((t) => t + 1) // the map shows the photo, even when it does not follow the navigation
     },
@@ -986,8 +989,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   )
 
   useEffect(() => {
-    if (focusPoint && (!current || current.idx < focusPoint.start || current.idx > focusPoint.end)) setFocusPoint(null)
-  }, [current, focusPoint])
+    const [a, b] = focusPoint?.kind === 'stop' && stopAdj ? stopAdj : [focusPoint?.start ?? 0, focusPoint?.end ?? 0]
+    if (focusPoint && (!current || current.idx < a || current.idx > b)) setFocusPoint(null)
+  }, [current, focusPoint, stopAdj])
 
   // « Ignorer » headings to check: the manual heading is right (computed one wrong, GPS lost); points recomputed
   const ignoreHeadings = useCallback(
@@ -1475,7 +1479,30 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 editMode={editMode}
                 interpolable={canInterpolate(focusPoint, photos)}
                 onPositions={() => setEditMode(true)}
-                onCompare={() => setStopCompare([focusPoint.start, focusPoint.end])}
+                onCompare={() => setStopCompare(stopAdj ?? [focusPoint.start, focusPoint.end])}
+                stopEditor={
+                  focusPoint.kind === 'stop' && stopAdj
+                    ? {
+                        photos,
+                        range: stopAdj,
+                        currentIdx: current?.idx ?? null,
+                        onRange: (r) => {
+                          setStopAdj(r)
+                          setRange(r)
+                          if (current && (current.idx < r[0] || current.idx > r[1])) goIdx(Math.min(Math.max(current.idx, r[0]), r[1]))
+                        },
+                        onGo: (i) => {
+                          if (i < stopAdj[0] || i > stopAdj[1]) {
+                            const r: [number, number] = [Math.min(stopAdj[0], i), Math.max(stopAdj[1], i)]
+                            setStopAdj(r)
+                            setRange(r)
+                          }
+                          goIdx(i)
+                          setCenterTick((t) => t + 1)
+                        },
+                      }
+                    : undefined
+                }
                 onAction={fixIssue}
                 onNext={nextIssue}
                 onClose={() => setFocusPoint(null)}

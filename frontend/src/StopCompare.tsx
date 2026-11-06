@@ -73,7 +73,7 @@ export default function StopCompare({
         </h2>
         <p className="small-text muted">
           Cochez la ou les photos à garder (la plus nette, la mieux cadrée — pas forcément la première) ; les autres seront
-          exclues. Clic sur une vignette : la photo dans la visionneuse 360° (la direction regardée est gardée d'une photo à
+          exclues. Aucune cochée : toutes sont exclues. Clic sur une vignette : la photo dans la visionneuse 360° (la direction regardée est gardée d'une photo à
           l'autre). Ctrl+Z annule.
         </p>
         {focus && (
@@ -120,8 +120,8 @@ export default function StopCompare({
             Aller à cette photo
           </button>
           <button onClick={onClose}>Fermer</button>
-          <button className="primary" disabled={!drop.length || !keep.size} onClick={apply} title={keep.size ? '' : 'Gardez au moins une photo'}>
-            {drop.length ? `Exclure ${drop.length} photo(s), garder ${keep.size}` : 'Décochez les photos à exclure'}
+          <button className="primary" disabled={!drop.length} onClick={apply} title={keep.size ? '' : 'Aucune photo de cet arrêt n\'est gardée (Ctrl+Z annule)'}>
+            {!drop.length ? 'Décochez les photos à exclure' : keep.size ? `Exclure ${drop.length} photo(s), garder ${keep.size}` : `Exclure les ${drop.length} photos (aucune gardée)`}
           </button>
         </div>
       </div>
