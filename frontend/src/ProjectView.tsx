@@ -19,7 +19,7 @@ import { AddBasemap, Confirm, ValueDialog } from './Dialogs'
 import SequencesTab from './SequencesTab'
 import SyncTab from './SyncTab'
 import { positionAt, Track } from './timesync'
-import { AGE_CLASSES, loadOverlay, OverlaySettings, saveOverlay } from './panoramaxLayer'
+import { loadOverlay, OverlaySettings, saveOverlay } from './panoramaxLayer'
 import Timeline from './Timeline'
 import Viewer360 from './Viewer360'
 import ContextMenu, { MenuItem } from './ContextMenu'
@@ -1310,7 +1310,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               api.setPosition(projectId, id, lat, lon).then((r) => afterHeadingChange(r.undo), (er) => setError(er.message))
             }}
           />
-          <MapLegend />
+          <MapLegend panoramax={overlay.enabled ? overlay.url : null} />
           {(seqStart != null || (range && range[1] > range[0])) && !snapOpen && (
             <div className="selection-chip small-text" role="status">
               {seqStart != null ? (
@@ -1375,17 +1375,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               </label>
             )}
           </div>
-          {overlay.enabled && (
-            <div className="pnx-legend small-text" title={overlay.url}>
-              <strong>Panoramax 360°</strong>
-              {AGE_CLASSES.map((c) => (
-                <span key={c.label}>
-                  <span className="chip" style={{ background: c.color }} /> {c.label}
-                </span>
-              ))}
-              <span className="muted">survol : date</span>
-            </div>
-          )}
           {issuesStep && (
             <IssuesPanel
               step={issuesStep}
