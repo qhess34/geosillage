@@ -117,3 +117,21 @@ def test_static_files_stay_inside_dist():
     with TestClient(main.app) as client:
         r = client.get("/..%2f..%2fbackend%2fapp%2fconfig.py")
         assert "DATA_DIR" not in r.text
+
+
+def test_fs_list_subfolders(tmp_path):
+    root = tmp_path / "carte"
+    root.mkdir()
+    # folder picker: sub-folders listed (special names, links to folders), broken links skipped, JPEGs counted
+    (root / "100GOPRO").mkdir()
+    (root / "a#b & é").mkdir()
+    (root / "x.JPG").write_bytes(b"")
+    (root / "lien").symlink_to(root / "100GOPRO")
+    (root / "casse").symlink_to(root / "absent")
+    with TestClient(main.app) as client:
+        r = client.get("/api/fs", params={"path": str(root)}).json()
+        assert r["dirs"] == ["100GOPRO", "a#b & é", "lien"] and r["jpeg_count"] == 1
+        assert r["files"] == [{"name": "x.JPG", "size": 0}]
+        sub = client.get("/api/fs", params={"path": f"{root}/a#b & é"}).json()
+        assert sub["path"] == str(root / "a#b & é") and sub["parent"] == str(root)
+        assert client.get("/api/fs", params={"path": str(root / "absent")}).status_code == 400

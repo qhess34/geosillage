@@ -259,6 +259,9 @@ def photo_exif(pid: str, photo_id: int):
 # ---- Local file system (folder picker) ----
 
 
+FS_MAX_FILES = 500
+
+
 @app.get("/api/fs")
 def fs_list(path: str = "~"):
     if path == "~":
@@ -266,18 +269,29 @@ def fs_list(path: str = "~"):
     p = Path(os.path.expanduser(path)).resolve()
     if not p.is_dir():
         raise HTTPException(400, "Dossier introuvable")
-    dirs, jpegs = [], 0
+    dirs, jpegs, files = [], 0, []
     try:
         for e in sorted(os.scandir(p), key=lambda e: e.name.lower()):
             if e.name.startswith("."):
                 continue
-            if e.is_dir(follow_symlinks=True):
+            try:  # one unreadable entry (broken link, permissions) must not hide the others
+                is_dir = e.is_dir(follow_symlinks=True)
+            except OSError:
+                continue
+            if is_dir:
                 dirs.append(e.name)
             elif Path(e.name).suffix.lower() in importer.JPEG_EXT:
                 jpegs += 1
+                if len(files) < FS_MAX_FILES:  # shown (greyed) in the picker; imports are by folder only
+                    try:
+                        files.append({"name": e.name, "size": e.stat().st_size})
+                    except OSError:
+                        files.append({"name": e.name, "size": None})
     except PermissionError:
-        raise HTTPException(403, "Accès refusé")
-    return {"path": str(p), "parent": str(p.parent) if p.parent != p else None, "dirs": dirs, "jpeg_count": jpegs}
+        raise HTTPException(403, f"Accès refusé au dossier {p} (droits de lecture)")
+    except OSError as e:
+        raise HTTPException(400, f"Dossier illisible : {p} ({e.strerror or e})")
+    return {"path": str(p), "parent": str(p.parent) if p.parent != p else None, "dirs": dirs, "jpeg_count": jpegs, "files": files}
 
 
 # ---- Frontend ----

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, FsListing } from './api'
+import FsBrowser from './FsBrowser'
 
 interface Props {
   title: string
@@ -45,27 +46,7 @@ export default function FolderPicker({ title, initial, onPick, onClose }: Props)
           <button type="submit">Ouvrir</button>
         </form>
         <p className="muted small-text">Vous pouvez aussi saisir le chemin d'un dossier qui n'existe pas encore : il sera créé.</p>
-        {listing && (
-          <div className="fs">
-            <div className="fs-head">
-              <button disabled={!listing.parent} onClick={() => listing.parent && go(listing.parent)} title="Dossier parent">
-                ↑
-              </button>
-              <span className="mono ellipsis">{listing.path}</span>
-            </div>
-            <ul className="fs-list">
-              {listing.dirs.map((d) => (
-                <li key={d}>
-                  <button className="link" onClick={() => go(`${listing.path}/${d}`)}>
-                    📁 {d}
-                  </button>
-                </li>
-              ))}
-              {!listing.dirs.length && <li className="muted">Aucun sous-dossier</li>}
-            </ul>
-          </div>
-        )}
-        {error && <p className="error">{error}</p>}
+        <FsBrowser listing={listing} error={error} onGo={go} />
         <div className="actions">
           <button onClick={onClose}>Annuler</button>
           <button className="primary" disabled={!typed.trim()} onClick={() => onPick(typed.trim())}>

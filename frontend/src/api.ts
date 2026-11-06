@@ -303,6 +303,7 @@ export interface FsListing {
   parent: string | null
   dirs: string[]
   jpeg_count: number
+  files: { name: string; size: number | null }[] // JPEGs of this folder (first ones), shown only
 }
 
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
