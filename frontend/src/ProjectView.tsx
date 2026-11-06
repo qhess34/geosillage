@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, FLAG_LABELS, FLAGS, Job, MissingRun, PhotoDetail, PhotoRow, Project, QualityIssue, SeqState, Sequence, UndoState } from './api'
+import { api, FLAG_LABELS, FLAGS, Job, PhotoDetail, PhotoRow, Project, QualityIssue, SeqState, Sequence, UndoState } from './api'
 import { Basemap, BUILTIN_BASEMAPS, loadCustomBasemaps, saveCustomBasemaps } from './basemaps'
 import ExportTab from './ExportTab'
 import { fmtCoord, fmtDistance, fmtDuration, fmtSize, fmtTime } from './format'
@@ -9,8 +9,9 @@ import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
 import PublishPanel from './PublishPanel'
 import StepBar from './StepBar'
+import IssuesPanel from './IssuesPanel'
 import CheckCard, { CheckAction } from './CheckCard'
-import { canInterpolate, computeIssues, Issue, ISSUE_TEXT, issueDetail, sameIssue } from './issues'
+import { canInterpolate, computeIssues, Issue, ISSUE_TEXT, issueDetail, IssueStep, sameIssue, STEP_KINDS } from './issues'
 import StopCompare from './StopCompare'
 import MapLegend from './MapLegend'
 import { AddBasemap, Confirm, ValueDialog } from './Dialogs'
@@ -167,141 +168,6 @@ function shifted(lat: number, lon: number, east: number, north: number): { lat: 
   return { lat: lat + north / M_PER_DEG, lon: lon + east / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)) }
 }
 
-
-// Points to check before publishing, also marked in amber on the timeline. Nothing is changed automatically.
-function QualityChecks({ issues, onShow, onCompare }: { issues: QualityIssue[]; onShow: (r: [number, number]) => void; onCompare: (r: [number, number]) => void }) {
-  const kinds = (['stop', 'spacing', 'gps_dop', 'heading'] as QualityIssue['kind'][]).filter((k) => issues.some((i) => i.kind === k))
-  return (
-    <div className="small-text quality">
-      <h3>Points à vérifier ({issues.length})</h3>
-      {issues.length === 0 ? (
-        <p className="muted">Rien à signaler.</p>
-      ) : (
-        <>
-          <p className="muted">Repérés en orange en haut de la timeline. Rien n'est modifié automatiquement : « Voir » sélectionne les photos concernées.</p>
-          {kinds.map((k) => {
-            const list = issues.filter((i) => i.kind === k)
-            return (
-              <details key={k} open={list.length <= 5}>
-                <summary>
-                  <strong>{ISSUE_TEXT[k].title}</strong> ({list.length})
-                </summary>
-                <p className="muted">
-                  <strong>Cause :</strong> {ISSUE_TEXT[k].cause} <strong>Correction :</strong> {ISSUE_TEXT[k].fix}
-                </p>
-                <ul className="missing-list">
-                  {list.map((i) => (
-                    <li key={`${k}-${i.start_idx}`}>
-                      <span>
-                        {i.count > 1 ? `Photos ${i.start_idx + 1} → ${i.end_idx + 1}` : `Photo ${i.start_idx + 1}`}
-                        <span className="muted"> · {i.detail}</span>
-                      </span>
-                      <span className="row">
-                        {k === 'stop' && (
-                          <button className="small" onClick={() => onCompare([i.start_idx, i.end_idx])} title="Photos de l'arrêt côte à côte : choisir celles à garder">
-                            Comparer
-                          </button>
-                        )}
-                        <button className="small" onClick={() => onShow([i.start_idx, i.end_idx])}>
-                          Voir
-                        </button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )
-          })}
-        </>
-      )}
-    </div>
-  )
-}
-
-// Photos without a position, by block, with the positioned photos before / after them (Bilan tab)
-function MissingPositions({
-  projectId,
-  photos,
-  sequences,
-  onGo,
-  onChanged,
-  onError,
-}: {
-  projectId: string
-  photos: PhotoRow[]
-  sequences: Sequence[]
-  onGo: (idx: number) => void
-  onChanged: (u?: UndoState) => void
-  onError: (msg: string) => void
-}) {
-  const [runs, setRuns] = useState<MissingRun[] | null>(null)
-  useEffect(() => {
-    api.missingPositions(projectId).then(setRuns, (e) => onError(e.message))
-  }, [projectId, photos, onError])
-  if (!runs) return null
-  const total = runs.reduce((n, r) => n + r.count, 0)
-  const fillable = runs.filter((r) => r.prev && r.next)
-  const interpolate = (ids: number[]) =>
-    api.positionsBatch(projectId, { photo_ids: ids, mode: 'interpolate' }).then((r) => onChanged(r.undo), (e) => onError(e.message))
-  const time = (side: MissingRun['prev']) => (side?.ts != null ? ` (${fmtTime(side.ts, false)})` : '')
-  return (
-    <div className="small-text missing-positions">
-      <h3>Photos sans position ({total})</h3>
-      {total === 0 ? (
-        <p className="muted">Toutes les photos utilisables ont une position.</p>
-      ) : (
-        <>
-          <p className="muted">
-            Photos sans GPS (ou en coordonnées invalides) pas encore placées. « Voir » ouvre la photo en mode Positions :
-            cliquez sur la carte pour la placer, entre les deux photos entourées en rouge. « Interpoler » les répartit entre
-            la photo d'avant et celle d'après selon l'heure de prise de vue. Une photo placée rejoint la séquence de ses
-            voisines. Annulable (Ctrl+Z).
-          </p>
-          {fillable.length > 1 && (
-            <button className="small" onClick={() => interpolate(fillable.flatMap((r) => r.ids))}>
-              Interpoler tout ({fillable.reduce((n, r) => n + r.count, 0)} photos)
-            </button>
-          )}
-          <ul className="missing-list">
-            {runs.map((r) => {
-              const seq = sequences.find((x) => x.id === r.sequence_id)
-              return (
-                <li key={r.ids[0]}>
-                  <span>
-                    {r.count > 1 ? `Photos ${r.start_idx + 1} → ${r.end_idx + 1} (${r.count})` : `Photo ${r.start_idx + 1}`}
-                    <span className="muted">
-                      {r.prev && r.next
-                        ? ` · entre la photo ${r.prev.idx + 1}${time(r.prev)} et la ${r.next.idx + 1}${time(r.next)}`
-                        : r.prev
-                          ? ` · après la photo ${r.prev.idx + 1}, en fin de sortie`
-                          : r.next
-                            ? ` · avant la photo ${r.next.idx + 1}, en début de sortie`
-                            : ''}
-                      {seq ? ` · ${seq.name}` : ''}
-                    </span>
-                  </span>
-                  <span className="row">
-                    <button className="small" onClick={() => onGo(r.start_idx)}>
-                      Voir
-                    </button>
-                    <button
-                      className="small"
-                      disabled={!r.prev || !r.next}
-                      title={r.prev && r.next ? '' : 'Pas de photo positionnée des deux côtés : placez-les à la main'}
-                      onClick={() => interpolate(r.ids)}
-                    >
-                      Interpoler
-                    </button>
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        </>
-      )}
-    </div>
-  )
-}
 
 function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o: OverlaySettings) => void }) {
   const [url, setUrl] = useState(overlay.url)
@@ -868,6 +734,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [addingBasemap, setAddingBasemap] = useState(false)
   // heading offset / orientation of a series of photos (context menu)
   const [valueDlg, setValueDlg] = useState<{ kind: 'offset' | 'yaw'; range: [number, number] } | null>(null)
+  const [issuesStep, setIssuesStep] = useState<IssueStep | null>(null) // list of things to fix of a step (floating window)
+  const closeIssues = useCallback(() => setIssuesStep(null), [])
+  const [confirmInterp, setConfirmInterp] = useState<number[] | null>(null) // photos to place between their neighbours
   const [stopCompare, setStopCompare] = useState<[number, number] | null>(null) // photos of a stop side by side
   const [editMode, setEditMode] = useState(false)
   const [track, setTrack] = useState<Track | null>(null)
@@ -922,8 +791,13 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const reloadPhotos = useCallback(async () => setPhotos(await api.photos(projectId)), [projectId])
   // Everything to check, in the order of the ride (N / Shift+N, step bar, Bilan, card of the Photo tab)
   const checkPoints = useMemo(() => computeIssues(quality, photos, isPnx), [quality, photos, isPnx])
-  // The point being corrected: shown as a card on top of the Photo tab (what is wrong, how to fix it)
-  // The issue being corrected, as reached; looked up again in the list at each render: gone = fixed
+  // the same, per step of the step bar (list of things to fix of a step)
+  const issuesByStep = useMemo(() => {
+    const by = (st: IssueStep) => checkPoints.filter((c) => STEP_KINDS[st].includes(c.kind))
+    return { dups: by('dups'), gps: by('gps'), seq: by('seq') }
+  }, [checkPoints])
+  // The issue being corrected (card on top of the Photo tab), as reached; looked up again in the list at each
+  // render: gone = fixed
   const [focusPoint, setFocusPoint] = useState<Issue | null>(null)
   const focusLive = focusPoint ? checkPoints.find((c) => sameIssue(c, focusPoint)) ?? null : null
   const focusOn = useCallback(
@@ -933,19 +807,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       setRange(c.end > c.start ? [c.start, c.end] : null)
       setFocusPoint(c)
       setTab('photo')
+      setCenterTick((t) => t + 1) // the map shows the photo, even when it does not follow the navigation
     },
     [],
-  )
-  // first point of these kinds after the current photo (from the start of the ride if none after)
-  const focusFirst = useCallback(
-    (kinds: Issue['kind'][]) => {
-      const list = checkPoints.filter((c) => kinds.includes(c.kind))
-      const i = current?.idx ?? -1
-      const c = list.find((x) => x.end >= i) ?? list[0] // the point the current photo is in, or the next one
-      if (c) focusOn(c)
-      return !!c
-    },
-    [checkPoints, current, focusOn],
   )
 
   const refresh = useCallback(async () => {
@@ -1192,6 +1056,25 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     },
     [focusPoint, photos, projectId, afterHeadingChange, applyState],
   )
+  // « Interpoler tous les trous possibles » (list of things to fix): every hole with a positioned photo before and
+  // after; a bulk action, confirmed first
+  const askInterpolateAll = useCallback(
+    () =>
+      api.missingPositions(projectId).then((runs) => {
+        const ids = runs.filter((r) => r.prev && r.next).flatMap((r) => r.ids)
+        if (ids.length) setConfirmInterp(ids)
+        else setNotice('Aucun trou entre deux photos positionnées')
+      }, (e) => setError(e.message)),
+    [projectId],
+  )
+  const interpolateAll = useCallback(
+    (ids: number[]) =>
+      api.positionsBatch(projectId, { photo_ids: ids, mode: 'interpolate' }).then((r) => {
+        afterHeadingChange(r.undo)
+        setNotice(`${r.changed} photo(s) placée(s) entre leurs voisines — Ctrl+Z pour annuler`)
+      }, (e) => setError(e.message)),
+    [projectId, afterHeadingChange],
+  )
   const nextIssue = useCallback(() => {
     if (!focusPoint) return
     const c = checkPoints.find((x) => x.start > focusPoint.end) ?? checkPoints.find((x) => x.start > focusPoint.start)
@@ -1203,7 +1086,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg) return
+      if (t?.closest('input, textarea, select') || showImport || confirmExclude || addingBasemap || stopCompare || valueDlg || confirmInterp) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl && e.key.toLowerCase() === 'z') {
         undoRedo(e.shiftKey ? 'redo' : 'undo')
@@ -1282,7 +1165,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg])
+  }, [photos, current, range, sequences, detail, projectId, showImport, goIdx, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, seqStart, nextKept, stepIdx, showExcluded, editMode, carryPos, carryCorrection, isPnx, checkPoints, focusOn, excludeRange, confirmExclude, addingBasemap, stopCompare, valueDlg, confirmInterp])
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
   const photosContext = (idx: number | null, x: number, y: number) => {
@@ -1434,8 +1317,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         quality={quality}
         tab={tab}
         onTab={setTab}
-        onCompare={setStopCompare}
-        onFocus={focusFirst}
+        onIssues={(st) => setIssuesStep(st)}
+        issueCounts={{ dups: issuesByStep.dups.length, gps: issuesByStep.gps.length, seq: issuesByStep.seq.length }}
       />
       {error && (
         <div className="error banner" onClick={() => setError(null)}>
@@ -1553,6 +1436,17 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               ))}
               <span className="muted">survol : date</span>
             </div>
+          )}
+          {issuesStep && (
+            <IssuesPanel
+              step={issuesStep}
+              issues={issuesByStep[issuesStep]}
+              current={focusPoint}
+              duplicates={project.summary.duplicates}
+              onPick={focusOn}
+              onClose={closeIssues}
+              onInterpolateAll={askInterpolateAll}
+            />
           )}
             {snapOpen && (
               <OsmSnapPanel
@@ -1704,29 +1598,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <>
                 <Summary p={project} />
-                <QualityChecks
-                  issues={quality}
-                  onCompare={setStopCompare}
-                  onShow={(r) => {
-                    const c = checkPoints.find((x) => x.start === r[0] && x.end === r[1])
-                    if (c) return focusOn(c)
-                    goIdx(r[0])
-                    setRange(r[1] > r[0] ? r : null)
-                    setTab('photo')
-                  }}
-                />
-                <MissingPositions
-                  projectId={projectId}
-                  photos={photos}
-                  sequences={sequences}
-                  onGo={(idx) => {
-                    goIdx(idx)
-                    setEditMode(true)
-                    setTab('photo')
-                  }}
-                  onChanged={(u) => afterHeadingChange(u)}
-                  onError={fail}
-                />
                 <OverlayUrl overlay={overlay} onSave={setOverlay} />
                 <div className="row wrap">
                   {!isPnx && (
@@ -1770,6 +1641,22 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       </main>
       <JobBar jobs={project.jobs} projectId={projectId} projectName={project.name} />
       {showImport && <ImportDialog projectId={projectId} onClose={() => setShowImport(false)} onStarted={refresh} />}
+      {confirmInterp && (
+        <Confirm
+          title={`Placer ${confirmInterp.length} photo(s) entre leurs voisines ?`}
+          confirmLabel={`Placer ${confirmInterp.length} photo(s)`}
+          onCancel={() => setConfirmInterp(null)}
+          onConfirm={() => {
+            interpolateAll(confirmInterp)
+            setConfirmInterp(null)
+          }}
+        >
+          <p>
+            Chaque photo sans position prise entre deux photos positionnées est placée entre elles, selon l'heure de prise de vue. Les photos en
+            début ou en fin de sortie restent à placer. Ctrl+Z annule.
+          </p>
+        </Confirm>
+      )}
       {confirmExclude && (
         <Confirm
           title={`Exclure ${confirmExclude.n} photos ?`}

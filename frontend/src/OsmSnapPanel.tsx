@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDraggable } from './useDraggable'
 import { api, PhotoRow, Sequence, SnapProposal, UndoState } from './api'
 
 export interface SnapPreview {
@@ -70,27 +71,8 @@ export default function OsmSnapPanel({
   const [hover, setHover] = useState<number | null>(null)
   const [keepManual, setKeepManual] = useState(true)
   const [scope, setScope] = useState<SnapScope>(initialScope)
-  const box = useRef<HTMLDivElement>(null)
   // the window can be moved by its title bar (kept inside the map area)
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
-  const drag = useRef<{ dx: number; dy: number } | null>(null)
-  const startDrag = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return
-    const el = box.current
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    drag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top }
-    ;(e.target as Element).setPointerCapture(e.pointerId)
-  }
-  const moveDrag = (e: React.PointerEvent) => {
-    const el = box.current
-    if (!drag.current || !el || !(e.buttons & 1)) return
-    const parent = (el.offsetParent as HTMLElement | null)?.getBoundingClientRect()
-    if (!parent) return
-    const left = Math.max(0, Math.min(parent.width - 80, e.clientX - parent.left - drag.current.dx))
-    const top = Math.max(0, Math.min(parent.height - 40, e.clientY - parent.top - drag.current.dy))
-    setPos({ left, top })
-  }
+  const { box, style: boxStyle, handlers: dragHandlers } = useDraggable<HTMLDivElement>()
   const [bounds, setBounds] = useState<[number | null, number | null]>(initialBounds ?? [current?.idx ?? null, null])
   // after D, the end follows the navigation (← →) until F, as for a sequence — but nothing is cut here
   const [following, setFollowing] = useState(false)
@@ -233,14 +215,12 @@ export default function OsmSnapPanel({
       ref={box}
       role="dialog"
       aria-label="Recalage sur OpenStreetMap"
-      style={pos ? { left: pos.left, top: pos.top, right: 'auto' } : undefined}
+      style={boxStyle}
     >
       <div
         className="row between snap-title"
         title="Faire glisser pour déplacer la fenêtre"
-        onPointerDown={startDrag}
-        onPointerMove={moveDrag}
-        onPointerUp={() => (drag.current = null)}
+        {...dragHandlers}
       >
         <h3>Recalage sur OpenStreetMap{range ? ` · photos ${range[0] + 1} → ${range[1] + 1}` : ''}</h3>
         <button className="small" onClick={onClose} aria-label="Fermer">

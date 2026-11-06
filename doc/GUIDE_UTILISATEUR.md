@@ -118,9 +118,9 @@ commencée) ; l'étape de l'onglet ouvert est encadrée. Au survol, le détail ;
 |---|---|---|
 | Import | — (gris tant qu'aucune photo) | *Bilan* |
 | Synchro | — (grise tant qu'aucun décalage n'est appliqué ; verte avec le décalage et le nombre de photos placées) | *Synchro* |
-| Doublons et arrêts | des arrêts restent à trier (les fichiers identiques sont écartés à l'import) | premier arrêt, photos sélectionnées |
-| Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | le point où l'on est, ou le suivant, **expliqué** en haut de l'onglet *Photo* (*Bilan* quand tout est vert) |
-| Séquences | photos ni dans une séquence, ni exclues | *Séquences* |
+| Doublons et arrêts | des arrêts restent à trier (les fichiers identiques sont écartés à l'import) | fenêtre *À corriger* : la liste des arrêts |
+| Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | fenêtre *À corriger* : problèmes, cause, correction ; un clic sur une photo y va (*Bilan* quand tout est vert) |
+| Séquences | photos ni dans une séquence, ni exclues | fenêtre *À corriger* (photos non classées) ; onglet *Séquences* quand tout est vert |
 | Export | séquences pas encore exportées, ou à réexporter | *Export* |
 | Envoi | séquences pas encore publiées, modifiées depuis, ou envoi interrompu | *Envoi* |
 
@@ -310,14 +310,13 @@ place chaque photo sur la voie choisie (position la plus proche) ; les photos pl
 
 ### Photos sans position
 
-Photos sans GPS (début de sortie, tunnel, perte du signal) : onglet *Bilan*, section **Photos sans position**, un
-bloc par trou, avec les photos positionnées prises juste avant et juste après (« entre la photo 50 (09:31:40) et la
-54 (09:31:48) · Séquence 1 »).
-- *Voir* ouvre la première photo du trou en mode Positions : la carte montre, entourées en rouge et reliées en
-  pointillés, la photo d'avant et celle d'après ; cliquer sur la carte place la photo.
-- *Interpoler* répartit les photos du trou entre la photo d'avant et celle d'après, selon l'heure de prise de vue
-  (*Interpoler tout* pour tous les trous). Impossible en début ou en fin de sortie (il manque un voisin) : les placer
-  à la main.
+Photos sans GPS (début de sortie, tunnel, perte du signal) : clic sur l'étape **Correction GPS** (fenêtre *À
+corriger*, groupe *Photos sans position*), un élément par trou.
+- Un clic sur un trou va à sa première photo : la carte montre, entourées en rouge et reliées en pointillés, la
+  photo d'avant et celle d'après ; en mode Positions (`M`), cliquer sur la carte place la photo.
+- *Interpoler entre les voisines* (encadré de l'onglet *Photo*) répartit les photos du trou entre la photo d'avant
+  et celle d'après, selon l'heure de prise de vue (*Interpoler tous les trous possibles* dans la fenêtre). Impossible
+  en début ou en fin de sortie (il manque un voisin) : les placer à la main ou les exclure.
 - Une photo placée **rejoint la séquence de ses voisines** quand la photo d'avant et celle d'après sont dans la
   même séquence. Tout est annulable (`Ctrl+Z`).
 
@@ -373,7 +372,11 @@ correction. Le fichier JPEG n'est jamais tourné : seule la balise d'orientation
 
 ### Points à vérifier avant de publier
 
-Onglet *Bilan*, section **Points à vérifier**, et marques **orange en haut de la timeline** :
+Clic sur une étape orange de la barre d'étapes (*Doublons et arrêts*, *Correction GPS*, *Séquences*) : une **fenêtre
+*À corriger*** s'ouvre sur la carte (déplaçable par sa barre de titre, `Échap` ou ✕ la ferme). Elle liste les
+problèmes de l'étape, groupés par type avec leur **cause** et la **correction** à apporter ; un clic sur une photo
+de la liste centre la carte dessus et la charge dans l'onglet *Photo*, la fenêtre restant ouverte pour enchaîner.
+Les problèmes sont aussi marqués **en orange en haut de la timeline** :
 
 - **Arrêts** : au moins 3 photos de suite au même endroit (moins de 2 m entre elles : feu rouge, pause). Choisir la
   ou les photos à garder — pas forcément la première : la plus nette, la mieux cadrée — et exclure les autres (`X`) ;
@@ -382,7 +385,7 @@ Onglet *Bilan*, section **Points à vérifier**, et marques **orange en haut de 
 - **Précision GPS faible** : la caméra indique une position peu précise (DOP > 5) ; vérifier la position sur la carte ;
 - **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?).
 
-*Voir* ouvre l'onglet *Photo* sur la première photo, sélectionne les photos concernées et affiche en haut un encadré
+L'onglet *Photo* sélectionne alors les photos concernées et affiche en haut un encadré
 **« À corriger »** : quel est le problème, comment le corriger, et les boutons utiles (*Corriger la position (M)*,
 *Interpoler entre les voisines*, *Revenir au cap calculé*, *Comparer les photos*, *Créer une séquence*, *Exclure*),
 plus *Suivant (N)*. L'encadré disparaît quand on quitte ces photos ou avec ✕. **Rien n'est modifié
@@ -391,7 +394,7 @@ position et les photos non classées). Pour un arrêt, **Comparer** (ou un clic 
 affiche ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
 regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder, puis *Exclure n photos*
 (une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
-signalés à part (anomalies, *Photos sans position*).
+listés dans la même fenêtre (étape *Correction GPS*), les photos non classées avec l'étape *Séquences*.
 
 ---
 

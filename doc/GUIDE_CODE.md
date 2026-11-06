@@ -435,6 +435,9 @@ une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des 
   `fixIssue` pour les actions, exclusion confirmée) ; le point est recherché dans la liste à chaque rendu : disparu =
   « Corrigé ✓ ». `focusFirst(kinds)` sert à l'étape *Correction GPS* ; l'encadré est retiré quand la photo courante
   sort de `start..end`.
+  `IssuesPanel.tsx` : fenêtre flottante (`useDraggable`, partagé avec `OsmSnapPanel`) des problèmes d'une étape
+  (`STEP_KINDS`), groupés avec cause et correction (`ISSUE_TEXT`) ; ouverte par la `StepBar` (`onIssues`) ; plus de
+  listes de corrections dans le *Bilan*.
 - `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`) ; pastille de sélection (`.selection-chip`) ;
   carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
 - `Timeline` : bulle au survol (`HoverBubble`), zoom gardé sous `pss-timeline-<projet>` si le nombre de photos n'a
