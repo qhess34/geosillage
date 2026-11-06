@@ -82,7 +82,7 @@ export default function StopCompare({
               thumbUrl={api.thumbUrl(projectId, focus.id)}
               imageUrl={api.imageUrl(projectId, focus.id)}
               alt={`Photo ${focus.idx + 1}`}
-              height={300}
+              height={Math.round(Math.min(300, window.innerHeight * 0.35))}
               yaw={shown?.detail?.yaw_offset ?? null}
               pitch={shown?.detail?.pitch_orig ?? null}
               roll={shown?.detail?.roll_orig ?? null}

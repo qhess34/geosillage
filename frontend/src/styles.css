@@ -1212,6 +1212,21 @@ input.coord {
 .wide-modal {
   width: min(1100px, 100%);
 }
+/* title, viewer and buttons stay in view: only the list of photos scrolls */
+.modal.stop-compare {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.stop-compare > :not(.stop-grid) {
+  flex: none;
+}
+.stop-compare .stop-grid {
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow: auto;
+  padding: 3px;
+}
 .stop-preview {
   margin: 0 0 10px;
 }
