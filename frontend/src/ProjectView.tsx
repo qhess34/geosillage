@@ -796,8 +796,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     const by = (st: IssueStep) => checkPoints.filter((c) => STEP_KINDS[st].includes(c.kind))
     return { dups: by('dups'), gps: by('gps'), seq: by('seq') }
   }, [checkPoints])
-  // The point being corrected: shown as a card on top of the Photo tab (what is wrong, how to fix it)
-  // The issue being corrected, as reached; looked up again in the list at each render: gone = fixed
+  // The issue being corrected (card on top of the Photo tab), as reached; looked up again in the list at each
+  // render: gone = fixed
   const [focusPoint, setFocusPoint] = useState<Issue | null>(null)
   const focusLive = focusPoint ? checkPoints.find((c) => sameIssue(c, focusPoint)) ?? null : null
   const focusOn = useCallback(
