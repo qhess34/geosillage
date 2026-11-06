@@ -52,13 +52,13 @@ export default function StepBar({
 
   // 2. GPS delay: photos placed on the track by the time synchronisation
   const synced = photos.filter((p) => p.pos_method === 'time').length
-  const off = project.sync_offset_s
   steps.push({
     id: 'sync',
     label: 'Synchro',
     state: synced ? 'ok' : 'todo',
-    sub: synced ? `${off != null ? `${off >= 0 ? '+' : ''}${off.toFixed(1)} s · ` : ''}${plural(synced, 'photo', 'photos')}` : 'pas encore faite',
-    help: 'Retard du GPS de la caméra : faites glisser une photo le long de la trace sur la vue satellite (onglet Synchro).',
+    // the offset is not shown: it can differ from one batch of photos to another (see the Synchro tab)
+    sub: synced ? `${plural(synced, 'photo', 'photos')}` : 'pas encore faite',
+    help: (synced ? `${plural(synced, 'photo synchronisée', 'photos synchronisées')} ; décalages par lot dans l'onglet Synchro. ` : '') + 'Retard du GPS de la caméra : faites glisser une photo le long de la trace sur la vue satellite (onglet Synchro).',
     go: () => onTab('sync'),
   })
 
