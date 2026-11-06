@@ -124,7 +124,7 @@ commencée) ; l'étape de l'onglet ouvert est encadrée. Au survol, le détail ;
 | Étape | Orange quand… | Clic |
 |---|---|---|
 | Import | — (gris tant qu'aucune photo) | *Bilan* |
-| Synchro | — (grise tant qu'aucun décalage n'est appliqué ; verte avec le décalage et le nombre de photos placées) | *Synchro* |
+| Synchro | — (grise tant qu'aucun décalage n'est appliqué ; verte avec le nombre de photos synchronisées, sans le décalage ; les décalages, qui peuvent varier d'un lot de photos à l'autre, sont dans l'onglet) | *Synchro* |
 | Doublons et arrêts | des arrêts restent à trier (les fichiers identiques sont écartés à l'import) | fenêtre *À corriger* : la liste des arrêts |
 | Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | fenêtre *À corriger* : problèmes, cause, correction ; un clic sur une photo y va (*Bilan* quand tout est vert) |
 | Séquences | photos ni dans une séquence, ni exclues | fenêtre *À corriger* (photos non classées) ; onglet *Séquences* quand tout est vert |
