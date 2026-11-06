@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, Job, PanoramaxStatus, seqColor, Sequence, Tag } from './api'
+import { api, PanoramaxStatus, Sequence, Tag } from './api'
 import { Confirm } from './Dialogs'
 
 export const PUBLICATION_STATES: Record<string, string> = {
@@ -14,26 +14,14 @@ export function viewerUrl(instance: string, pictureId: string): string {
   return `${instance.replace(/\/+$/, '')}/#focus=pic&pic=${pictureId}`
 }
 
-// Envoi tab: connection to a Panoramax instance and publication of the selected sequences (from their last export)
-export default function PublishPanel({
-  projectId,
-  sequences,
-  jobs,
-  onStarted,
-  onError,
-}: {
-  projectId: string
-  sequences: Sequence[]
-  jobs: Job[]
-  onStarted: () => void
-  onError: (msg: string) => void
-}) {
+// Options of a publication on Panoramax, shared by the « Publier » buttons of the exported sequences: connection,
+// visibility, attributes (those of the last publication are proposed again)
+export function usePublishOptions() {
   const [st, setSt] = useState<PanoramaxStatus | null>(null)
   const [visibility, setVisibility] = useState<'anyone' | 'owner-only'>('anyone')
   const [transport, setTransport] = useState('')
   const [extra, setExtra] = useState('') // other attributes, one key=value per line
   const [tagsReady, setTagsReady] = useState(false)
-  // attributes of the last publication proposed again
   useEffect(() => {
     if (!st || tagsReady) return
     setTransport(st.semantics.find((t) => t.key === 'transport')?.value ?? '')
@@ -42,78 +30,32 @@ export default function PublishPanel({
   }, [st, tagsReady])
   const parsed = parseTags(extra)
   const semantics: Tag[] = [...(transport ? [{ key: 'transport', value: transport }] : []), ...parsed.tags]
-  const [picked, setPicked] = useState<Set<number>>(new Set())
-  const [confirm, setConfirm] = useState(false)
-  const running = jobs.some((j) => j.kind === 'publish' && j.state === 'running')
+  return { st, setSt, visibility, setVisibility, transport, setTransport, extra, setExtra, parsed, semantics }
+}
+export type PublishOptions = ReturnType<typeof usePublishOptions>
 
-  const exported = sequences.filter((s) => s.last_export)
-  const chosen = exported.filter((s) => picked.has(s.id))
-  const publish = () => {
-    setConfirm(false)
-    api.publish(projectId, chosen.map((s) => s.id), visibility, semantics).then(() => {
-      setPicked(new Set())
-      onStarted()
-    }, (e) => onError(e.message))
-  }
-
+// Section « Publier sur Panoramax » of the Export tab: connection and options; each exported sequence has its own
+// « Publier » button in the list above
+export function PublishOptionsPanel({ o, onError }: { o: PublishOptions; onError: (msg: string) => void }) {
   return (
     <div className="publish small-text">
       <h3>Publier sur Panoramax</h3>
-      <PnxConnection onChange={setSt} onError={onError} />
-
-      {st?.connected && (
+      <p className="muted">
+        Une fois une séquence exportée, « Publier » sur sa ligne l'envoie telle qu'exportée (dossier de son dernier export), comme{' '}
+        <strong>une seule</strong> séquence Panoramax : ni redécoupée, ni dédoublonnée. Une séquence modifiée depuis son export est
+        d'abord réexportée ; un envoi interrompu reprend où il s'était arrêté.
+      </p>
+      <PnxConnection onChange={o.setSt} onError={onError} />
+      {o.st?.connected && (
         <>
-          <p className="muted">
-            Chaque séquence est envoyée telle qu'exportée (dossier de son dernier export), comme <strong>une seule</strong> séquence
-            Panoramax : ni redécoupée, ni dédoublonnée. Une séquence modifiée depuis son export est d'abord réexportée. Un envoi
-            interrompu reprend où il s'était arrêté.
-          </p>
-          {exported.length === 0 ? (
-            <p className="muted">Aucune séquence exportée : exportez d'abord (onglet Export).</p>
-          ) : (
-            <ul className="export-list">
-              {exported.map((s, i) => {
-                const pub = s.last_publication
-                return (
-                  <li key={s.id}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={picked.has(s.id)}
-                        onChange={() => {
-                          const n = new Set(picked)
-                          if (n.has(s.id)) n.delete(s.id)
-                          else n.add(s.id)
-                          setPicked(n)
-                        }}
-                      />{' '}
-                      <span className="chip" style={{ background: seqColor(sequences, s.id) }} /> {sequences.indexOf(s) + 1 || i + 1} · {s.name}{' '}
-                      <span className="muted">({s.count} photos)</span>{' '}
-                      {pub && (
-                        <span className={`badge ${pub.state === 'error' || pub.state === 'uploading' ? 'warn-text' : ''}`} title={pub.message ?? ''}>
-                          {PUBLICATION_STATES[pub.state]} le {new Date(pub.ts * 1000).toLocaleDateString('fr-FR')}
-                        </span>
-                      )}{' '}
-                      {s.changed_since_publication && <span className="badge warn-text">modifiée depuis</span>}
-                    </label>{' '}
-                    {pub?.first_picture_id && (
-                      <a href={viewerUrl(pub.instance, pub.first_picture_id)} target="_blank" rel="noreferrer">
-                        voir sur Panoramax
-                      </a>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
           <fieldset className="modes">
             <legend>Visibilité</legend>
             <label>
-              <input type="radio" checked={visibility === 'anyone'} onChange={() => setVisibility('anyone')} /> Tout le monde
+              <input type="radio" checked={o.visibility === 'anyone'} onChange={() => o.setVisibility('anyone')} /> Tout le monde
             </label>
             <label>
-              <input type="radio" checked={visibility === 'owner-only'} onChange={() => setVisibility('owner-only')} /> Moi seulement (essai,
-              modifiable ensuite sur Panoramax)
+              <input type="radio" checked={o.visibility === 'owner-only'} onChange={() => o.setVisibility('owner-only')} /> Moi seulement
+              (essai, modifiable ensuite sur Panoramax)
             </label>
           </fieldset>
           <fieldset className="modes">
@@ -121,49 +63,78 @@ export default function PublishPanel({
             <div className="row wrap" role="radiogroup" aria-label="Mode de déplacement">
               {TRANSPORTS.map(([v, label]) => (
                 <label key={v}>
-                  <input type="radio" checked={transport === v} onChange={() => setTransport(v)} /> {label}
+                  <input type="radio" checked={o.transport === v} onChange={() => o.setTransport(v)} /> {label}
                 </label>
               ))}
             </div>
             <label className="tags-input">
               Autres attributs, un par ligne <span className="muted">(clé=valeur, ex. hashtag=gravel)</span>
-              <textarea rows={3} value={extra} onChange={(e) => setExtra(e.target.value)} spellCheck={false} aria-label="Autres attributs" />
+              <textarea rows={3} value={o.extra} onChange={(e) => o.setExtra(e.target.value)} spellCheck={false} aria-label="Autres attributs" />
             </label>
-            {parsed.bad.length > 0 && <p className="warn-text">Ligne(s) sans « clé=valeur » : {parsed.bad.join(', ')}</p>}
+            {o.parsed.bad.length > 0 && <p className="warn-text">Ligne(s) sans « clé=valeur » : {o.parsed.bad.join(', ')}</p>}
             <p className="muted">
-              {semantics.length ? `Envoyés : ${semantics.map((t) => `${t.key}=${t.value}`).join(', ')}.` : 'Aucun attribut envoyé.'} Ils
-              sont copiés sur la séquence Panoramax et reproposés au prochain envoi.
+              {o.semantics.length ? `Envoyés : ${o.semantics.map((t) => `${t.key}=${t.value}`).join(', ')}.` : 'Aucun attribut envoyé.'}{' '}
+              Ils sont copiés sur la séquence Panoramax et reproposés au prochain envoi.
             </p>
           </fieldset>
-          <div className="actions">
-            <button className="primary" disabled={!chosen.length || running || parsed.bad.length > 0} onClick={() => setConfirm(true)}>
-              {running ? 'Publication en cours…' : `Publier ${chosen.length} séquence(s)`}
-            </button>
-          </div>
-          {confirm && (
-            <Confirm
-              title={`Publier ${chosen.length} séquence(s) ?`}
-              confirmLabel="Publier"
-              onCancel={() => setConfirm(false)}
-              onConfirm={publish}
-            >
-              <p>
-                Sur <strong>{st!.instance.replace(/^https?:\/\//, '')}</strong>,{' '}
-                {visibility === 'anyone' ? 'visibles par tout le monde' : 'visibles par vous seulement'}
-                {semantics.length ? <>, avec {semantics.map((t) => `${t.key}=${t.value}`).join(', ')}</> : ''}.
-              </p>
-              <ul className="small-text">
-                {chosen.map((c) => (
-                  <li key={c.id}>
-                    {c.name} ({c.count} photos)
-                  </li>
-                ))}
-              </ul>
-            </Confirm>
-          )}
         </>
       )}
     </div>
+  )
+}
+
+// « Publier » button of an exported sequence (Export tab), with its confirmation
+export function PublishButton({
+  projectId,
+  s,
+  o,
+  running,
+  onStarted,
+  onError,
+}: {
+  projectId: string
+  s: Sequence
+  o: PublishOptions
+  running: boolean
+  onStarted: () => void
+  onError: (msg: string) => void
+}) {
+  const [confirm, setConfirm] = useState(false)
+  const pub = s.last_publication
+  const label = pub?.state === 'uploading' ? 'Reprendre l\'envoi' : pub ? 'Republier' : 'Publier'
+  const why = !o.st?.connected
+    ? 'Connectez-vous à Panoramax (section « Publier sur Panoramax » ci-dessous)'
+    : o.parsed.bad.length
+      ? 'Attributs à corriger (section « Publier sur Panoramax »)'
+      : running
+        ? 'Une publication est en cours'
+        : ''
+  const publish = () => {
+    setConfirm(false)
+    api.publish(projectId, [s.id], o.visibility, o.semantics).then(onStarted, (e) => onError(e.message))
+  }
+  return (
+    <>
+      <button className={pub ? 'small' : 'small primary'} disabled={!!why} title={why || `Publier « ${s.name} » sur Panoramax`} onClick={() => setConfirm(true)}>
+        ⇪ {label}
+      </button>
+      {confirm && o.st && (
+        <Confirm title={`${label} « ${s.name} » ?`} confirmLabel={label} onCancel={() => setConfirm(false)} onConfirm={publish}>
+          <p>
+            {s.count} photos sur <strong>{o.st.instance.replace(/^https?:\/\//, '')}</strong>,{' '}
+            {o.visibility === 'anyone' ? 'visibles par tout le monde' : 'visibles par vous seulement'}
+            {o.semantics.length ? <>, avec {o.semantics.map((t) => `${t.key}=${t.value}`).join(', ')}</> : ''}.
+            {s.needs_export ? ' La séquence a changé depuis son export : elle est d\'abord réexportée.' : ''}
+          </p>
+          {pub && pub.state !== 'uploading' && (
+            <p className="small-text warn-text">
+              Elle est déjà sur Panoramax : republier crée une nouvelle séquence. Pour envoyer seulement des corrections, utilisez
+              « Comparer avec Panoramax » (onglet Séquences).
+            </p>
+          )}
+        </Confirm>
+      )}
+    </>
   )
 }
 

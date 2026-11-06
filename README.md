@@ -31,7 +31,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
 | 3 | Recalage sur les voies OSM d'une sélection (tronçons, choix de la voie si ambiguïté, aperçu) | ✅ |
 | 3 (reste) | Import GPX | à faire |
-| 4 | Publication Panoramax par séquence (onglet Envoi, connexion par lien de validation, attributs : mode de déplacement et attributs libres, reprise d'un envoi interrompu) | ✅ |
+| 4 | Publication Panoramax par séquence (bouton « Publier » de chaque séquence exportée, onglet Export et envoi, connexion par lien de validation, attributs : mode de déplacement et attributs libres, reprise d'un envoi interrompu) | ✅ |
 | 4 (suite) | Projet Panoramax : corriger des séquences déjà publiées (choisies dans son compte), envoi des seules différences, retour en arrière | ✅ |
 | Qualité | Points à vérifier avant publication (arrêts, grands écarts, précision GPS, caps) : Bilan et timeline | ✅ |
 | Interface | Barre d'étapes (import, synchro, doublons et arrêts, correction GPS, séquences, export, envoi) : état et accès direct | ✅ |

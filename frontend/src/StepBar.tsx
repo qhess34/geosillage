@@ -149,8 +149,8 @@ export default function StepBar({
             `${published.length} / ${sequences.length} publiée${published.length > 1 ? 's' : ''}` +
             (changed.length ? ` · ${changed.length} modifiée${changed.length > 1 ? 's' : ''} depuis` : '') +
             (failed.length ? ` · ${failed.length} interrompue${failed.length > 1 ? 's' : ''}` : ''),
-          help: 'Publication sur Panoramax des séquences exportées (onglet Envoi).',
-          go: () => onTab('send'),
+          help: 'Publication sur Panoramax des séquences exportées : « Publier » sur chaque séquence (onglet Export et envoi).',
+          go: () => onTab('export'),
         },
   )
 

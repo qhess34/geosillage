@@ -9,7 +9,6 @@ import HeadingDial from './HeadingDial'
 import ImportDialog from './ImportDialog'
 import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
-import PublishPanel from './PublishPanel'
 import StepBar from './StepBar'
 import IssuesPanel from './IssuesPanel'
 import CheckCard, { CheckAction } from './CheckCard'
@@ -710,10 +709,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       /* ignore */
     }
   }, [viewKey, selected, tab])
-  // a Panoramax project has no Export tab
+  // a Panoramax project has no Export tab, a ride has no separate Envoi tab (publication is in « Export et envoi »)
   useEffect(() => {
     if (isPnx && tab === 'export') setTab('send')
-  }, [isPnx, tab])
+    if (project && !isPnx && tab === 'send') setTab('export')
+  }, [project, isPnx, tab])
   const current = useMemo(() => photos.find((p) => p.id === selected) ?? null, [photos, selected])
 
   // points to check, recomputed whenever the photos change (positions, exclusions, headings)
@@ -1427,11 +1427,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 ['photo', 'Photo'],
                 ['sequences', 'Séquences'],
                 ['sync', 'Synchro'],
-                ['export', 'Export'],
+                ['export', 'Export et envoi'],
                 ['send', 'Envoi'],
                 ['summary', 'Bilan'],
               ] as [Tab, string][]
-            ).filter(([t]) => !(isPnx && t === 'export')).map(([t, label]) => (
+            ).filter(([t]) => (isPnx ? t !== 'export' : t !== 'send')).map(([t, label]) => (
               <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'tab active' : 'tab'} onClick={() => setTab(t)}>
                 {label}
                 {t === 'sequences' && <span className="count">{sequences.length}</span>}
@@ -1516,9 +1516,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             )}
             {tab === 'send' && isPnx && (
               <SendTab projectId={projectId} instance={project.pnx_instance} sequences={sequences} onStarted={refresh} onError={fail} />
-            )}
-            {tab === 'send' && !isPnx && (
-              <PublishPanel projectId={projectId} sequences={sequences} jobs={project.jobs} onStarted={refresh} onError={fail} />
             )}
             {tab === 'export' && !isPnx && (
               <ExportTab
