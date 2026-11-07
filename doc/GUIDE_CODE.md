@@ -3,6 +3,8 @@
 Fonctionnement interne. Pour commencer : [DEVELOPPEMENT.md](DEVELOPPEMENT.md) (installation, vérifications,
 recettes) et [AGENTS.md](../AGENTS.md) (règles).
 
+**Sommaire** : [Vue d'ensemble](#vue-densemble) · [Docker](#docker) · [Données](#données) · [Flux d'import](#flux-dimport) · [Séquences et annuler/rétablir](#séquences-et-annulerrétablir) · [Cap](#cap) · [Recalage sur les voies OpenStreetMap](#recalage-sur-les-voies-openstreetmap) · [Trace GPX](#trace-gpx) · [Positions](#positions) · [Exclusion, découpe en un geste](#exclusion-découpe-en-un-geste) · [Création manuelle, visionneuse et carte](#création-manuelle-visionneuse-et-carte) · [Orientation (caméra sur casque, caméra à l'envers)](#orientation-caméra-sur-casque-caméra-à-lenvers) · [Retard GPS (synchronisation temporelle)](#retard-gps-synchronisation-temporelle) · [Photos GoPro MAX réelles : balises](#photos-gopro-max-réelles--balises) · [Surcouche Panoramax](#surcouche-panoramax) · [Publication Panoramax](#publication-panoramax) · [Séquences déjà publiées (corrections)](#séquences-déjà-publiées-corrections) · [Projets Panoramax (séquences déjà publiées)](#projets-panoramax-séquences-déjà-publiées) · [Réexport](#réexport) · [Export](#export) · [Détection des sauts GPS](#détection-des-sauts-gps) · [Barre d'étapes](#barre-détapes) · [Confort de l'interface](#confort-de-linterface) · [Points à vérifier (contrôle qualité)](#points-à-vérifier-contrôle-qualité) · [Pièges connus](#pièges-connus) · [Tests](#tests)
+
 ## Vue d'ensemble
 
 Un seul processus local : FastAPI (`backend/app/main.py`) sert l'API REST sous `/api` et l'interface construite
@@ -517,6 +519,12 @@ marques orange en haut de la `Timeline` (`warnings`) et section du *Bilan* (`Qua
   couches de photos ne sont pas recréées après un changement de fond.
 - Panoramax (voir `ETUDE_PHASE1.md` §2.4) : ne jamais envoyer `relative_heading`, et un cap arrondi à 0 est recalculé
   par le serveur.
+- SQLite : jamais d'opération longue (déplacement de fichier, réseau, ExifTool) dans `db.transaction` : le verrou
+  bloque toutes les modifications (« database is locked » au bout de 30 s, renvoyé en 503 avec un message clair).
+- ExifTool : les options (`-m`, `-overwrite_original`…) sont à répéter pour chaque commande d'un fichier d'arguments ;
+  seules les lignes `Error` sont des erreurs.
+- Interface : les photos sont rechargées après chaque action ; un raccourci pressé juste après voit l'ancien état.
+- Docker : après un changement, l'utilisateur doit reconstruire (`docker compose up -d --build`).
 
 ## Tests
 
