@@ -29,6 +29,7 @@ import { ConfirmExclude, ConfirmInterpolate, HelpDialog, RangeValueDialog } from
 import { contextMenuItems, MenuContext, SnapOpen, ValueDlg } from './contextMenuItems'
 import { useShortcuts } from './shortcuts'
 import { useIssues } from './useIssues'
+import { t, useLang } from './i18n'
 
 // Small displacements (local flat approximation, enough for a few hundred meters)
 const M_PER_DEG = 111320
@@ -42,6 +43,7 @@ function shifted(lat: number, lon: number, east: number, north: number): { lat: 
 type Tab = 'photo' | 'sequences' | 'sync' | 'export' | 'send' | 'summary'
 
 export default function ProjectView({ projectId, onBack }: { projectId: string; onBack: () => void }) {
+  useLang() // re-render (menus, help) when the language changes
   const [project, setProject] = useState<Project | null>(null)
   const isPnx = project?.kind === 'panoramax' // sequences already published: corrections only, no cut, no export
   const [photos, setPhotos] = useState<PhotoRow[]>([])
@@ -595,10 +597,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </button>
         <span className="spacer" />
         {notice && <div className="toast small-text">✓ {notice}</div>}
-        <button onClick={() => setShowSettings(true)} title="Réglages : surcouche Panoramax, fonds de carte ajoutés, calcul du cap">
-          ⚙ Réglages
+        <button onClick={() => setShowSettings(true)} title={t('settings.buttonTitle')}>
+          {t('settings.heading')}
         </button>
-        <button onClick={() => setShowHelp(true)} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">
+        <button onClick={() => setShowHelp(true)} title={t('help.button')} aria-label={t('help.title')}>
           ?
         </button>
       </header>

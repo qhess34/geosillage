@@ -1,18 +1,20 @@
 import { api, UndoState } from './api'
 import { Confirm, ValueDialog } from './Dialogs'
-import { SHORTCUTS } from './shortcuts'
+import { t, useLang } from './i18n'
+import { shortcutList } from './shortcuts'
 import { ValueDlg } from './contextMenuItems'
 
 // Small windows of the project screen: help, confirmations of bulk actions, value of a series of photos
 
 export function HelpDialog({ onClose }: { onClose: () => void }) {
+  useLang()
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal small-modal" role="dialog" aria-label="Raccourcis clavier">
-        <h2>Raccourcis clavier</h2>
+      <div className="modal small-modal" role="dialog" aria-label={t('help.title')}>
+        <h2>{t('help.title')}</h2>
         <table className="summary">
           <tbody>
-            {SHORTCUTS.map(([k, v]) => (
+            {shortcutList().map(([k, v]) => (
               <tr key={k}>
                 <th>
                   <kbd>{k}</kbd>
@@ -22,9 +24,9 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
             ))}
           </tbody>
         </table>
-        <p className="small-text muted">Sur la carte et la timeline : Maj+clic étend la plage. Glisser sur la timeline sélectionne une plage.</p>
+        <p className="small-text muted">{t('help.mouse')}</p>
         <div className="actions">
-          <button onClick={onClose}>Fermer</button>
+          <button onClick={onClose}>{t('common.close')}</button>
         </div>
       </div>
     </div>

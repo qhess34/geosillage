@@ -1,5 +1,6 @@
 import { api, GpxSummary, PhotoRow, SeqState, Sequence } from './api'
 import { MenuItem } from './ContextMenu'
+import { t, tp } from './i18n'
 import { SnapScope } from './OsmSnapPanel'
 
 // Context menu (right click) on the map, the timeline or a sequence
@@ -28,10 +29,10 @@ export function contextMenuItems(ctx: MenuContext | null, d: MenuDeps): { title:
   if (ctx.kind === 'sequence') {
     const sq = sequences.find((x) => x.id === ctx.sequenceId)
     return {
-      title: sq ? `${sq.name} (${sq.count} photos)` : 'Séquence',
+      title: sq ? t('menu.sequenceTitle', { name: sq.name, n: sq.count }) : t('menu.sequence'),
       items: [
         {
-          label: 'Recaler sur OpenStreetMap…',
+          label: t('menu.snapOsm'),
           disabled: !sq,
           onClick: () => {
             if (!sq) return
@@ -39,7 +40,7 @@ export function contextMenuItems(ctx: MenuContext | null, d: MenuDeps): { title:
             d.openSnap({ scope: 'sequence', sequenceId: sq.id })
           },
         },
-        ...(gpx && sq ? [{ label: 'Recaler sur la trace GPX…', onClick: () => openGpxSnap([sq.start_idx, sq.end_idx]) }] : []),
+        ...(gpx && sq ? [{ label: t('menu.snapGpx'), onClick: () => openGpxSnap([sq.start_idx, sq.end_idx]) }] : []),
       ],
     }
   }
@@ -47,31 +48,32 @@ export function contextMenuItems(ctx: MenuContext | null, d: MenuDeps): { title:
   const inSeq = photos[r[0]]?.sequence_id ?? null
   const sameSeq = inSeq != null && photos.slice(r[0], r[1] + 1).every((p) => p.sequence_id === inSeq)
   const sq = sameSeq ? sequences.find((x) => x.id === inSeq) : undefined
-  const these = r[0] === r[1] ? 'de cette photo' : `de ces ${r[1] - r[0] + 1} photos`
+  const nSel = r[1] - r[0] + 1
+  const these = r[0] === r[1] ? t('menu.thisPhoto') : t('menu.thesePhotos', { n: nSel })
   const items: MenuItem[] = [
     {
-      label: r[0] === r[1] ? 'Recaler cette photo sur OpenStreetMap…' : `Recaler ces ${r[1] - r[0] + 1} photos sur OpenStreetMap…`,
+      label: tp('menu.snapOsm', nSel),
       onClick: () => d.openSnap({ scope: 'custom', sequenceId: inSeq, bounds: r }),
     },
     ...(gpx
-      ? [{ label: r[0] === r[1] ? 'Recaler cette photo sur la trace GPX…' : `Recaler ces ${r[1] - r[0] + 1} photos sur la trace GPX…`, onClick: () => openGpxSnap(r) }]
+      ? [{ label: tp('menu.snapGpx', nSel), onClick: () => openGpxSnap(r) }]
       : []),
-    { label: `Décalage du cap (sens de déplacement) ${these}…`, onClick: () => d.openValueDlg({ kind: 'offset', range: r }) },
-    { label: `Orientation de la caméra ${these}…`, onClick: () => d.openValueDlg({ kind: 'yaw', range: r }) },
+    { label: t('menu.offset', { these }), onClick: () => d.openValueDlg({ kind: 'offset', range: r }) },
+    { label: t('menu.yaw', { these }), onClick: () => d.openValueDlg({ kind: 'yaw', range: r }) },
   ]
   if (!isPnx && photos.slice(r[0], r[1] + 1).every((p) => p.sequence_id == null))
     items.push({
-      label: r[0] === r[1] ? 'Créer une séquence avec cette photo' : `Créer une séquence avec ces ${r[1] - r[0] + 1} photos`,
+      label: tp('menu.createSeq', nSel),
       onClick: () =>
         api.createSequence(projectId, r[0], r[1]).then((st) => {
-          applyState({ ...st, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` })
+          applyState({ ...st, done: t('menu.seqCreated', { from: r[0] + 1, to: r[1] + 1 }) })
           d.clearSelection()
         }, (er) => d.onError(er.message)),
     })
   if (sq)
     items.push({
-      label: `Recaler toute la séquence « ${sq.name} »…`,
+      label: t('menu.snapWhole', { name: sq.name }),
       onClick: () => d.openSnap({ scope: 'sequence', sequenceId: sq.id }),
     })
-  return { title: r[0] === r[1] ? `Photo ${r[0] + 1}` : `Photos ${r[0] + 1} → ${r[1] + 1}`, items }
+  return { title: r[0] === r[1] ? t('menu.photoTitle', { a: r[0] + 1 }) : t('menu.photosTitle', { a: r[0] + 1, b: r[1] + 1 }), items }
 }

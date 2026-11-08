@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { locale } from './i18n'
 import { api, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
 import { PUBLICATION_STATES, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './Publication'
@@ -154,7 +155,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
                   {s.last_export ? (s.needs_export ? <span className="badge warn-text">à réexporter</span> : <span className="badge">exportée</span>) : null}{' '}
                   {p && (
                     <span className={`badge ${p.state === 'error' || p.state === 'uploading' || s.changed_since_publication ? 'warn-text' : ''}`} title={p.message ?? p.instance}>
-                      {s.changed_since_publication ? 'modifiée depuis la publication' : `${PUBLICATION_STATES[p.state]} le ${new Date(p.ts * 1000).toLocaleDateString('fr-FR')}`}
+                      {s.changed_since_publication ? 'modifiée depuis la publication' : `${PUBLICATION_STATES[p.state]} le ${new Date(p.ts * 1000).toLocaleDateString(locale())}`}
                     </span>
                   )}
                 </label>
@@ -288,7 +289,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
                 {h.report.corrected_positions > 0 && `, ${h.report.corrected_positions} positions corrigées`}
                 {(h.report.excluded_gps_jumps?.length ?? 0) > 0 && `, ${h.report.excluded_gps_jumps?.length} sauts GPS exclus`}
                 {h.report.mode === 'move' ? ' · photos sources déplacées' : h.report.mode === 'in_place' ? ' · photos sources modifiées sur place' : ''} ·{' '}
-                {new Date(h.ts * 1000).toLocaleString('fr-FR')}
+                {new Date(h.ts * 1000).toLocaleString(locale())}
                 <div className="mono break muted">{h.path}</div>
                 {(h.report.foreign_files?.length ?? 0) > 0 && (
                   <div className="warn-text">

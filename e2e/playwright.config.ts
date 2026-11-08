@@ -15,6 +15,7 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1280, height: 800 },
+    locale: 'fr-FR', // the interface follows the browser language (French by default)
     trace: 'off',
     screenshot: 'only-on-failure',
   },

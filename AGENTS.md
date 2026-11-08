@@ -56,8 +56,9 @@ chercher (`grep -n`) plutôt que le lire en entier.
   l'interface ni écrit dans un journal ; jamais `relative_heading` dans un envoi (il écraserait les caps).
 - **Sécurité** : l'API ne doit écouter que sur `127.0.0.1` ; texte venant des photos ou de Panoramax jamais inséré
   comme HTML.
-- **Langue** : interface, erreurs, documentation et commits en **français** ; code et commentaires en anglais,
-  courts.
+- **Langue** : interface en **français et anglais** (`frontend/src/i18n/` : `fr.ts` référence, `en.ts`, repli sur le
+  français ; tout nouveau texte d'interface y passe, jamais en dur ; chantier #37) ; erreurs du serveur, documentation et
+  commits en **français** ; code et commentaires en anglais, courts.
 - **Documentation dans le même commit** : `GUIDE_UTILISATEUR.md` pour tout changement visible (ses captures,
   `tools/captures.sh`, seulement quand l'utilisateur le demande), `GUIDE_CODE.md` pour le fonctionnement, ce fichier si une règle
   ou l'organisation change.

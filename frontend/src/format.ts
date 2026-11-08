@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 // Display helpers. Capture times are camera wall-clock times stored as UTC epochs.
 
 export function fmtTime(ts: number | null | undefined, withDate = true): string {
@@ -26,5 +28,5 @@ export function fmtCoord(lat: number | null, lon: number | null): string {
 }
 
 export function fmtSize(b: number): string {
-  return b > 1e6 ? `${(b / 1e6).toFixed(1)} Mo` : `${Math.round(b / 1e3)} ko`
+  return b > 1e6 ? `${(b / 1e6).toFixed(1)} ${t('unit.mb')}` : `${Math.round(b / 1e3)} ${t('unit.kb')}`
 }

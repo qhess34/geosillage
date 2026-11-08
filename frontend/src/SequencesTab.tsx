@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { locale } from './i18n'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
 import { PUBLICATION_STATES, viewerUrl } from './Publication'
@@ -76,12 +77,12 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
       <div className="small-text">
         {props.pnx ? null : last ? (
           s.needs_export ? (
-            <span className="badge warn-text" title={`Modifiée depuis l'export du ${new Date(last.ts * 1000).toLocaleString('fr-FR')}`}>
+            <span className="badge warn-text" title={`Modifiée depuis l'export du ${new Date(last.ts * 1000).toLocaleString(locale())}`}>
               à réexporter
             </span>
           ) : (
             <span className="badge" title={last.path}>
-              exportée le {new Date(last.ts * 1000).toLocaleString('fr-FR')}
+              exportée le {new Date(last.ts * 1000).toLocaleString(locale())}
             </span>
           )
         ) : (
