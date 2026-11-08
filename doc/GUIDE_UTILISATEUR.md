@@ -116,7 +116,7 @@ L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#s
 **⚙ Réglages** (barre d'outils) : les réglages généraux, dans une fenêtre — source de la surcouche Panoramax et
 fonds de carte ajoutés (pour toutes les sorties ; *Retirer* supprime un fond ajouté, après confirmation), calcul du cap (distance
 minimale et fenêtre de temps, pour ce projet ; *Enregistrer et recalculer*) et **Langue** de l'interface (français ou
-anglais ; par défaut celle du navigateur ; seuls quelques écrans sont déjà traduits).
+anglais ; par défaut celle du navigateur ; s'applique aussi aux messages du serveur).
 
 **Barre d'étapes** (sous la barre d'outils) : où en est la sortie, dans l'ordre de travail. Chaque étape est
 **✓ verte** (rien à faire), **! orange** (quelque chose à reprendre, résumé à côté) ou **numérotée en gris** (pas
