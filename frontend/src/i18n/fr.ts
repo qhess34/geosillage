@@ -24,7 +24,7 @@ export const fr = {
   'settings.buttonTitle': 'Réglages : surcouche Panoramax, fonds de carte ajoutés, calcul du cap',
   'settings.heading': '⚙ Réglages',
   'settings.language': 'Langue',
-  'settings.languageHelp': "Langue de l'interface (les messages du serveur restent en français pour l'instant).",
+  'settings.languageHelp': "Langue de l'interface et des messages du serveur.",
   'settings.overlay.title': 'Surcouche Panoramax (toutes les sorties)',
   'settings.overlay.help':
     'Photos 360° déjà publiées affichées par le bouton « Panoramax » des contrôles de la carte : toutes les instances (méta-catalogue) ou une seule instance.',

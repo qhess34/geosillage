@@ -18,7 +18,7 @@ from pathlib import Path
 
 import httpx
 
-from . import config, db, exporter, jobs
+from . import config, db, exporter, i18n, jobs
 
 USER_AGENT = "GeoSillage/1.0 (+https://github.com/qhess34/geosillage)"
 DEFAULT_INSTANCE = "https://panoramax.openstreetmap.fr"
@@ -197,7 +197,8 @@ def last_publications(conn) -> dict[int, dict]:
             (r["sequence_id"], r["instance"]),
         ).fetchone()
         out[r["sequence_id"]] = {
-            **{k: r[k] for k in ("instance", "upload_set_id", "collection_id", "ts", "photo_count", "state", "message")},
+            **{k: r[k] for k in ("instance", "upload_set_id", "collection_id", "ts", "photo_count", "state")},
+            "message": i18n.tr(r["message"]),
             "first_picture_id": first[0] if first else None,
         }
     return out

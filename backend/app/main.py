@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import config, db, exporter, importer, jobs, panoramax, routes_edit, routes_publish, undo
+from . import config, db, exporter, i18n, importer, jobs, panoramax, routes_edit, routes_publish, undo
 from .core import analysis, headings
 from .exif import reader
 
@@ -28,13 +28,20 @@ async def lifespan(app):
 
 
 app = FastAPI(title="GeoSillage", lifespan=lifespan)
+app.add_middleware(i18n.LangMiddleware)
 app.include_router(routes_edit.router)
 app.include_router(routes_publish.router)
 
 
+@app.exception_handler(HTTPException)
+async def http_error(request: Request, exc: HTTPException):
+    detail = i18n.tr(exc.detail) if isinstance(exc.detail, str) else exc.detail
+    return JSONResponse({"detail": detail}, status_code=exc.status_code, headers=getattr(exc, "headers", None))
+
+
 @app.exception_handler(db.ProjectNotFound)
 async def not_found(request: Request, exc):
-    return JSONResponse({"detail": "Projet introuvable"}, status_code=404)
+    return JSONResponse({"detail": i18n.tr("Projet introuvable")}, status_code=404)
 
 
 @app.exception_handler(sqlite3.OperationalError)
@@ -42,7 +49,7 @@ async def db_busy(request: Request, exc: sqlite3.OperationalError):
     # another writer kept the project database for longer than the wait (30 s): a clear message, nothing changed
     if "locked" in str(exc) or "busy" in str(exc):
         return JSONResponse(
-            {"detail": "Base du projet occupée par une tâche en cours : rien n'a été modifié, réessayez dans un instant."},
+            {"detail": i18n.tr("Base du projet occupée par une tâche en cours : rien n'a été modifié, réessayez dans un instant.")},
             status_code=503,
         )
     raise exc
@@ -142,7 +149,7 @@ def project_update(pid: str, body: dict):
             try:
                 s = SettingsIn(**body["settings"]).model_dump(exclude_none=True)
             except ValidationError as e:  # a value out of range: refused (in French), not a server error
-                raise HTTPException(422, "Réglage invalide : " + " ; ".join(_setting_error(x) for x in e.errors()))
+                raise HTTPException(422, "Réglage invalide : " + " ; ".join(i18n.tr(_setting_error(x)) for x in e.errors()))
             db.set_meta(conn, "settings", {**(db.get_meta(conn, "settings", {}) or {}), **s})
             analysis.run(conn)
             headings.recompute(conn)
@@ -190,7 +197,7 @@ def project_thumbnails(pid: str, retry_failed: bool = False):
 @app.get("/api/projects/{pid}/jobs")
 def project_jobs(pid: str):
     with db.open_project(pid) as conn:
-        return jobs.list_jobs(conn)
+        return [{**j, "message": i18n.tr(j["message"])} for j in jobs.list_jobs(conn)]
 
 
 @app.post("/api/projects/{pid}/jobs/{job_id}/cancel")
