@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
+import { t, useLang } from './i18n'
 
 // Confirmation inside the page (instead of the browser's window.confirm): Enter confirms, Escape cancels
 export function Confirm({
@@ -16,6 +17,7 @@ export function Confirm({
   onConfirm: () => void
   onCancel: () => void
 }) {
+  useLang()
   const ok = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     ok.current?.focus()
@@ -35,7 +37,7 @@ export function Confirm({
         <h2>{title}</h2>
         {children}
         <div className="actions">
-          <button onClick={onCancel}>Annuler</button>
+          <button onClick={onCancel}>{t('common.cancel')}</button>
           <button ref={ok} className={danger ? 'danger' : 'primary'} onClick={onConfirm}>
             {confirmLabel}
           </button>
@@ -47,6 +49,7 @@ export function Confirm({
 
 // New XYZ background map (instead of three window.prompt)
 export function AddBasemap({ onAdd, onCancel }: { onAdd: (name: string, url: string, attribution: string) => void; onCancel: () => void }) {
+  useLang()
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [attribution, setAttribution] = useState('')
@@ -66,32 +69,32 @@ export function AddBasemap({ onAdd, onCancel }: { onAdd: (name: string, url: str
       <form
         className="modal small-modal form-grid"
         role="dialog"
-        aria-label="Ajouter un fond de carte"
+        aria-label={t('dlg.basemap.title')}
         onSubmit={(e) => {
           e.preventDefault()
           if (valid) onAdd(name.trim(), url.trim(), attribution.trim())
         }}
       >
-        <h2>Ajouter un fond de carte</h2>
+        <h2>{t('dlg.basemap.title')}</h2>
         <label>
-          Nom
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Orthophoto de ma commune" />
+          {t('dlg.basemap.name')}
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t('dlg.basemap.namePh')} />
         </label>
         <label>
-          Adresse des tuiles XYZ
+          {t('dlg.basemap.url')}
           <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…/{z}/{x}/{y}.png" spellCheck={false} />
         </label>
         <label>
-          Attribution <span className="muted">(obligatoire selon le fournisseur)</span>
+          {t('dlg.basemap.attr')} <span className="muted">{t('dlg.basemap.attrReq')}</span>
           <input value={attribution} onChange={(e) => setAttribution(e.target.value)} placeholder="© …" />
         </label>
-        {url && !valid && <p className="small-text warn-text">L'adresse doit commencer par https:// et contenir {'{z}'}, {'{x}'} et {'{y}'}.</p>}
+        {url && !valid && <p className="small-text warn-text">{t('dlg.basemap.urlHelp')}</p>}
         <div className="actions">
           <button type="button" onClick={onCancel}>
-            Annuler
+            {t('common.cancel')}
           </button>
           <button type="submit" className="primary" disabled={!valid}>
-            Ajouter
+            {t('common.add')}
           </button>
         </div>
       </form>
@@ -119,6 +122,7 @@ export function ValueDialog({
   onApply: (v: number) => void
   onCancel: () => void
 }) {
+  useLang()
   const [v, setV] = useState(initial)
   const n = Number(v.replace(',', '.'))
   const valid = v.trim() !== '' && Number.isFinite(n) && Math.abs(n) <= 360
@@ -153,7 +157,7 @@ export function ValueDialog({
         {help && <div className="small-text muted">{help}</div>}
         <div className="actions">
           <button type="button" onClick={onCancel}>
-            Annuler
+            {t('common.cancel')}
           </button>
           <button type="submit" className="primary" disabled={!valid}>
             {applyLabel}

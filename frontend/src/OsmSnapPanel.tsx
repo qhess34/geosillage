@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDraggable } from './useDraggable'
 import { api, PhotoRow, Sequence, SnapProposal, UndoState } from './api'
+import { Key, t, useLang } from './i18n'
 
 export interface SnapPreview {
   ways: GeoJSON.FeatureCollection // candidate ways (property chosen = 1 for a way that will be used)
@@ -8,27 +9,12 @@ export interface SnapPreview {
   highlight: number | null // way hovered in the list
 }
 
-const HIGHWAY_LABELS: Record<string, string> = {
-  cycleway: 'piste cyclable',
-  path: 'chemin',
-  track: 'piste',
-  footway: 'voie piétonne',
-  pedestrian: 'zone piétonne',
-  living_street: 'zone de rencontre',
-  residential: 'rue',
-  service: 'voie de service',
-  unclassified: 'route',
-  tertiary: 'route',
-  secondary: 'route',
-  primary: 'route principale',
-  trunk: 'voie rapide',
-  steps: 'escalier',
-  bridleway: 'chemin',
-}
+const HIGHWAYS = ['cycleway', 'path', 'track', 'footway', 'pedestrian', 'living_street', 'residential', 'service', 'unclassified', 'tertiary', 'secondary', 'primary', 'trunk', 'steps', 'bridleway']
 
+// OSM name shown as is (never translated); the kind of way is
 function wayLabel(w: { name: string; highway: string }): string {
-  const kind = HIGHWAY_LABELS[w.highway] ?? w.highway
-  return w.name ? `${w.name} (${kind})` : kind.charAt(0).toUpperCase() + kind.slice(1) + ' sans nom'
+  const kind = HIGHWAYS.includes(w.highway) ? t(`hw.${w.highway}` as Key) : w.highway
+  return w.name ? `${w.name} (${kind})` : t('osm.unnamed', { kind, Kind: kind.charAt(0).toUpperCase() + kind.slice(1) })
 }
 
 // Snapping a selection onto OpenStreetMap ways: segments proposed by the server, the user picks the way of each
@@ -65,6 +51,7 @@ export default function OsmSnapPanel({
   onClose: () => void
   onError: (msg: string) => void
 }) {
+  useLang()
   const [prop, setProp] = useState<SnapProposal | null>(null)
   const [loading, setLoading] = useState(true)
   const [choices, setChoices] = useState<(number | null)[]>([])
@@ -84,8 +71,8 @@ export default function OsmSnapPanel({
   // Keys while the window is open: Escape closes it; D / F choose the photos to snap (instead of cutting a sequence)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return
+      const el = e.target as HTMLElement
+      if (el?.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return
       const k = e.key.toLowerCase()
       if (e.key === 'Escape') onClose()
       else if (k === 'd' && cur.current) {
@@ -128,7 +115,7 @@ export default function OsmSnapPanel({
     }
     setLoading(true)
     let cancelled = false
-    const t = window.setTimeout(
+    const timer = window.setTimeout(
       () =>
         api.snapPropose(projectId, range[0], range[1]).then(
           (p) => {
@@ -147,7 +134,7 @@ export default function OsmSnapPanel({
     )
     return () => {
       cancelled = true
-      window.clearTimeout(t)
+      window.clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, rangeKey])
@@ -214,64 +201,62 @@ export default function OsmSnapPanel({
       className="snap-panel snap-modal small-text"
       ref={box}
       role="dialog"
-      aria-label="Recalage sur OpenStreetMap"
+      aria-label={t('osm.title')}
       style={boxStyle}
     >
       <div
         className="row between snap-title"
-        title="Faire glisser pour déplacer la fenêtre"
+        title={t('gpx.snap.drag')}
         {...dragHandlers}
       >
-        <h3>Recalage sur OpenStreetMap{range ? ` · photos ${range[0] + 1} → ${range[1] + 1}` : ''}</h3>
-        <button className="small" onClick={onClose} aria-label="Fermer">
+        <h3>{range ? t('osm.titleRange', { a: range[0] + 1, b: range[1] + 1 }) : t('osm.title')}</h3>
+        <button className="small" onClick={onClose} aria-label={t('common.close')}>
           ✕
         </button>
       </div>
       <fieldset className="modes">
-        <legend>Photos à recaler (D / F : début / fin de la sélection, sans toucher aux séquences)</legend>
+        <legend>{t('osm.photosTo')}</legend>
         <label>
-          <input type="radio" checked={scope === 'sequence'} disabled={!seq} onChange={() => setScope('sequence')} /> Séquence{' '}
-          {seq ? `« ${seq.name} » (${seq.start_idx + 1} → ${seq.end_idx + 1})` : '(photo non classée)'}
+          <input type="radio" checked={scope === 'sequence'} disabled={!seq} onChange={() => setScope('sequence')} /> {t('osm.scope.seq')}{' '}
+          {seq ? `« ${seq.name} » (${seq.start_idx + 1} → ${seq.end_idx + 1})` : t('osm.scope.seqNone')}
         </label>
         <label>
-          <input type="radio" checked={scope === 'timeline'} disabled={!timelineRange} onChange={() => setScope('timeline')} /> Plage de la
-          timeline {timelineRange ? `(${timelineRange[0] + 1} → ${timelineRange[1] + 1})` : '(glisser sur la timeline, ou Maj+clic)'}
+          <input type="radio" checked={scope === 'timeline'} disabled={!timelineRange} onChange={() => setScope('timeline')} /> {t('osm.scope.timeline')}{' '}
+          {timelineRange ? `(${timelineRange[0] + 1} → ${timelineRange[1] + 1})` : t('osm.scope.timelineNone')}
         </label>
         <label>
-          <input type="radio" checked={scope === 'custom'} onChange={() => setScope('custom')} /> Photos{' '}
+          <input type="radio" checked={scope === 'custom'} onChange={() => setScope('custom')} /> {t('osm.scope.custom')}{' '}
           {bounds[0] != null ? bounds[0] + 1 : '…'} → {bounds[1] != null ? bounds[1] + 1 : '…'}
         </label>
         {scope === 'custom' && (
           <div className="row wrap">
             <button className="small" disabled={!current} onClick={() => current && setBounds([current.idx, bounds[1]])}>
-              De cette photo{current ? ` (${current.idx + 1})` : ''}
+              {t('osm.from', { n: current ? ` (${current.idx + 1})` : '' })}
             </button>
             <button className="small" disabled={!current} onClick={() => current && setBounds([bounds[0], current.idx])}>
-              Jusqu'à cette photo{current ? ` (${current.idx + 1})` : ''}
+              {t('osm.until', { n: current ? ` (${current.idx + 1})` : '' })}
             </button>
-            <span className="muted">ou D sur la première photo, ← →, puis F sur la dernière{following ? ' (en cours…)' : ''}</span>
+            <span className="muted">{t('osm.orKeys', { running: following ? t('osm.running') : '' })}</span>
           </div>
         )}
       </fieldset>
-      {loading && <p className="muted">Recherche des voies OpenStreetMap autour de la sélection…</p>}
-      {prop && prop.segments.length === 0 && <p className="muted">Aucune photo positionnée dans la sélection.</p>}
+      {loading && <p className="muted">{t('osm.searching')}</p>}
+      {prop && prop.segments.length === 0 && <p className="muted">{t('osm.noPhoto')}</p>}
       {prop && prop.segments.length > 0 && (
         <>
           <p className="muted">
-            Chaque tronçon est placé sur la voie choisie (aperçu sur la carte : la voie en bleu foncé, les déplacements en
-            pointillés). Quand plusieurs voies sont à distance comparable, choisissez celle que vous avez prise. Annulable
-            (Ctrl+Z).
+            {t('osm.help')}
           </p>
           <ol className="snap-list">
             {prop.segments.map((s, i) => (
               <li key={s.start_idx} className={s.status}>
                 <div>
                   <strong>
-                    {s.count > 1 ? `Photos ${s.start_idx + 1} → ${s.end_idx + 1}` : `Photo ${s.start_idx + 1}`}
+                    {s.count > 1 ? t('osm.seg.photos', { a: s.start_idx + 1, b: s.end_idx + 1 }) : t('osm.seg.photo', { a: s.start_idx + 1 })}
                   </strong>{' '}
                   <span className="muted">({s.count})</span>
-                  {s.status === 'none' && <span className="muted"> · aucune voie à moins de 15 m : laissé tel quel</span>}
-                  {s.status === 'ambiguous' && <span className="warn-text"> · plusieurs voies possibles : à choisir</span>}
+                  {s.status === 'none' && <span className="muted">{t('osm.seg.none')}</span>}
+                  {s.status === 'ambiguous' && <span className="warn-text">{t('osm.seg.ambiguous')}</span>}
                 </div>
                 {s.status !== 'none' &&
                   (s.status === 'clear' ? (
@@ -281,7 +266,7 @@ export default function OsmSnapPanel({
                         checked={choices[i] != null}
                         onChange={(e) => setChoices(choices.map((c, j) => (j === i ? (e.target.checked ? s.candidates[0].id : null) : c)))}
                       />{' '}
-                      {wayLabel(s.candidates[0])} <span className="muted">· {s.candidates[0].mean_dist} m en moyenne</span>
+                      {wayLabel(s.candidates[0])} <span className="muted">{t('osm.meanDist', { d: s.candidates[0].mean_dist })}</span>
                     </label>
                   ) : (
                     <div className="snap-choices">
@@ -293,7 +278,7 @@ export default function OsmSnapPanel({
                             checked={choices[i] === c.id}
                             onChange={() => setChoices(choices.map((x, j) => (j === i ? c.id : x)))}
                           />{' '}
-                          {wayLabel(c)} <span className="muted">· {c.mean_dist} m</span>
+                          {wayLabel(c)} <span className="muted">{t('osm.dist', { d: c.mean_dist })}</span>
                         </label>
                       ))}
                       <label>
@@ -303,7 +288,7 @@ export default function OsmSnapPanel({
                           checked={choices[i] == null}
                           onChange={() => setChoices(choices.map((x, j) => (j === i ? null : x)))}
                         />{' '}
-                        Ne pas recaler ce tronçon
+                        {t('osm.skip')}
                       </label>
                     </div>
                   ))}
@@ -312,15 +297,14 @@ export default function OsmSnapPanel({
           </ol>
           {manual.size > 0 && (
             <label>
-              <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} /> Garder les {manual.size} photo(s)
-              placée(s) à la main
+              <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} /> {t('osm.keepManual', { n: manual.size })}
             </label>
           )}
           <div className="row wrap">
             <button className="primary small" disabled={!moving.length} onClick={apply}>
-              Recaler {moving.length} photo(s)
+              {t('osm.apply', { n: moving.length })}
             </button>
-            {ambiguousLeft > 0 && <span className="warn-text">{ambiguousLeft} tronçon(s) ambigu(s) sans voie choisie : ils ne bougeront pas</span>}
+            {ambiguousLeft > 0 && <span className="warn-text">{t('osm.ambiguousLeft', { n: ambiguousLeft })}</span>}
           </div>
         </>
       )}

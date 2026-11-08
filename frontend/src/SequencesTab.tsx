@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { locale } from './i18n'
+import { locale, t, useLang } from './i18n'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
 import { PUBLICATION_STATES, viewerUrl } from './Publication'
@@ -20,6 +20,7 @@ interface Props {
 }
 
 function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; props: Props }) {
+  useLang()
   const { projectId, current, range, onState, onGo, onError } = props
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(s.name)
@@ -63,30 +64,30 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
             </button>
           </form>
         ) : (
-          <button className="link grow ellipsis seq-name" onClick={() => onGo(s.start_idx)} onDoubleClick={() => setEditing(true)} title="Aller au début · double-clic : renommer">
+          <button className="link grow ellipsis seq-name" onClick={() => onGo(s.start_idx)} onDoubleClick={() => setEditing(true)} title={t('seq.goStart')}>
             {s.name}
           </button>
         )}
         {!editing && (
-          <button className="small icon" onClick={() => setEditing(true)} title="Renommer" aria-label="Renommer">
+          <button className="small icon" onClick={() => setEditing(true)} title={t('seq.rename')} aria-label={t('seq.rename')}>
             ✎
           </button>
         )}
-        <span className="muted small-text">{s.count} photos</span>
+        <span className="muted small-text">{t('seq.photos', { n: s.count })}</span>
       </div>
       <div className="small-text">
         {props.pnx ? null : last ? (
           s.needs_export ? (
-            <span className="badge warn-text" title={`Modifiée depuis l'export du ${new Date(last.ts * 1000).toLocaleString(locale())}`}>
-              à réexporter
+            <span className="badge warn-text" title={t('seq.changedSinceExport', { date: new Date(last.ts * 1000).toLocaleString(locale()) })}>
+              {t('seq.reexportNeeded')}
             </span>
           ) : (
             <span className="badge" title={last.path}>
-              exportée le {new Date(last.ts * 1000).toLocaleString(locale())}
+              {t('seq.exportedOn', { date: new Date(last.ts * 1000).toLocaleString(locale()) })}
             </span>
           )
         ) : (
-          <span className="muted">jamais exportée</span>
+          <span className="muted">{t('seq.neverExported')}</span>
         )}
         {s.last_publication && (
           <>
@@ -95,13 +96,13 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
               className={`badge ${s.last_publication.state === 'ready' && !s.changed_since_publication ? '' : 'warn-text'}`}
               title={s.last_publication.message ?? s.last_publication.instance}
             >
-              {s.changed_since_publication ? 'modifiée depuis la publication' : `${PUBLICATION_STATES[s.last_publication.state]} sur Panoramax`}
+              {s.changed_since_publication ? t('seq.changedSincePub') : t('seq.onPanoramax', { state: PUBLICATION_STATES[s.last_publication.state] })}
             </span>
             {s.last_publication.first_picture_id && (
               <>
                 {' '}
                 <a href={viewerUrl(s.last_publication.instance, s.last_publication.first_picture_id)} target="_blank" rel="noreferrer">
-                  voir
+                  {t('seq.view')}
                 </a>
               </>
             )}
@@ -115,18 +116,18 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
       {!props.pnx && (
         <div className="seq-actions">
           {inThis && current && current.idx !== s.start_idx && (
-            <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title="Couper avant la photo courante (C)">
-              ✂ Couper ici
+            <button className="small" onClick={() => run(api.splitSequence(projectId, s.id, current.id))} title={t('seq.splitTitle')}>
+              {t('seq.split')}
             </button>
           )}
           {range && (
-            <button className="small" onClick={() => run(api.setBounds(projectId, s.id, range[0], range[1]))} title="La séquence devient la plage sélectionnée">
-              Limites = plage
+            <button className="small" onClick={() => run(api.setBounds(projectId, s.id, range[0], range[1]))} title={t('seq.boundsTitle')}>
+              {t('seq.bounds')}
             </button>
           )}
           {next && (
-            <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))} title={`Fusionner avec « ${next.name} »`}>
-              Fusionner avec la suivante
+            <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))} title={t('seq.mergeTitle', { name: next.name })}>
+              {t('seq.merge')}
             </button>
           )}
           <span className="spacer" />
@@ -134,13 +135,13 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
             <button
               className={confirmReexport ? 'small danger' : s.needs_export ? 'small primary' : 'small'}
               onClick={reexport}
-              title={`Même dossier et mêmes réglages que le dernier export (${last.mode === 'copy' ? 'copie' : last.mode === 'move' ? 'photos sources déplacées' : 'photos sources modifiées sur place'}) : ${last.path}`}
+              title={t('seq.reexportTitle', { mode: last.mode === 'copy' ? t('seq.mode.copy') : last.mode === 'move' ? t('seq.mode.move') : t('seq.mode.inplace'), path: last.path })}
             >
-              {confirmReexport ? 'Confirmer : modifie les photos sources' : '⟳ Réexporter'}
+              {confirmReexport ? t('seq.reexportConfirm') : t('seq.reexport')}
             </button>
           )}
-          <button className="small danger" onClick={() => run(api.deleteSequence(projectId, s.id))} title="Les photos retournent dans « non classées » (annulable)">
-            Supprimer
+          <button className="small danger" onClick={() => run(api.deleteSequence(projectId, s.id))} title={t('seq.deleteTitle')}>
+            {t('seq.delete')}
           </button>
         </div>
       )}
@@ -149,6 +150,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
 }
 
 export default function SequencesTab(props: Props) {
+  useLang()
   const { projectId, sequences, range, onState, onError } = props
   const [proposals, setProposals] = useState<(Proposal & { keep: boolean })[] | null>(null)
   const [gap, setGap] = useState(10)
@@ -183,40 +185,40 @@ export default function SequencesTab(props: Props) {
               disabled={!range}
               onClick={() => range && api.createSequence(projectId, range[0], range[1]).then(onState, (e) => onError(e.message))}
             >
-              Créer avec la plage (F)
+              {t('seq.create')}
             </button>
-            <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title="Une séquence par bloc de photos non classées (toute la sortie sur un nouveau projet) ; découpez ensuite avec C">
-              Tout en séquences
+            <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title={t('seq.allTitle')}>
+              {t('seq.all')}
             </button>
           </div>
         )}
         {!props.pnx && <span className="muted small-text">
           {range
-            ? `Plage : photos ${range[0] + 1} → ${range[1] + 1} (${range[1] - range[0] + 1}).`
-            : 'Créer à la main : « ⏵ Début » (D) sur la première photo, naviguer, puis « ⏹ Fin » (F) sur la dernière.'}{' '}
-          Découper en naviguant : C (ou ✂ Couper) sur la première photo de chaque nouvelle séquence. X : exclure la photo et passer à la suivante.
+            ? t('seq.rangeInfo', { a: range[0] + 1, b: range[1] + 1, n: range[1] - range[0] + 1 })
+            : t('seq.manualHelp')}{' '}
+          {t('seq.cutHelp')}
         </span>}
         {props.pnx && (
           <span className="muted small-text">
-            Séquences déjà publiées : leur découpage ne change pas. X exclut une photo (supprimée de Panoramax à l'envoi, sur demande).
+            {t('seq.pnxHelp')}
           </span>
         )}
       </div>
 
       {!props.pnx && <details className="proposals" open={proposals !== null}>
-        <summary>Découpage proposé (photos non classées)</summary>
+        <summary>{t('seq.prop.title')}</summary>
         <div className="row wrap small-text">
           <label>
-            Interruption &gt; <input className="num" type="number" value={gap} onChange={(e) => setGap(Number(e.target.value))} /> s
+            {t('seq.prop.gap')} <input className="num" type="number" value={gap} onChange={(e) => setGap(Number(e.target.value))} /> s
           </label>
           <label>
-            Saut &gt; <input className="num" type="number" value={dist} onChange={(e) => setDist(Number(e.target.value))} /> m
+            {t('seq.prop.jump')} <input className="num" type="number" value={dist} onChange={(e) => setDist(Number(e.target.value))} /> m
           </label>
           <label>
-            Min. <input className="num" type="number" value={minPhotos} onChange={(e) => setMinPhotos(Number(e.target.value))} /> photos
+            {t('seq.prop.min')} <input className="num" type="number" value={minPhotos} onChange={(e) => setMinPhotos(Number(e.target.value))} /> {t('seq.prop.photos')}
           </label>
           <button className="small" onClick={propose}>
-            Proposer
+            {t('seq.prop.go')}
           </button>
         </div>
         {proposals &&
@@ -231,10 +233,11 @@ export default function SequencesTab(props: Props) {
                         checked={p.keep}
                         onChange={() => setProposals(proposals.map((x, j) => (j === i ? { ...x, keep: !x.keep } : x)))}
                       />{' '}
-                      photos {p.start_idx + 1} → {p.end_idx + 1} ({p.count}){p.reason && <span className="muted"> · coupure : {p.reason}</span>}
+                      {t('seq.prop.item', { a: p.start_idx + 1, b: p.end_idx + 1, n: p.count })}
+                      {p.reason && <span className="muted"> · {t('seq.prop.cut', { reason: p.reason })}</span>}
                     </label>
                     <button className="small link" onClick={() => props.onGo(p.start_idx)}>
-                      voir
+                      {t('seq.view')}
                     </button>
                   </li>
                 ))}
@@ -242,20 +245,20 @@ export default function SequencesTab(props: Props) {
               <div className="row">
                 <span className="spacer" />
                 <button className="small" onClick={() => setProposals(null)}>
-                  Ignorer
+                  {t('seq.prop.ignore')}
                 </button>
                 <button className="primary small" onClick={acceptProposals}>
-                  Créer {proposals.filter((p) => p.keep).length} séquence(s)
+                  {t('seq.prop.create', { n: proposals.filter((p) => p.keep).length })}
                 </button>
               </div>
             </>
           ) : (
-            <p className="muted small-text">Aucun segment proposé.</p>
+            <p className="muted small-text">{t('seq.prop.none')}</p>
           ))}
       </details>}
 
-      <h3>Séquences ({sequences.length})</h3>
-      {sequences.length === 0 && <p className="muted small-text">Aucune séquence. Créez-en depuis une plage ou le découpage proposé.</p>}
+      <h3>{t('seq.heading', { n: sequences.length })}</h3>
+      {sequences.length === 0 && <p className="muted small-text">{t('seq.none')}</p>}
       <ul className="seq-list">
         {sequences.map((s) => (
           <SeqItem key={`${s.id}-${s.name}`} s={s} sequences={sequences} props={props} />

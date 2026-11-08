@@ -1,4 +1,5 @@
 import { FsListing } from './api'
+import { t, useLang } from './i18n'
 
 // Listing of one local folder: clickable path (breadcrumb), parent button, sub-folders (the whole row opens it).
 // `extra` adds actions to the header (current folder) and to each row (sub-folder path).
@@ -17,6 +18,7 @@ export default function FsBrowser({
   rowExtra?: (path: string) => React.ReactNode
   onFile?: (path: string) => void // files can be picked (listing made with an extension)
 }) {
+  useLang()
   if (!listing) return error ? <p className="error">{error}</p> : null
   const sep = listing.path.includes('\\') && !listing.path.includes('/') ? '\\' : '/'
   const join = (d: string) => (listing.path.endsWith(sep) ? listing.path + d : listing.path + sep + d)
@@ -30,7 +32,7 @@ export default function FsBrowser({
   return (
     <div className="fs">
       <div className="fs-head">
-        <button disabled={!listing.parent} onClick={() => listing.parent && onGo(listing.parent)} title="Dossier parent">
+        <button disabled={!listing.parent} onClick={() => listing.parent && onGo(listing.parent)} title={t('fs.parent')}>
           ↑
         </button>
         <span className="fs-crumbs mono" title={listing.path}>
@@ -58,31 +60,31 @@ export default function FsBrowser({
       <ul className="fs-list">
         {listing.dirs.map((d) => (
           <li key={d}>
-            <button className="fs-dir" onClick={() => onGo(join(d))} title="Ouvrir ce dossier">
+            <button className="fs-dir" onClick={() => onGo(join(d))} title={t('fs.openDir')}>
               <span>📁 {d}</span>
               <span className="muted">›</span>
             </button>
             {rowExtra?.(join(d))}
           </li>
         ))}
-        {!listing.dirs.length && !listing.files.length && <li className="muted">Dossier vide</li>}
+        {!listing.dirs.length && !listing.files.length && <li className="muted">{t('fs.empty')}</li>}
         {listing.files.map((f) =>
           onFile ? (
             <li key={f.name}>
-              <button className="fs-dir" onClick={() => onFile(join(f.name))} title="Choisir ce fichier">
+              <button className="fs-dir" onClick={() => onFile(join(f.name))} title={t('fs.pickFile')}>
                 <span>📄 {f.name}</span>
-                <span className="muted">{f.size != null ? `${(f.size / 1e6).toFixed(1)} Mo` : ''}</span>
+                <span className="muted">{f.size != null ? `${(f.size / 1e6).toFixed(1)} ${t('unit.mb')}` : ''}</span>
               </button>
             </li>
           ) : (
-            <li key={f.name} className="fs-file" title="Photo de ce dossier (pour information : l'import se fait par dossier)">
+            <li key={f.name} className="fs-file" title={t('fs.photoInfo')}>
               <span>🖼 {f.name}</span>
-              {f.size != null && <span>{(f.size / 1e6).toFixed(1)} Mo</span>}
+              {f.size != null && <span>{(f.size / 1e6).toFixed(1)} {t('unit.mb')}</span>}
             </li>
           ),
         )}
         {listing.jpeg_count > listing.files.length && (
-          <li className="muted">… et {listing.jpeg_count - listing.files.length} autres photos</li>
+          <li className="muted">{t('fs.more', { n: listing.jpeg_count - listing.files.length })}</li>
         )}
       </ul>
     </div>

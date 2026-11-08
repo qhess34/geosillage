@@ -1,7 +1,7 @@
 import { Dispatch, SetStateAction, useEffect, useRef } from 'react'
 import { api, PhotoDetail, PhotoRow, SeqState, Sequence, UndoState } from './api'
 import { t } from './i18n'
-import { Issue, ISSUE_TEXT, issueDetail } from './issues'
+import { Issue, issueText, issueDetail } from './issues'
 
 // Shown in the help window (?): [key label, description]
 export const shortcutList = (): [string, string][] => [
@@ -134,7 +134,7 @@ export function useShortcuts(params: ShortcutsParams) {
         } else {
           const c = list[k]
           focusOn(c)
-          setNotice(t('notice.issueAt', { k: k + 1, total: list.length, range: `${c.start + 1}${c.end > c.start ? ` → ${c.end + 1}` : ''}`, kind: ISSUE_TEXT[c.kind].one, detail: issueDetail(c) }))
+          setNotice(t('notice.issueAt', { k: k + 1, total: list.length, range: `${c.start + 1}${c.end > c.start ? ` → ${c.end + 1}` : ''}`, kind: issueText(c.kind).one, detail: issueDetail(c) }))
         }
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, PhotoDetail, PhotoRow, SeqState } from './api'
 import Viewer360 from './Viewer360'
 import { fmtTime } from './format'
+import { t, useLang } from './i18n'
 
 // Photos of a stop side by side: the user ticks the ones to keep (not necessarily the first one), the others are
 // excluded in one go (one undoable operation). The photo clicked is shown in the 360° viewer; the view direction
@@ -23,6 +24,7 @@ export default function StopCompare({
   onClose: () => void
   onError: (msg: string) => void
 }) {
+  useLang()
   const list = photos.slice(range[0], range[1] + 1).filter((p) => !p.excluded)
   const [keep, setKeep] = useState<Set<number>>(() => new Set(list.map((p) => p.id)))
   // photo shown in the 360° viewer, with its orientation (yaw / pitch / roll, as in the Photo tab). A clicked photo
@@ -67,41 +69,39 @@ export default function StopCompare({
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal wide-modal stop-compare" role="dialog" aria-label="Comparer les photos de l'arrêt">
+      <div className="modal wide-modal stop-compare" role="dialog" aria-label={t('compare.label')}>
         <h2>
-          Arrêt : photos {range[0] + 1} → {range[1] + 1}
+          {t('compare.title', { a: range[0] + 1, b: range[1] + 1 })}
         </h2>
         <p className="small-text muted">
-          Cochez la ou les photos à garder (la plus nette, la mieux cadrée — pas forcément la première) ; les autres seront
-          exclues. Aucune cochée : toutes sont exclues. Clic sur une vignette : la photo dans la visionneuse 360° (la direction regardée est gardée d'une photo à
-          l'autre). Ctrl+Z annule.
+          {t('compare.help')}
         </p>
         {focus && (
           <figure className="stop-preview">
             <Viewer360
               thumbUrl={api.thumbUrl(projectId, focus.id)}
               imageUrl={api.imageUrl(projectId, focus.id)}
-              alt={`Photo ${focus.idx + 1}`}
+              alt={t('stoprange.photo', { n: focus.idx + 1 })}
               height={Math.round(Math.min(300, window.innerHeight * 0.35))}
               yaw={shown?.detail?.yaw_offset ?? null}
               pitch={shown?.detail?.pitch_orig ?? null}
               roll={shown?.detail?.roll_orig ?? null}
             />
             <figcaption className="small-text muted">
-              Photo {focus.idx + 1} · {fmtTime(focus.ts, false)}
+              {t('stoprange.photo', { n: focus.idx + 1 })} · {fmtTime(focus.ts, false)}
             </figcaption>
           </figure>
         )}
         <ul className="stop-grid">
           {list.map((p) => (
             <li key={p.id} className={`${keep.has(p.id) ? 'keep' : 'drop'}${(asked ?? focus)?.id === p.id ? ' shown' : ''}`}>
-              <button className="stop-thumb" onClick={() => setFocus(p)} title="Afficher dans la visionneuse 360°">
-                <img src={api.thumbUrl(projectId, p.id)} alt={`Photo ${p.idx + 1}`} loading="lazy" />
+              <button className="stop-thumb" onClick={() => setFocus(p)} title={t('compare.showTitle')}>
+                <img src={api.thumbUrl(projectId, p.id)} alt={t('stoprange.photo', { n: p.idx + 1 })} loading="lazy" />
               </button>
               <label>
                 <span>
                   <input type="checkbox" checked={keep.has(p.id)} onChange={() => toggle(p.id)} />
-                  <strong>Photo {p.idx + 1}</strong>
+                  <strong>{t('stoprange.photo', { n: p.idx + 1 })}</strong>
                   <span className="muted">{fmtTime(p.ts, false)}</span>
                 </span>
               </label>
@@ -110,18 +110,18 @@ export default function StopCompare({
         </ul>
         <div className="actions">
           <button className="link small-text" onClick={() => setKeep(new Set(list.map((p) => p.id)))}>
-            Tout garder
+            {t('compare.keepAll')}
           </button>
-          <button className="link small-text" onClick={() => setKeep(new Set())} title="Tout décocher, puis cocher la ou les photos à garder">
-            Tout désélectionner
+          <button className="link small-text" onClick={() => setKeep(new Set())} title={t('compare.deselectTitle')}>
+            {t('compare.deselect')}
           </button>
           <span className="spacer" />
-          <button onClick={() => focus && onGo(focus.idx)} disabled={!focus} title="Fermer et aller à cette photo dans l'écran principal">
-            Aller à cette photo
+          <button onClick={() => focus && onGo(focus.idx)} disabled={!focus} title={t('compare.gotoTitle')}>
+            {t('compare.goto')}
           </button>
-          <button onClick={onClose}>Fermer</button>
-          <button className="primary" disabled={!drop.length} onClick={apply} title={keep.size ? '' : 'Aucune photo de cet arrêt n\'est gardée (Ctrl+Z annule)'}>
-            {!drop.length ? 'Décochez les photos à exclure' : keep.size ? `Exclure ${drop.length} photo(s), garder ${keep.size}` : `Exclure les ${drop.length} photos (aucune gardée)`}
+          <button onClick={onClose}>{t('common.close')}</button>
+          <button className="primary" disabled={!drop.length} onClick={apply} title={keep.size ? '' : t('compare.noneKept')}>
+            {!drop.length ? t('compare.untick') : keep.size ? t('compare.excludeKeep', { n: drop.length, k: keep.size }) : t('compare.excludeAll', { n: drop.length })}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, UndoState } from './api'
+import { t, useLang } from './i18n'
 
 type Target = { photo_ids?: number[]; start_idx?: number; end_idx?: number; sequence_id?: number; all?: boolean }
 
@@ -23,10 +24,11 @@ export default function YawRotate({
 }: {
   projectId: string
   target: Target
-  what: string // "la séquence", "toutes les photos du projet"…
+  what: string // translated: "the sequence", "all the photos of the project"…
   onDone: (undo?: UndoState) => void
   onError: (msg: string) => void
 }) {
+  useLang()
   const [angle, setAngle] = useState(loadAngle)
   const value = Number(angle.replace(',', '.'))
   const valid = angle.trim() !== '' && Number.isFinite(value) && Math.abs(value) <= 360
@@ -47,8 +49,8 @@ export default function YawRotate({
         max={360}
         value={angle}
         onChange={(e) => setAngle(e.target.value)}
-        aria-label="Angle de rotation (°)"
-        title="Angle en degrés (−360 à 360)"
+        aria-label={t('yaw.angleLabel')}
+        title={t('yaw.angleTitle')}
       />
       °{' '}
       <button
@@ -58,9 +60,9 @@ export default function YawRotate({
           remember()
           api.rotateYaw(projectId, target, value).then((r) => onDone(r.undo), (e) => onError(e.message))
         }}
-        title={`Caméra mal orientée sur le casque : tourne ${what} de cet angle, ajouté à l'orientation de chaque photo (les angles de tête déjà fixés sont gardés ; caméra à l'envers : 180 ; l'angle opposé revient en arrière). XMP PoseHeadingDegrees, le JPEG n'est pas modifié. Ctrl+Z annule.`}
+        title={t('yaw.title', { what })}
       >
-        ↻ Corriger le montage
+        {t('yaw.fix')}
       </button>
     </span>
   )

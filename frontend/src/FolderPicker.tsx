@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, FsListing } from './api'
 import FsBrowser from './FsBrowser'
+import { t, useLang } from './i18n'
 
 interface Props {
   title: string
@@ -11,6 +12,7 @@ interface Props {
 
 // Choose one folder on the local machine (the export creates it if the typed path does not exist yet)
 export default function FolderPicker({ title, initial, onPick, onClose }: Props) {
+  useLang()
   const [listing, setListing] = useState<FsListing | null>(null)
   const [typed, setTyped] = useState(initial)
   const [error, setError] = useState<string | null>(null)
@@ -43,14 +45,14 @@ export default function FolderPicker({ title, initial, onPick, onClose }: Props)
           }}
         >
           <input value={typed} onChange={(e) => setTyped(e.target.value)} />
-          <button type="submit">Ouvrir</button>
+          <button type="submit">{t('common.open')}</button>
         </form>
-        <p className="muted small-text">Vous pouvez aussi saisir le chemin d'un dossier qui n'existe pas encore : il sera créé.</p>
+        <p className="muted small-text">{t('folder.help')}</p>
         <FsBrowser listing={listing} error={error} onGo={go} />
         <div className="actions">
-          <button onClick={onClose}>Annuler</button>
+          <button onClick={onClose}>{t('common.cancel')}</button>
           <button className="primary" disabled={!typed.trim()} onClick={() => onPick(typed.trim())}>
-            Choisir « {typed.split('/').filter(Boolean).pop() || typed} »
+            {t('folder.choose', { name: typed.split('/').filter(Boolean).pop() || typed })}
           </button>
         </div>
       </div>

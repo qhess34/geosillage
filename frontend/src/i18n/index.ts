@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { createElement, ReactNode, useSyncExternalStore } from 'react'
 import { en } from './en'
 import { fr, Key } from './fr'
 
@@ -66,4 +66,9 @@ export type PluralBase = Key extends infer K ? (K extends `${infer B}.one` ? B :
 export function tp(base: PluralBase, n: number, params?: Params): string {
   const one = current === 'fr' ? n < 2 : n === 1
   return t(`${base}.${one ? 'one' : 'many'}` as Key, { n, ...params })
+}
+
+// Renders "<b>…</b>" in a translated text as <strong> (translations are ours, never photo / server text)
+export function rich(s: string): ReactNode[] {
+  return s.split(/(<b>.*?<\/b>)/g).map((p, i) => (p.startsWith('<b>') ? createElement('strong', { key: i }, p.slice(3, -4)) : p))
 }

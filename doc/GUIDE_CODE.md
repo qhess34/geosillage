@@ -439,8 +439,11 @@ Mécanisme maison, sans dépendance, dans `frontend/src/i18n/` : `fr.ts` (réfé
   redessiner au changement de langue.
 - **Langue** : choisie dans ⚙ Réglages, mémorisée dans `localStorage` (`pss-lang`, essai protégé) ; sinon langue du
   navigateur si anglaise, sinon français. Dates : `toLocale…(locale())` (`fr-FR` / `en-GB`), jamais de `'fr-FR'` en dur.
-- Traduit au lot 1 (#37) : liste des projets, Réglages, barre d'étapes, aide et raccourcis, menu contextuel ; le
-  reste de l'interface et les messages du serveur sont encore en français. Les tests e2e fixent `locale: 'fr-FR'`.
+- Texte avec gras : `rich(t('clé'))` rend `<b>…</b>` en `<strong>` (nos traductions seulement). Tables de textes
+  (`issueText(kind)` dans `issues.ts`, `capHelp()` / `orientationHelp()`) : des fonctions, pas des constantes.
+- Traduit aux lots 1–2 (#37) : liste des projets, Réglages, barre d'étapes, aide, menu contextuel, écran projet
+  (import, séquences, synchro, GPX, photo, cap/orientation, bilan, points à vérifier, arrêts, timeline) ; restent en
+  français : export, publication, carte, `JobBar` (lot 3) et les messages du serveur. Les tests e2e fixent `locale: 'fr-FR'`.
 
 ## Confort de l'interface
 

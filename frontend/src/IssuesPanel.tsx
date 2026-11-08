@@ -1,12 +1,9 @@
 import { useEffect } from 'react'
-import { Issue, issueDetail, IssueStep, ISSUE_TEXT, sameIssue, STEP_KINDS } from './issues'
+import { t, useLang } from './i18n'
+import { Issue, issueDetail, IssueStep, issueText, sameIssue, STEP_KINDS } from './issues'
 import { useDraggable } from './useDraggable'
 
-const STEP_TITLES: Record<IssueStep, string> = {
-  dups: 'Doublons et arrêts',
-  gps: 'Correction GPS',
-  seq: 'Séquences',
-}
+const stepTitle = (s: IssueStep) => t(`step.${s}`)
 
 // Floating window (moved by its title bar) listing what is left to fix for a step, grouped by kind with the cause
 // and the fix. A click on an item goes to its photo: map centred on it, photo loaded in the Photo tab with the card
@@ -30,6 +27,7 @@ export default function IssuesPanel({
   onInterpolateAll?: () => void
   onClose: () => void
 }) {
+  useLang()
   const { box, style, handlers } = useDraggable<HTMLDivElement>()
   // Escape closes the window (and only that: the selection is kept), unless a dialog is open above it
   useEffect(() => {
@@ -42,36 +40,36 @@ export default function IssuesPanel({
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
   const kinds = STEP_KINDS[step].filter((k) => issues.some((i) => i.kind === k))
-  const where = (i: Issue) => (i.end > i.start ? `Photos ${i.start + 1} → ${i.end + 1}` : `Photo ${i.start + 1}`)
+  const where = (i: Issue) => (i.end > i.start ? t('issues.panel.photos', { a: i.start + 1, b: i.end + 1 }) : t('issues.panel.photo', { a: i.start + 1 }))
   return (
-    <div className="snap-panel snap-modal issues-modal small-text" ref={box} role="dialog" aria-label={`À corriger : ${STEP_TITLES[step]}`} style={style}>
-      <div className="row between snap-title" title="Faire glisser pour déplacer la fenêtre" {...handlers}>
+    <div className="snap-panel snap-modal issues-modal small-text" ref={box} role="dialog" aria-label={t('issues.panel.label', { step: stepTitle(step) })} style={style}>
+      <div className="row between snap-title" title={t('gpx.snap.drag')} {...handlers}>
         <h3>
-          À corriger : {STEP_TITLES[step]} ({issues.length})
+          {t('issues.panel.title', { step: stepTitle(step), n: issues.length })}
         </h3>
-        <button className="small" onClick={onClose} aria-label="Fermer">
+        <button className="small" onClick={onClose} aria-label={t('common.close')}>
           ✕
         </button>
       </div>
       {step === 'dups' && duplicates > 0 && (
         <p className="muted">
-          {duplicates} doublon(s) (fichiers identiques) écarté(s) automatiquement à l'import : rien à faire.
+          {t('issues.panel.dups', { n: duplicates })}
         </p>
       )}
-      {issues.length === 0 && <p className="muted">Rien à corriger pour cette étape.</p>}
+      {issues.length === 0 && <p className="muted">{t('issues.panel.none')}</p>}
       {kinds.map((k) => {
         const list = issues.filter((i) => i.kind === k)
         return (
           <section key={k} className="issues-group">
             <h4>
-              {ISSUE_TEXT[k].title} ({list.length})
+              {issueText(k).title} ({list.length})
             </h4>
             <p className="muted">
-              <strong>Cause :</strong> {ISSUE_TEXT[k].cause} <strong>Correction :</strong> {ISSUE_TEXT[k].fix}
+              <strong>{t('issues.cause')}</strong> {issueText(k).cause} <strong>{t('issues.fix')}</strong> {issueText(k).fix}
             </p>
             {k === 'missing' && onInterpolateAll && (
-              <button className="small" onClick={onInterpolateAll} title="Chaque trou entre deux photos positionnées ; les photos en début / fin de sortie restent à placer">
-                Interpoler tous les trous possibles
+              <button className="small" onClick={onInterpolateAll} title={t('issues.interpAllTitle')}>
+                {t('issues.interpAll')}
               </button>
             )}
             <ul>
@@ -79,13 +77,13 @@ export default function IssuesPanel({
                 const on = current != null && sameIssue(current, i)
                 return (
                   <li key={`${i.kind}-${i.start}`} className="row">
-                    <button className={`issue-item${on ? ' current' : ''}`} onClick={() => onPick(i)} title="Aller à cette photo (carte et onglet Photo)">
+                    <button className={`issue-item${on ? ' current' : ''}`} onClick={() => onPick(i)} title={t('issues.goto')}>
                       <span>{where(i)}</span>
                       <span className="muted">{issueDetail(i)}</span>
                     </button>
                     {i.kind === 'heading' && (
-                      <button className="small" onClick={() => onIgnore(i)} title="Le cap saisi est le bon (cap calculé faux, perte du GPS) : ne plus le signaler">
-                        Ignorer
+                      <button className="small" onClick={() => onIgnore(i)} title={t('issues.ignoreTitle')}>
+                        {t('issues.ignore')}
                       </button>
                     )}
                   </li>

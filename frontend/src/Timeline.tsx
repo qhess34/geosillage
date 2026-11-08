@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FLAGS, PhotoRow, QualityIssue, seqColor, Sequence } from './api'
 import { fmtTime } from './format'
+import { t, useLang } from './i18n'
 
 interface Props {
   photos: PhotoRow[]
@@ -18,6 +19,7 @@ interface Props {
 
 // Excluded photos hidden: the strip shows only the others, one column each; indexes are translated both ways
 export default function Timeline(props: Props) {
+  useLang()
   const { photos, hideExcluded, selectedIdx, range, warnings, onPick, onContextMenu } = props
   const map = useMemo(() => {
     if (!hideExcluded || !photos.some((p) => p.excluded)) return null
@@ -230,14 +232,14 @@ function TimelineStrip({ photos, sequences, selectedIdx, range, onPick, onContex
       {hover && photos[hover.idx] && <HoverBubble p={photos[hover.idx]} x={hover.x} sequences={sequences} warnings={bubbleWarnings ?? warnings} thumbUrl={thumbUrl} />}
       <div className="timeline-zoom small-text">
         <div className="zoom-buttons">
-        <button className="small" onClick={() => zoomAt(1.6, center)} disabled={!zoomed} title="Dézoomer (molette sur la timeline)" aria-label="Dézoomer la timeline">
+        <button className="small" onClick={() => zoomAt(1.6, center)} disabled={!zoomed} title={t('tl.zoomOutTitle')} aria-label={t('tl.zoomOut')}>
           −
         </button>
-        <button className="small" onClick={() => zoomAt(0.6, center)} disabled={span <= Math.min(MIN_SPAN, fullSpan)} title="Zoomer (molette sur la timeline)" aria-label="Zoomer la timeline">
+        <button className="small" onClick={() => zoomAt(0.6, center)} disabled={span <= Math.min(MIN_SPAN, fullSpan)} title={t('tl.zoomInTitle')} aria-label={t('tl.zoomIn')}>
           +
         </button>
-        <button className="small" onClick={setWindowAll} disabled={!zoomed} title="Toute la sortie">
-          Tout
+        <button className="small" onClick={setWindowAll} disabled={!zoomed} title={t('tl.all')}>
+          {t('tl.allBtn')}
         </button>
         </div>
         {zoomed && (
@@ -251,7 +253,7 @@ function TimelineStrip({ photos, sequences, selectedIdx, range, onPick, onContex
         <div
           ref={bar}
           className="timeline-bar"
-          title="Faire glisser pour parcourir la sortie"
+          title={t('tl.scrollTitle')}
           onPointerDown={(e) => {
             ;(e.target as Element).setPointerCapture(e.pointerId)
             const at = barIdx(e.clientX)
@@ -275,22 +277,23 @@ function TimelineStrip({ photos, sequences, selectedIdx, range, onPick, onContex
 
 // Bubble above the strip: photo under the pointer (thumbnail, number, time, sequence, what to check there)
 function HoverBubble({ p, x, sequences, warnings, thumbUrl }: { p: PhotoRow; x: number; sequences: Sequence[]; warnings?: QualityIssue[]; thumbUrl?: (id: number) => string }) {
+  useLang()
   const seq = sequences.find((s) => s.id === p.sequence_id)
   const notes = [
-    p.excluded ? 'exclue' : null,
-    p.flags & FLAGS.GPS_JUMP ? 'saut GPS' : null,
-    p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD) && p.lat == null ? 'sans position' : null,
-    p.flags & FLAGS.GAP_BEFORE ? 'interruption avant' : null,
+    p.excluded ? t('tl.excluded') : null,
+    p.flags & FLAGS.GPS_JUMP ? t('tl.jump') : null,
+    p.flags & (FLAGS.NO_GPS | FLAGS.INVALID_COORD) && p.lat == null ? t('tl.noPos') : null,
+    p.flags & FLAGS.GAP_BEFORE ? t('tl.gapBefore') : null,
     ...(warnings ?? []).filter((w) => p.idx >= w.start_idx && p.idx <= w.end_idx).map((w) => w.detail),
   ].filter(Boolean)
   return (
     <div className="timeline-bubble small-text" style={{ left: x }}>
       {thumbUrl && p.thumb === 1 && <img src={thumbUrl(p.id)} alt="" />}
       <div>
-        <strong>Photo {p.idx + 1}</strong> · {fmtTime(p.ts, false)}
+        <strong>{t('tl.photo', { n: p.idx + 1 })}</strong> · {fmtTime(p.ts, false)}
       </div>
       <div className="muted">
-        <span className="chip" style={{ background: seqColor(sequences, p.sequence_id) }} /> {seq ? seq.name : 'non classée'}
+        <span className="chip" style={{ background: seqColor(sequences, p.sequence_id) }} /> {seq ? seq.name : t('tl.unclassified')}
       </div>
       {notes.length > 0 && <div className="warn-text">{notes.join(' · ')}</div>}
     </div>
