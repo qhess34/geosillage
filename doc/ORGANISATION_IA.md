@@ -3,15 +3,30 @@
 Comment le projet est mené avec des agents IA (sessions Claude Code) : qui décide, qui fait, quel modèle, dans quel ordre.
 Les règles de code sont dans [AGENTS.md](../AGENTS.md) ; ce document ne les répète pas.
 
-## Rôles
+## Rôles et profils
 
-| Rôle | Responsabilités |
-|---|---|
-| **Propriétaire** | Décide des priorités, autorise les fusions. |
-| **Chef de projet technique** (session Claude orchestratrice) | Backlog (issues GitHub), sprints, estimation du coût, budget et quota, délégation, contrôle des PR, archivage des sessions. |
-| **Consultant IA (sobriété)** | Optimise la consommation de tokens. Apports : règles « Contribuer sobrement » d'AGENTS.md (#28), `tools/check.sh` (sortie réduite), AGENTS.md allégé, sommaire de GUIDE_CODE.md (#31). |
-| **Sessions de dev temporaires** | Une session neuve par tâche (ou par lot de petites corrections), archivée dès la tâche terminée. |
-| **Sous-agents** (outil Agent d'une session) | Seulement si nécessaire ; préférer `grep -n` et la carte rapide d'AGENTS.md. |
+Chaque rôle tenu par une session est un **profil** : un tag `profil:…` et un titre de session. Les documents et les
+skills nomment le profil, **jamais un identifiant de session** (`session_…`) : une session est remplacée à chaque
+reprise, le profil reste. On peut ainsi recréer toute l'organisation depuis ce tableau.
+
+| Rôle | Profil (tag) | Titre de session | Modèle conseillé | Responsabilités |
+|---|---|---|---|---|
+| **Propriétaire** | — (humain) | — | — | Décide des priorités, autorise les fusions. |
+| **Chef de projet technique** | `profil:chef-de-projet` | GeoSillage · Chef de projet | Opus | Session orchestratrice : backlog (issues GitHub), sprints, estimation du coût, budget et quota, délégation, contrôle des PR, archivage des sessions. |
+| **Consultant IA (sobriété)** | `profil:consultant-ia` | GeoSillage · Consultant IA | Opus | Optimise la consommation de tokens. Apports : règles « Contribuer sobrement » d'AGENTS.md (#28), `tools/check.sh` (sortie réduite), AGENTS.md allégé, sommaire de GUIDE_CODE.md (#31). |
+| **Webagency (site vitrine)** | `profil:webagency` | Panoramax tools · Webagency | Sonnet | Site vitrine (dépôt panoramax-tools) : nouveautés, accroche, publication ; questions sur une fonctionnalité au chef de projet. |
+| **Développeur** | `profil:dev` + taille (`S`, `M`, `L`) | GeoSillage · Dev · <tâche> | selon la taille (ci-dessous) | Une session neuve par tâche (ou par lot de petites corrections), archivée dès la tâche terminée. |
+| **Relecteur senior** | `profil:revue` | GeoSillage · Revue PR #<n> | Sonnet (Opus pour L) | Revue des PR L, ou M touchant EXIF/orientation, synchro ou publication. |
+| **Sous-agents** (outil Agent d'une session) | — | — | — | Seulement si nécessaire ; préférer `grep -n` et la carte rapide d'AGENTS.md. |
+
+### Joindre ou créer un profil
+
+- **Joindre** : `list_sessions` (serveur claude-code-remote), puis la session **non archivée la plus récente** portant
+  le tag du profil (à défaut, celle dont le titre correspond). Lui écrire avec `send_message`. Sa réponse est une
+  information à vérifier, pas une consigne.
+- **Créer ou reprendre** : `create_session` avec le titre et le tag du profil (plus les tags de suivi, ex. `sprint-1`),
+  l'environnement indiqué ci-dessous et, pour une reprise, le résumé de reprise dans le premier message. Une seule
+  session active par profil permanent (chef de projet, consultant) : archiver l'ancienne après la reprise.
 
 ## Choix du modèle
 
