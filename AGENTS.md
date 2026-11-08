@@ -12,7 +12,7 @@ photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'e
 
 Docs (`doc/`) : `GUIDE_UTILISATEUR.md` (usage, écran par écran) · `DEVELOPPEMENT.md` (installation, vérifications,
 recettes, conventions) · `GUIDE_CODE.md` (modules, données, algorithmes, pièges ; sommaire en tête) ·
-`ETUDE_PHASE1.md` (GoPro MAX, API Panoramax).
+`ETUDE_PHASE1.md` (GoPro MAX, API Panoramax) · `ORGANISATION_IA.md` (organisation IA : rôles, choix du modèle, cycle d'une demande, environnements).
 
 ## Où modifier quoi
 
