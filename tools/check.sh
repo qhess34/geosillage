@@ -32,7 +32,15 @@ back() {
   args=("${args[@]/#backend\//}")
   step "backend (pytest)" "$ROOT/backend" "$PY" -m pytest -q --no-header -p no:cacheprovider "${args[@]}"
 }
-front() { step "interface (tsc + vite)" "$ROOT/frontend" npm run build --silent -- --logLevel error; }
+front() { # vite --logLevel error n'imprime rien en cas de succès : résumé écrit ici
+  if (cd "$ROOT/frontend" && npm run build --silent -- --logLevel error) >"$LOG" 2>&1; then
+    echo "OK    interface : construction réussie (tsc + vite)"
+  else
+    echo "ÉCHEC interface (tsc + vite, 40 dernières lignes) :"
+    tail -40 "$LOG"
+    FAILED=1
+  fi
+}
 e2e() { step "interface (Playwright)" "$ROOT/e2e" npx playwright test --trace off --reporter=line "$@"; }
 
 case "$WHAT" in

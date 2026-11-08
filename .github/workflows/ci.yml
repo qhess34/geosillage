@@ -3,10 +3,18 @@ name: Vérifications
 
 on:
   push:
+    branches: [main]
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'doc/**'
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:

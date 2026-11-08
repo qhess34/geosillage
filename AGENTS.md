@@ -86,6 +86,7 @@ Pour limiter le temps et les tokens consommés :
   (carte rapide ci-dessus).
 - **Modèle / effort** : léger pour textes, CSS et petits défauts ; élevé pour caps, orientation, EXIF, synchro et
   publication.
+- **Docs** : modifier seulement la section concernée, en restant concis ; condenser une section qui dépasse ~60 lignes.
 
 ## Vérifier avant de committer
 
