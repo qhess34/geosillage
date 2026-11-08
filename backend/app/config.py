@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import threading
 from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("PSS_DATA_DIR", Path.home() / ".local/share/panoramax-studio")).expanduser()
@@ -35,9 +36,10 @@ DEFAULT_SETTINGS = {
 def ensure_dirs() -> None:
     try:
         PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
-        probe = PROJECTS_DIR / ".write-test"
+        # unique name: concurrent requests must not remove each other's probe
+        probe = PROJECTS_DIR / f".write-test-{os.getpid()}-{threading.get_ident()}"
         probe.touch()
-        probe.unlink()
+        probe.unlink(missing_ok=True)
     except PermissionError:
         raise SystemExit(
             f"Pas de droit d'écriture dans {DATA_DIR} (utilisateur {os.getuid()}:{os.getgid()}). "

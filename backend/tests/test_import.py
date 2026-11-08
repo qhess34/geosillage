@@ -135,3 +135,14 @@ def test_fs_list_subfolders(tmp_path):
         sub = client.get("/api/fs", params={"path": f"{root}/a#b & é"}).json()
         assert sub["path"] == str(root / "a#b & é") and sub["parent"] == str(root)
         assert client.get("/api/fs", params={"path": str(root / "absent")}).status_code == 400
+
+
+def test_ensure_dirs_concurrent():
+    # parallel requests used to remove each other's write probe (FileNotFoundError, HTTP 500)
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app import config
+
+    with ThreadPoolExecutor(8) as ex:
+        list(ex.map(lambda _: config.ensure_dirs(), range(200)))
+    assert not list(config.PROJECTS_DIR.glob(".write-test*"))
