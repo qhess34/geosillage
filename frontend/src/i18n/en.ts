@@ -26,7 +26,7 @@ export const en: Record<Key, string> = {
   'settings.buttonTitle': 'Settings: Panoramax overlay, added background maps, heading computation',
   'settings.heading': '⚙ Settings',
   'settings.language': 'Language',
-  'settings.languageHelp': 'Language of the interface (server messages stay in French for now).',
+  'settings.languageHelp': 'Language of the interface and of the server messages.',
   'settings.overlay.title': 'Panoramax overlay (all rides)',
   'settings.overlay.help':
     'Already published 360° photos shown by the “Panoramax” button of the map controls: all instances (meta-catalog) or a single instance.',

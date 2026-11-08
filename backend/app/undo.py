@@ -10,7 +10,7 @@ import json
 import time
 from contextlib import contextmanager
 
-from . import db
+from . import db, i18n
 
 # new columns go at the end: operations journaled before they existed only restore the columns they knew
 PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset", "heading_offset", "heading_kept"]
@@ -97,7 +97,7 @@ def undo(conn) -> str:
             raise NothingToDo()
         _apply(conn, json.loads(row["data"]), "before")
         conn.execute("UPDATE op_log SET undone = 1 WHERE id=?", (row["id"],))
-    return row["label"]
+    return i18n.tr(row["label"])
 
 
 def redo(conn) -> str:
@@ -107,15 +107,15 @@ def redo(conn) -> str:
             raise NothingToDo()
         _apply(conn, json.loads(row["data"]), "after")
         conn.execute("UPDATE op_log SET undone = 0 WHERE id=?", (row["id"],))
-    return row["label"]
+    return i18n.tr(row["label"])
 
 
 def state(conn) -> dict:
     u = conn.execute("SELECT label FROM op_log WHERE undone = 0 ORDER BY id DESC LIMIT 1").fetchone()
     r = conn.execute("SELECT label FROM op_log WHERE undone = 1 ORDER BY id ASC LIMIT 1").fetchone()
-    return {"undo": u[0] if u else None, "redo": r[0] if r else None}
+    return {"undo": i18n.tr(u[0]) if u else None, "redo": i18n.tr(r[0]) if r else None}
 
 
 def history(conn, limit=50) -> list[dict]:
     rows = conn.execute("SELECT id, ts, label, undone FROM op_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-    return [dict(r) for r in rows]
+    return [{**dict(r), "label": i18n.tr(r["label"])} for r in rows]

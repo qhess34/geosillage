@@ -442,10 +442,14 @@ Mécanisme maison, sans dépendance, dans `frontend/src/i18n/` : `fr.ts` (réfé
 - Texte avec gras : `rich(t('clé'))` rend `<b>…</b>` en `<strong>` (nos traductions seulement). Tables de textes
   (`issueText(kind)` dans `issues.ts`, `capHelp()` / `orientationHelp()`) : des fonctions, pas des constantes.
 - Traduit aux lots 1–3 (#37) : tous les écrans (liste, Réglages, étapes, aide, menus, écran projet, export, publication,
-  envoi, projet Panoramax, carte, légende, visionneuse, barre des tâches) ; restent en français : les messages du
-  serveur (lot 4). Tables de textes en fonctions (`publicationStates()`, `builtinBasemaps()`, `panoramaxPresets()`).
+  envoi, projet Panoramax, carte, légende, visionneuse, barre des tâches) ; lot 4 : messages du serveur (ci-dessous). Tables de textes en fonctions (`publicationStates()`, `builtinBasemaps()`, `panoramaxPresets()`).
   `tools/check_i18n.mjs` (appelé par `tools/check.sh front`) signale les lignes à accents français hors `i18n/`
   (commentaires exclus ; exceptions dans `ALLOWED`). Les tests e2e fixent `locale: 'fr-FR'`.
+- **Messages du serveur** : `api.ts` envoie `Accept-Language` à chaque appel ; `backend/app/i18n.py` (middleware ASGI →
+  contextvar) traduit **à la lecture** : le français reste la clé, stocké et repli ; table `EN` (`{param}` = partie
+  variable, traduite récursivement). Appliqué par le gestionnaire d'`HTTPException`, `jobs` (liste des tâches),
+  `undo` (libellés), `panoramax.last_publications`. Nouveau message : l'ajouter à `EN` (sinon il reste en français).
+  Les textes de Panoramax / ExifTool ne sont jamais traduits. `tr(texte, **params)` pour un usage direct.
 
 ## Confort de l'interface
 

@@ -1,5 +1,7 @@
 // Thin typed client for the local backend API.
 
+import { getLang } from './i18n'
+
 export interface ProjectItem {
   id: string
   name: string
@@ -332,7 +334,8 @@ export interface FsListing {
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    // the server translates its messages according to Accept-Language
+    headers: { 'Accept-Language': getLang(), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
   if (!res.ok) {
