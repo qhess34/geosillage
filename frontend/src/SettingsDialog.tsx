@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, Project } from './api'
 import { Basemap } from './basemaps'
 import { Confirm } from './Dialogs'
+import { getLang, Key, LANGS, setLang, t, useLang } from './i18n'
 import { OverlaySettings, PANORAMAX_PRESETS } from './panoramaxLayer'
 
 // Settings (button ⚙ of the toolbar): display of the map for every ride, heading computation of this project
@@ -26,6 +27,7 @@ export default function SettingsDialog({
   onError: (m: string) => void
   onClose: () => void
 }) {
+  useLang()
   const [removing, setRemoving] = useState<Basemap | null>(null) // background map to remove, once confirmed
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -39,16 +41,27 @@ export default function SettingsDialog({
   }, [onClose])
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal settings" role="dialog" aria-label="Réglages">
+      <div className="modal settings" role="dialog" aria-label={t('settings.title')}>
         <div className="row between">
-          <h2>⚙ Réglages</h2>
-          <button className="small" onClick={onClose} aria-label="Fermer">
+          <h2>{t('settings.heading')}</h2>
+          <button className="small" onClick={onClose} aria-label={t('common.close')}>
             ✕
           </button>
         </div>
+        <div className="small-text">
+          <h3>{t('settings.language')}</h3>
+          <p className="muted">{t('settings.languageHelp')}</p>
+          <select value={getLang()} onChange={(e) => setLang(e.target.value as 'fr' | 'en')} aria-label={t('settings.language')}>
+            {LANGS.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <OverlayUrl overlay={overlay} onSave={onOverlay} />
         <div className="small-text">
-          <h3>Fonds de carte ajoutés (toutes les sorties)</h3>
+          <h3>{t('settings.basemaps.title')}</h3>
           {custom.length ? (
             <ul className="settings-list">
               {custom.map((b) => (
@@ -57,19 +70,19 @@ export default function SettingsDialog({
                     <strong>{b.name}</strong> <span className="muted mono break">{b.url}</span>
                   </span>
                   <button className="small danger" onClick={() => setRemoving(b)}>
-                    Retirer
+                    {t('common.remove')}
                   </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="muted">Aucun : « + Ajouter un fond XYZ… » dans la liste des fonds de carte (contrôles de la carte).</p>
+            <p className="muted">{t('settings.basemaps.none')}</p>
           )}
         </div>
         {removing && (
           <Confirm
-            title={`Retirer le fond « ${removing.name} » ?`}
-            confirmLabel="Retirer"
+            title={t('settings.basemaps.removeTitle', { name: removing.name })}
+            confirmLabel={t('common.remove')}
             danger
             onCancel={() => setRemoving(null)}
             onConfirm={() => {
@@ -77,7 +90,7 @@ export default function SettingsDialog({
               setRemoving(null)
             }}
           >
-            <p>Il disparaît de la liste des fonds de carte de toutes les sorties. Pour le retrouver, il faudra l'ajouter de nouveau.</p>
+            <p>{t('settings.basemaps.removeBody')}</p>
           </Confirm>
         )}
         <QualitySettings key={JSON.stringify(QUALITY_KEYS.map((k) => project.settings[k]))} p={project} onSaved={onQualitySaved} onError={onError} />
@@ -88,12 +101,12 @@ export default function SettingsDialog({
 }
 
 const QUALITY_KEYS = ['stop_m', 'stop_min', 'spacing_m', 'dop_max', 'heading_diff'] as const
-const QUALITY_FIELDS: { key: (typeof QUALITY_KEYS)[number]; label: string; unit: string; min: number; max: number; step: number }[] = [
-  { key: 'stop_min', label: 'Arrêt : au moins', unit: 'photos de suite', min: 2, max: 100, step: 1 },
-  { key: 'stop_m', label: '…à moins de', unit: 'm les unes des autres', min: 0.5, max: 50, step: 0.5 },
-  { key: 'spacing_m', label: 'Grand écart : plus de', unit: 'm entre deux photos', min: 1, max: 1000, step: 1 },
-  { key: 'dop_max', label: 'Précision GPS faible : DOP au-dessus de', unit: '', min: 0.5, max: 50, step: 0.5 },
-  { key: 'heading_diff', label: 'Cap à vérifier : écart de plus de', unit: '° avec le cap calculé', min: 10, max: 180, step: 5 },
+const QUALITY_FIELDS: { key: (typeof QUALITY_KEYS)[number]; min: number; max: number; step: number }[] = [
+  { key: 'stop_min', min: 2, max: 100, step: 1 },
+  { key: 'stop_m', min: 0.5, max: 50, step: 0.5 },
+  { key: 'spacing_m', min: 1, max: 1000, step: 1 },
+  { key: 'dop_max', min: 0.5, max: 50, step: 0.5 },
+  { key: 'heading_diff', min: 10, max: 180, step: 5 },
 ]
 
 // Thresholds of the points to check (quality.py), for this project
@@ -105,11 +118,11 @@ function QualitySettings({ p, onSaved, onError }: { p: Project; onSaved: () => v
       .then(onSaved, (e) => onError(e.message))
   return (
     <div className="small-text">
-      <h3>Points à vérifier (ce projet)</h3>
-      <p className="muted">Seuils des points signalés dans les étapes « Doublons et arrêts » et « Correction GPS ».</p>
+      <h3>{t('settings.quality.title')}</h3>
+      <p className="muted">{t('settings.quality.help')}</p>
       {QUALITY_FIELDS.map((f) => (
         <div key={f.key} className="form-row wide">
-          <span>{f.label}</span>
+          <span>{t(`settings.quality.${f.key}` as Key)}</span>
           <span>
             <input
               className="num"
@@ -119,15 +132,15 @@ function QualitySettings({ p, onSaved, onError }: { p: Project; onSaved: () => v
               step={f.step}
               value={v[f.key]}
               onChange={(e) => setV({ ...v, [f.key]: e.target.value })}
-              aria-label={f.label}
+              aria-label={t(`settings.quality.${f.key}` as Key)}
             />{' '}
-            {f.unit}
+            {t(`settings.quality.${f.key}.unit` as Key)}
           </span>
         </div>
       ))}
       <div className="row">
         <button className="small" onClick={save}>
-          Enregistrer
+          {t('common.save')}
         </button>
       </div>
     </div>
@@ -143,20 +156,17 @@ function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => v
       .then(onSaved, (e) => onError(e.message))
   return (
     <div className="small-text">
-      <h3>Calcul du cap (ce projet)</h3>
-      <p className="muted">
-        Le cap d'une photo est la direction vers le premier point suivant situé à au moins cette distance (cherché dans la
-        fenêtre de temps). Les caps manuels ne sont jamais recalculés.
-      </p>
+      <h3>{t('settings.heading.title')}</h3>
+      <p className="muted">{t('settings.heading.help')}</p>
       <div className="row wrap">
         <label>
-          Distance min. <input className="num" type="number" min={1} max={100} value={minM} onChange={(e) => setMinM(e.target.value)} /> m
+          {t('settings.heading.minDist')} <input className="num" type="number" min={1} max={100} value={minM} onChange={(e) => setMinM(e.target.value)} /> m
         </label>
         <label>
-          Fenêtre <input className="num" type="number" min={1} max={120} value={win} onChange={(e) => setWin(e.target.value)} /> s
+          {t('settings.heading.window')} <input className="num" type="number" min={1} max={120} value={win} onChange={(e) => setWin(e.target.value)} /> s
         </label>
         <button className="small" onClick={save}>
-          Enregistrer et recalculer
+          {t('settings.heading.save')}
         </button>
       </div>
     </div>
@@ -167,11 +177,8 @@ function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o:
   const [url, setUrl] = useState(overlay.url)
   return (
     <div className="small-text">
-      <h3>Surcouche Panoramax (toutes les sorties)</h3>
-      <p className="muted">
-        Photos 360° déjà publiées affichées par le bouton « Panoramax » des contrôles de la carte : toutes les instances
-        (méta-catalogue) ou une seule instance.
-      </p>
+      <h3>{t('settings.overlay.title')}</h3>
+      <p className="muted">{t('settings.overlay.help')}</p>
       <div className="row wrap">
         {PANORAMAX_PRESETS.map((p) => (
           <label key={p.url}>
@@ -196,9 +203,9 @@ function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o:
           if (/^https?:\/\//.test(u)) onSave({ ...overlay, url: u })
         }}
       >
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.example.org" aria-label="Autre instance Panoramax" />
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.example.org" aria-label={t('settings.overlay.other')} />
         <button className="small" type="submit">
-          Enregistrer
+          {t('common.save')}
         </button>
       </form>
     </div>

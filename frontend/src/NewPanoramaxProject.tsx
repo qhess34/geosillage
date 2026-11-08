@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { locale } from './i18n'
 import { api, PanoramaxStatus, PnxSequence } from './api'
 import { PnxConnection } from './Publication'
 
@@ -22,7 +23,7 @@ export default function NewPanoramaxProject({ onCreated, onCancel }: { onCreated
     .filter((x) => x.length > 10)
   const chosen = [...picked, ...extra]
   const shown = (seqs ?? []).filter((s) => !filter || s.title.toLowerCase().includes(filter.toLowerCase()))
-  const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString('fr-FR') : '')
+  const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString(locale()) : '')
 
   const create = () => {
     const first = seqs?.find((s) => picked.has(s.id))

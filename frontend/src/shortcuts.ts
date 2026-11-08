@@ -1,25 +1,25 @@
 import { Dispatch, SetStateAction, useEffect, useRef } from 'react'
 import { api, PhotoDetail, PhotoRow, SeqState, Sequence, UndoState } from './api'
+import { t } from './i18n'
 import { Issue, ISSUE_TEXT, issueDetail } from './issues'
 
-// Shown in the help window (?)
-export const SHORTCUTS: [string, string][] = [
-  ['← / →', 'Photo précédente / suivante (Maj : par 10) ; les photos exclues sont sautées (sauf case « Exclues » cochée)'],
-  ['Début / Fin', 'Première / dernière photo'],
-  ['Page ↑ / Page ↓', 'Séquence précédente / suivante'],
-  ['D', 'Début de séquence sur la photo courante (la plage suit ensuite la navigation) ; fenêtre de recalage OSM ouverte : début des photos à recaler'],
-  ['F', 'Fin de séquence : crée la séquence du début jusqu\'à la photo courante ; la photo suivante devient le début de la séquence suivante (Échap pour annuler) ; fenêtre de recalage OSM ouverte : fin des photos à recaler'],
-  ['C', 'Découper ici : coupe la séquence avant la photo courante (photo non classée : crée la séquence autour, puis coupe)'],
-  ['X ou Suppr', 'Exclure la photo courante et passer à la suivante (exclure la photo de début déplace le début à la suivante ; plage tracée sur la timeline : exclure la plage, après confirmation ; Ctrl+Z annule)'],
-  ['Maj+X', 'Réintégrer la photo courante'],
-  ['Échap', 'Effacer la plage'],
-  ['[ / ]', 'Cap de la photo −1° / +1° (Maj : 5°)'],
-  ['N / Maj+N', 'Point suivant / précédent à vérifier : arrêt, grand écart, précision GPS, cap, saut GPS, photo sans position, photos non classées (les photos concernées sont sélectionnées)'],
-  ['M', 'Mode positions : glisser le marqueur violet, ou cliquer la carte pour placer une photo sans GPS'],
-  ['Ctrl+Z / Ctrl+Y', 'Annuler / rétablir'],
-  ['?', 'Cette aide'],
+// Shown in the help window (?): [key label, description]
+export const shortcutList = (): [string, string][] => [
+  ['← / →', t('sc.prevNext')],
+  [t('key.homeEnd'), t('sc.firstLast')],
+  [t('key.page'), t('sc.seqPrevNext')],
+  ['D', t('sc.start')],
+  ['F', t('sc.finish')],
+  ['C', t('sc.cut')],
+  [t('key.delete'), t('sc.exclude')],
+  [t('key.shiftX'), t('sc.include')],
+  [t('key.escape'), t('sc.clearRange')],
+  ['[ / ]', t('sc.heading')],
+  [t('key.nextIssue'), t('sc.nextIssue')],
+  ['M', t('sc.positions')],
+  ['Ctrl+Z / Ctrl+Y', t('sc.undoRedo')],
+  ['?', t('sc.help')],
 ]
-
 
 export interface ShortcutsParams {
   projectId: string
@@ -69,8 +69,8 @@ export function useShortcuts(params: ShortcutsParams) {
         setShowHelp, setEditMode, setSeqStart, setRange, setConfirmExclude, setNotice, setError,
         goIdx, stepIdx, nextKept, applyState, afterHeadingChange, undoRedo, markStart, finishSequence, carryCorrection, focusOn, excludeRange,
       } = latest.current
-      const t = e.target as HTMLElement
-      if (t?.closest('input, textarea, select') || blocked) return
+      const el = e.target as HTMLElement
+      if (el?.closest('input, textarea, select') || blocked) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl && e.key.toLowerCase() === 'z') {
         undoRedo(e.shiftKey ? 'redo' : 'undo')
@@ -130,11 +130,11 @@ export function useShortcuts(params: ShortcutsParams) {
         const list = checkPoints
         const k = e.shiftKey ? list.map((c) => c.start < i).lastIndexOf(true) : list.findIndex((c) => c.start > i)
         if (k < 0) {
-          setNotice(list.length ? (e.shiftKey ? 'Aucun point à vérifier avant cette photo' : 'Aucun point à vérifier après cette photo') : 'Rien à vérifier')
+          setNotice(list.length ? t(e.shiftKey ? 'notice.noIssueBefore' : 'notice.noIssueAfter') : t('notice.nothingToCheck'))
         } else {
           const c = list[k]
           focusOn(c)
-          setNotice(`${k + 1}/${list.length} · photos ${c.start + 1}${c.end > c.start ? ` → ${c.end + 1}` : ''} · ${ISSUE_TEXT[c.kind].one} : ${issueDetail(c)}`)
+          setNotice(t('notice.issueAt', { k: k + 1, total: list.length, range: `${c.start + 1}${c.end > c.start ? ` → ${c.end + 1}` : ''}`, kind: ISSUE_TEXT[c.kind].one, detail: issueDetail(c) }))
         }
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)

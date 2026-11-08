@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api, ProjectItem } from './api'
+import { locale, t, useLang } from './i18n'
 import NewPanoramaxProject from './NewPanoramaxProject'
 
 export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }) {
+  useLang()
   const [projects, setProjects] = useState<ProjectItem[] | null>(null)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -44,27 +46,27 @@ export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }
           <h1>
             Geo<span className="brand-accent">Sillage</span>
           </h1>
-          <p className="muted">Préparez et corrigez vos relevés photo 360° pour Panoramax</p>
+          <p className="muted">{t('home.tagline')}</p>
         </div>
       </header>
       <form className="row" onSubmit={create}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du nouveau projet (ex. Sortie 14 juin)" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('home.namePlaceholder')} />
         <button className="primary" type="submit" disabled={!name.trim()}>
-          Créer le projet
+          {t('home.create')}
         </button>
       </form>
       <p className="small-text">
         <button className="link" onClick={() => setPnx(!pnx)}>
-          Corriger des séquences déjà publiées sur Panoramax…
+          {t('home.pnxLink')}
         </button>
       </p>
       {pnx && <NewPanoramaxProject onCreated={onOpen} onCancel={() => setPnx(false)} />}
       {error && <p className="error">{error}</p>}
-      <h2>Projets</h2>
+      <h2>{t('home.projects')}</h2>
       {projects === null ? (
-        <p className="muted">Chargement…</p>
+        <p className="muted">{t('home.loading')}</p>
       ) : projects.length === 0 ? (
-        <p className="muted">Aucun projet pour l'instant.</p>
+        <p className="muted">{t('home.none')}</p>
       ) : (
         <ul className="projects">
           {projects.map((p) => (
@@ -72,12 +74,12 @@ export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }
               <button className="link project-name" onClick={() => onOpen(p.id)}>
                 {p.name}
               </button>
-              {p.kind === 'panoramax' && <span className="badge" title="Séquences déjà publiées, corrigées puis renvoyées">Panoramax</span>}
+              {p.kind === 'panoramax' && <span className="badge" title={t('home.pnxBadgeTitle')}>Panoramax</span>}
               <span className="muted">
-                {p.photo_count} photos · créé le {new Date(p.created_at * 1000).toLocaleDateString('fr-FR')}
+                {t('home.projectInfo', { n: p.photo_count, date: new Date(p.created_at * 1000).toLocaleDateString(locale()) })}
               </span>
               <button className="small danger" onClick={() => setToDelete(p)}>
-                Supprimer
+                {t('home.delete')}
               </button>
             </li>
           ))}
@@ -86,16 +88,16 @@ export default function ProjectList({ onOpen }: { onOpen: (id: string) => void }
       {toDelete && (
         <div className="modal-backdrop">
           <div className="modal small-modal" role="alertdialog">
-            <h2>Supprimer « {toDelete.name} » ?</h2>
+            <h2>{t('home.deleteTitle', { name: toDelete.name })}</h2>
             <p>
-              Le projet (séquences, corrections, miniatures) sera supprimé définitivement.
+              {t('home.deleteBody')}
               <br />
-              <strong>Les photos sources ne sont pas touchées.</strong>
+              <strong>{t('home.deleteSources')}</strong>
             </p>
             <div className="actions">
-              <button onClick={() => setToDelete(null)}>Annuler</button>
+              <button onClick={() => setToDelete(null)}>{t('common.cancel')}</button>
               <button className="danger" onClick={remove}>
-                Supprimer le projet
+                {t('home.deleteConfirm')}
               </button>
             </div>
           </div>

@@ -427,6 +427,21 @@ envoi (`last_publication`, `changed_since_publication`) ; projet Panoramax : san
 `ok` / `warn` / `todo` ; `onTab` ouvre un onglet, `onShow` sélectionne des photos (onglet Photo). `.workspace` est
 une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des tâches).
 
+## Langues de l'interface (i18n)
+
+Mécanisme maison, sans dépendance, dans `frontend/src/i18n/` : `fr.ts` (référence ; ses clés typent tout), `en.ts`
+(mêmes clés ; une clé manquante retombe sur le français), `index.ts` (`t`, `tp`, `useLang`, `setLang`, `locale`).
+- **Ajouter un texte** : une clé `zone.nom` dans `fr.ts` et `en.ts`, puis `t('zone.nom', { param })` (`{param}` dans le
+  texte). Pluriel : clés `base.one` / `base.many` (`{n}` = le nombre) et `tp('base', n)`. Texte venant des photos ou
+  de Panoramax : jamais traduit, passé en paramètre, jamais inséré comme HTML.
+- **Hors composant** (`shortcuts.ts`, `contextMenuItems.ts`) : appeler `t()` au moment du calcul (fonction, pas
+  constante de module), sinon la langue est figée. Un composant qui affiche des `t()` appelle `useLang()` pour se
+  redessiner au changement de langue.
+- **Langue** : choisie dans ⚙ Réglages, mémorisée dans `localStorage` (`pss-lang`, essai protégé) ; sinon langue du
+  navigateur si anglaise, sinon français. Dates : `toLocale…(locale())` (`fr-FR` / `en-GB`), jamais de `'fr-FR'` en dur.
+- Traduit au lot 1 (#37) : liste des projets, Réglages, barre d'étapes, aide et raccourcis, menu contextuel ; le
+  reste de l'interface et les messages du serveur sont encore en français. Les tests e2e fixent `locale: 'fr-FR'`.
+
 ## Confort de l'interface
 
 - `StopCompare.tsx` : photos d'un arrêt côte à côte, la vignette cliquée dans `Viewer360` (orientation lue par

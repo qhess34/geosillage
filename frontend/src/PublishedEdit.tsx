@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { locale } from './i18n'
 import { api, PublishedDiff, Sequence } from './api'
 import { Confirm } from './Dialogs'
 
@@ -102,7 +103,7 @@ export default function PublishedEdit({
                 onClick={() => api.pnxRevert(projectId, s.id).then(started, (e) => onError(e.message))}
                 title="Renvoie les valeurs qu'avait Panoramax avant le dernier envoi de corrections (les photos supprimées ne reviennent pas)"
               >
-                Remettre les valeurs d'avant (envoi du {new Date(diff.last_edit.ts * 1000).toLocaleString('fr-FR')})
+                Remettre les valeurs d'avant (envoi du {new Date(diff.last_edit.ts * 1000).toLocaleString(locale())})
               </button>
             )}
             <button className="small" onClick={() => setDiff(null)}>
