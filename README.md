@@ -23,9 +23,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | 2c | Séquences (plage, découpage proposé, couper, fusionner, limites), timeline, annuler/rétablir, raccourcis | ✅ |
 | 2d (partiel) | Cap : calcul automatique, manuel, par plage, décalage sur toute la sortie ou une série de photos ; **export d'un dossier par séquence avec EXIF corrigés** | ✅ |
 | 2b | Visionneuse 360° (Photo Sphere Viewer), sens de déplacement pour caméra sur casque | ✅ |
-| 2b (reste) | Liste des photos (virtualisée, filtres d'anomalies) | backlog |
 | 2d | Correction GPS : glisser sur la carte, saisie, placer une photo sans GPS, décalage et déplacement le long du trajet sur une plage ; export en copie, en déplaçant les sources, ou sur place ; restauration des sources | ✅ |
-| 2d (reste) | Exports GeoJSON/CSV des positions | backlog |
 | 2e | Photos sans position : liste par trou, voisines sur la carte, interpolation, rattachement à la séquence | ✅ |
 | 3 (complément) | Synchro par tronçons (« à partir de cette photo ») ; vérifications automatiques GitHub | ✅ |
 | 3 (partiel) | **Retard GPS** : synchronisation en faisant glisser une photo le long de la trace sur la vue satellite, points de calage, application à la sortie / séquence / plage ; visionneuse zoomable | ✅ |
@@ -45,6 +43,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 | **Utiliser l'outil** (écran par écran, raccourcis, questions fréquentes) | [doc/GUIDE_UTILISATEUR.md](doc/GUIDE_UTILISATEUR.md) |
 | Développer (installation, vérifications, recettes, conventions) | [doc/DEVELOPPEMENT.md](doc/DEVELOPPEMENT.md) |
 | Agents IA : règles du dépôt | [AGENTS.md](AGENTS.md) |
+| Organisation IA : rôles, choix du modèle, cycle d'une demande | [doc/ORGANISATION_IA.md](doc/ORGANISATION_IA.md) |
 | Fonctionnement interne (modules, données, algorithmes, pièges) | [doc/GUIDE_CODE.md](doc/GUIDE_CODE.md) |
 | Étude GoPro MAX / API Panoramax | [doc/ETUDE_PHASE1.md](doc/ETUDE_PHASE1.md) |
 
