@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import ProjectList from './ProjectList'
 import ProjectView from './ProjectView'
+import { t, useLang } from './i18n'
 import './styles.css'
 
 // Route: #/p/<projectId> or home
@@ -20,6 +21,7 @@ function useHashRoute(): [string | null, (id: string | null) => void] {
 }
 
 function App() {
+  useLang()
   const [projectId, setProjectId] = useHashRoute()
   const [theme, setTheme] = useState<string>(() => {
     try {
@@ -43,9 +45,9 @@ function App() {
       <button
         className="theme-toggle small"
         onClick={() => setTheme(theme === 'auto' ? 'dark' : theme === 'dark' ? 'light' : 'auto')}
-        title="Thème : automatique / sombre / clair"
+        title={t('theme.title')}
       >
-        {theme === 'auto' ? '◐ auto' : theme === 'dark' ? '☾ sombre' : '☀ clair'}
+        {theme === 'auto' ? t('theme.auto') : theme === 'dark' ? t('theme.dark') : t('theme.light')}
       </button>
       {projectId ? (
         <ProjectView key={projectId} projectId={projectId} onBack={() => setProjectId(null)} />

@@ -5,14 +5,15 @@
 // Both also carry ids (id, account_id; pictures: first_sequence / sequences), but not the author's name: it is
 // fetched on hover from the API (see authorOf).
 import maplibregl, { Map as MlMap } from 'maplibre-gl'
+import { Key, t } from './i18n'
 
 // Federated meta-catalogue: harvests the metadata of all the referenced instances (the one panoramax.fr uses) and
 // serves the same vector tiles as an instance
 export const META_CATALOG_URL = 'https://api.panoramax.xyz'
 export const DEFAULT_PANORAMAX_URL = META_CATALOG_URL
 const OLD_DEFAULT_URL = 'https://panoramax.openstreetmap.fr'
-export const PANORAMAX_PRESETS = [
-  { url: META_CATALOG_URL, label: 'Toutes les instances (méta-catalogue panoramax.fr)' },
+export const panoramaxPresets = () => [
+  { url: META_CATALOG_URL, label: t('map.preset.all') },
   { url: 'https://panoramax.openstreetmap.fr', label: 'OpenStreetMap France' },
   { url: 'https://panoramax.ign.fr', label: 'IGN' },
 ]
@@ -44,9 +45,9 @@ export function saveOverlay(s: OverlaySettings): void {
 
 // Age classes (dates are ISO strings: compared as strings)
 export const AGE_CLASSES = [
-  { label: 'moins d\'un an', color: '#16a34a', years: 1 },
-  { label: '1 à 3 ans', color: '#f59e0b', years: 3 },
-  { label: 'plus de 3 ans', color: '#b91c1c', years: Infinity },
+  { label: 'map.age.lt1' as Key, color: '#16a34a', years: 1 },
+  { label: 'map.age.1to3' as Key, color: '#f59e0b', years: 3 },
+  { label: 'map.age.gt3' as Key, color: '#b91c1c', years: Infinity },
 ]
 
 function isoYearsAgo(years: number): string {
@@ -212,19 +213,19 @@ export function bindOverlayTooltip(m: MlMap, getUrl: () => string): void {
       return
     }
     shown = key
-    const what = f.layer.id === 'pnx-pictures' ? 'Photo 360° Panoramax' : 'Séquence 360° Panoramax'
+    const what = f.layer.id === 'pnx-pictures' ? t('map.pnxPhoto') : t('map.pnxSequence')
     const date = fmtDate(p.ts ?? p.date)
     const model = p.model ? ` · ${String(p.model)}` : ''
     const el = document.createElement('div')
     el.textContent = `${what} · ${date}${model}`
     const who = document.createElement('div')
     who.className = 'muted'
-    who.textContent = 'Auteur : …'
+    who.textContent = t('map.author', { name: '…' })
     el.appendChild(who)
     popup.setLngLat(e.lngLat).setDOMContent(el).addTo(m)
     m.getCanvas().style.cursor = 'help'
     authorOf(getUrl(), f.layer.id, p).then((name) => {
-      if (shown === key) who.textContent = `Auteur : ${name ?? 'inconnu'}`
+      if (shown === key) who.textContent = t('map.author', { name: name ?? t('map.unknown') })
     })
   }
   const hide = () => {

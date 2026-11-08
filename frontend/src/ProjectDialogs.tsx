@@ -34,22 +34,19 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
 }
 
 export function ConfirmInterpolate({ ids, onCancel, onConfirm }: { ids: number[]; onCancel: () => void; onConfirm: () => void }) {
+  useLang()
   return (
-    <Confirm title={`Placer ${ids.length} photo(s) entre leurs voisines ?`} confirmLabel={`Placer ${ids.length} photo(s)`} onCancel={onCancel} onConfirm={onConfirm}>
-      <p>
-        Chaque photo sans position prise entre deux photos positionnées est placée entre elles, selon l'heure de prise de vue. Les photos en
-        début ou en fin de sortie restent à placer. Ctrl+Z annule.
-      </p>
+    <Confirm title={t('dlg.interpTitle', { n: ids.length })} confirmLabel={t('dlg.interpConfirm', { n: ids.length })} onCancel={onCancel} onConfirm={onConfirm}>
+      <p>{t('dlg.interpBody')}</p>
     </Confirm>
   )
 }
 
 export function ConfirmExclude({ range, n, onCancel, onConfirm }: { range: [number, number]; n: number; onCancel: () => void; onConfirm: () => void }) {
+  useLang()
   return (
-    <Confirm title={`Exclure ${n} photos ?`} confirmLabel={`Exclure ${n} photos`} danger onCancel={onCancel} onConfirm={onConfirm}>
-      <p>
-        Photos {range[0] + 1} → {range[1] + 1} de la plage sélectionnée. Elles ne sont ni supprimées ni exportées ; Ctrl+Z annule.
-      </p>
+    <Confirm title={t('dlg.excludeTitle', { n })} confirmLabel={t('dlg.excludeConfirm', { n })} danger onCancel={onCancel} onConfirm={onConfirm}>
+      <p>{t('dlg.excludeBody', { a: range[0] + 1, b: range[1] + 1 })}</p>
     </Confirm>
   )
 }
@@ -68,25 +65,23 @@ export function RangeValueDialog({
   onDone: (u: UndoState, notice: string) => void
   onError: (m: string) => void
 }) {
+  useLang()
+  const offset = dlg.kind === 'offset'
   return (
     <ValueDialog
-      title={`${dlg.kind === 'offset' ? 'Décalage du cap' : 'Orientation de la caméra'} : photos ${dlg.range[0] + 1} → ${dlg.range[1] + 1}`}
-      label={dlg.kind === 'offset' ? 'Décalage ajouté aux caps calculés (sens de déplacement)' : 'Angle ajouté à l\'orientation de chaque photo (centre de l\'image)'}
+      title={t(offset ? 'dlg.offsetTitle' : 'dlg.yawTitle', { a: dlg.range[0] + 1, b: dlg.range[1] + 1 })}
+      label={t(offset ? 'dlg.offsetLabel' : 'dlg.yawLabel')}
       initial={dlg.kind === 'offset' ? '0' : '180'}
       unit="°"
-      applyLabel="Appliquer"
-      help={
-        dlg.kind === 'offset'
-          ? 'Le cap est la direction dans laquelle on avance (flèches de navigation). Remplace le décalage déjà posé sur ces photos ; 0 le retire. Les caps manuels ne changent pas. L\'orientation de la caméra ne change pas. Ctrl+Z annule.'
-          : 'L\'orientation est l\'angle entre le centre de l\'image et le sens de déplacement : caméra mal alignée sur le casque, ou à l\'envers (180°). Le cap ne change pas ; le fichier JPEG n\'est pas tourné. Ctrl+Z annule.'
-      }
+      applyLabel={t('dlg.apply')}
+      help={t(offset ? 'dlg.offsetHelp' : 'dlg.yawHelp')}
       onCancel={onClose}
       onApply={(v) => {
         const r = dlg.range
         const target = { start_idx: r[0], end_idx: r[1] }
         onClose()
         ;(dlg.kind === 'offset' ? api.headingOffset(projectId, target, v) : api.rotateYaw(projectId, target, v)).then(
-          (res) => onDone(res.undo, `${dlg.kind === 'offset' ? 'Décalage du cap' : 'Orientation'} ${v > 0 ? '+' : ''}${v}° : photos ${r[0] + 1} → ${r[1] + 1}`),
+          (res) => onDone(res.undo, t(offset ? 'dlg.offsetDone' : 'dlg.yawDone', { v: `${v > 0 ? '+' : ''}${v}`, a: r[0] + 1, b: r[1] + 1 })),
           (er) => onError(er.message),
         )
       }}

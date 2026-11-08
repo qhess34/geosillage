@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import maplibregl, { GeoJSONSource, Map as MlMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
@@ -469,7 +470,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     const el = document.createElement('div')
     el.className = 'sync-marker'
     el.innerHTML = '<span class="sync-arrow"></span>'
-    el.title = 'Glisser le long de la trace jusqu\'à l\'élément visible sur la photo'
+    el.title = t('map.syncDrag')
     const mk = new maplibregl.Marker({ element: el, draggable: true, rotationAlignment: 'map' }).setLngLat([start[1], start[0]]).addTo(m)
     let last: number | null = null
     syncMarker.current = mk
@@ -520,7 +521,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     const p = photos.find((x) => x.id === selectedId)
     if (!p || p.lat == null || p.lon == null) return
     const mk = new maplibregl.Marker({ draggable: true, color: '#7c3aed' }).setLngLat([p.lon, p.lat]).addTo(m)
-    mk.getElement().title = 'Glisser pour corriger la position'
+    mk.getElement().title = t('map.posDrag')
     mk.on('dragend', () => {
       const ll = mk.getLngLat()
       latest.current.onMove(p.id, ll.lat, ll.lng)

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { locale } from './i18n'
+import { locale, t, useLang } from './i18n'
 import { api, PanoramaxStatus, PnxSequence } from './api'
 import { PnxConnection } from './Publication'
 
 // Home page: project made of sequences already published on Panoramax (to correct them and send the corrections)
 export default function NewPanoramaxProject({ onCreated, onCancel }: { onCreated: (id: string) => void; onCancel: () => void }) {
+  useLang()
   const [st, setSt] = useState<PanoramaxStatus | null>(null)
   const [seqs, setSeqs] = useState<PnxSequence[] | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -27,30 +28,29 @@ export default function NewPanoramaxProject({ onCreated, onCancel }: { onCreated
 
   const create = () => {
     const first = seqs?.find((s) => picked.has(s.id))
-    const n = name.trim() || (first ? first.title : 'Séquences Panoramax')
+    const n = name.trim() || (first ? first.title : t('pnx.defaultName'))
     api.pnxCreateProject(n, chosen).then((r) => onCreated(r.id), (e) => setError(e.message))
   }
 
   return (
     <div className="pnx-new">
-      <h2>Corriger des séquences déjà publiées</h2>
+      <h2>{t('pnx.title')}</h2>
       <p className="muted small-text">
-        Un projet Panoramax contient des séquences déjà en ligne : leurs photos restent sur Panoramax (affichées depuis
-        l'instance). On y corrige positions, caps et orientation avec les mêmes outils, puis on envoie les corrections.
+        {t('pnx.intro')}
       </p>
       <div className="small-text">
         <PnxConnection onChange={setSt} onError={setError} />
       </div>
       {st?.connected && (
         <>
-          <h3>Vos séquences</h3>
+          <h3>{t('pnx.yours')}</h3>
           {seqs === null ? (
-            <p className="muted small-text">Chargement de vos séquences…</p>
+            <p className="muted small-text">{t('pnx.loading')}</p>
           ) : seqs.length === 0 ? (
-            <p className="muted small-text">Aucune séquence sur ce compte.</p>
+            <p className="muted small-text">{t('pnx.none')}</p>
           ) : (
             <>
-              {seqs.length > 8 && <input className="grow" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrer par titre" aria-label="Filtrer" />}
+              {seqs.length > 8 && <input className="grow" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('pnx.filter')} aria-label={t('pnx.filterLabel')} />}
               <ul className="pnx-seq-list small-text">
                 {shown.map((s) => (
                   <li key={s.id}>
@@ -65,7 +65,7 @@ export default function NewPanoramaxProject({ onCreated, onCancel }: { onCreated
                           setPicked(n)
                         }}
                       />{' '}
-                      <strong>{s.title || s.id}</strong> <span className="muted">· {s.count ?? '?'} photos{s.start ? ` · ${fmt(s.start)}` : ''}</span>
+                      <strong>{s.title || s.id}</strong> <span className="muted">· {t('seq.photos', { n: s.count ?? '?' })}{s.start ? ` · ${fmt(s.start)}` : ''}</span>
                     </label>
                   </li>
                 ))}
@@ -73,20 +73,20 @@ export default function NewPanoramaxProject({ onCreated, onCancel }: { onCreated
             </>
           )}
           <label className="small-text">
-            Ou collez l'adresse (ou l'identifiant) de séquences :{' '}
-            <input className="grow" value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="https://…" aria-label="Adresses de séquences" />
+            {t('pnx.paste')}{' '}
+            <input className="grow" value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="https://…" aria-label={t('pnx.pasteLabel')} />
           </label>
           <div className="row wrap">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du projet (par défaut : titre de la séquence)" aria-label="Nom du projet" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('pnx.namePlaceholder')} aria-label={t('pnx.nameLabel')} />
             <button className="primary" disabled={!chosen.length} onClick={create}>
-              Créer le projet Panoramax ({chosen.length} séquence(s))
+              {t('pnx.create', { n: chosen.length })}
             </button>
           </div>
         </>
       )}
       {error && <p className="error">{error}</p>}
       <button className="small" onClick={onCancel}>
-        Fermer
+        {t('common.close')}
       </button>
     </div>
   )

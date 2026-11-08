@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { locale } from './i18n'
+import { locale, t, useLang } from './i18n'
 import { api, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
-import { PUBLICATION_STATES, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './Publication'
+import { publicationStates, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './Publication'
 
 interface Props {
   projectId: string
@@ -16,17 +16,14 @@ interface Props {
 
 const KEY = 'pss-export-dir'
 
-const MODES: { id: ExportMode; label: string; help: string }[] = [
-  { id: 'copy', label: 'Copier dans un dossier par séquence', help: 'Les photos sources restent intactes.' },
-  {
-    id: 'move',
-    label: 'Déplacer les photos sources dans un dossier par séquence et modifier leurs EXIF',
-    help: 'Pas de copie (pas d\'espace disque en plus). Les fichiers sont renommés (numéro + nom) et déplacés.',
-  },
-  { id: 'in_place', label: 'Modifier les EXIF des photos sources sur place', help: 'Les fichiers ne bougent pas.' },
+const modes = (): { id: ExportMode; label: string; help: string }[] => [
+  { id: 'copy', label: t('exp.mode.copy'), help: t('exp.mode.copyHelp') },
+  { id: 'move', label: t('exp.mode.move'), help: t('exp.mode.moveHelp') },
+  { id: 'in_place', label: t('exp.mode.inPlace'), help: t('exp.mode.inPlaceHelp') },
 ]
 
 export default function ExportTab({ projectId, sequences, jobs, sources, excludedPhotos, onStarted, onError }: Props) {
+  useLang()
   // Destination: the folder of this project's last export, else the last folder typed in this browser
   const lastProjectDir = () =>
     sequences
@@ -93,14 +90,10 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
 
   return (
     <div>
-      <p className="small-text muted">
-        EXIF écrits : cap (GPSImgDirection, référence nord vrai), vitesse (GPSSpeed), GPSVersionID, et position quand elle
-        a été corrigée. Les images ne sont jamais recompressées. Un dossier par séquence (<span className="mono">NomDuProjet_1/</span>, <span className="mono">_2/</span>…)
-        sauf en mode « sur place ».
-      </p>
+      <p className="small-text muted">{t('exp.intro')}</p>
       <fieldset className="modes">
-        <legend className="small-text">Mode</legend>
-        {MODES.map((m) => (
+        <legend className="small-text">{t('exp.mode')}</legend>
+        {modes().map((m) => (
           <label key={m.id} className="small-text">
             <input type="radio" name="mode" checked={mode === m.id} onChange={() => setMode(m.id)} /> {m.label}
             <span className="muted"> — {m.help}</span>
@@ -109,35 +102,34 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
       </fieldset>
       {mode !== 'copy' && (
         <p className="warn-text small-text">
-          Les photos sources seront modifiées. Les valeurs d'origine des balises écrites sont sauvegardées dans le projet :
-          « Restaurer les photos sources » les remet (et remet les fichiers à leur place).
+          {t('exp.sourcesWarn')}
         </p>
       )}
       {mode !== 'in_place' && (
         <>
-          <label className="small-text">Dossier de destination</label>
+          <label className="small-text">{t('exp.destination')}</label>
           <div className="row">
-            <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="/chemin/vers/export" />
-            <button onClick={() => setPicking(true)}>Parcourir…</button>
+            <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder={t('exp.destPlaceholder')} />
+            <button onClick={() => setPicking(true)}>{t('exp.browse')}</button>
           </div>
         </>
       )}
-      <h3>Séquences</h3>
+      <h3>{t('exp.sequences')}</h3>
       {sequences.length > 0 && (
         <div className="row wrap small-text">
           {sequences.some((s) => !s.needs_export) && (
-            <span className="muted">Les séquences déjà exportées et inchangées sont décochées.</span>
+            <span className="muted">{t('exp.unchangedUnticked')}</span>
           )}
           <button className="small" onClick={() => tickAll(true)}>
-            Tout cocher
+            {t('exp.tickAll')}
           </button>
           <button className="small" onClick={() => tickAll(null)}>
-            Seulement les séquences à exporter ({sequences.filter((s) => s.needs_export).length})
+            {t('exp.tickPending', { n: sequences.filter((s) => s.needs_export).length })}
           </button>
         </div>
       )}
       {sequences.length === 0 ? (
-        <p className="muted small-text">Aucune séquence.</p>
+        <p className="muted small-text">{t('exp.noSequence')}</p>
       ) : (
         <ul className="export-list">
           {sequences.map((s, i) => {
@@ -151,11 +143,11 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
                     onChange={() => setOverrides(new Map(overrides).set(s.id, !isTicked(s)))}
                   />{' '}
                   <span className="chip" style={{ background: seqColor(sequences, s.id) }} /> {i + 1} · {s.name}{' '}
-                  <span className="muted">({s.count} photos)</span>{' '}
-                  {s.last_export ? (s.needs_export ? <span className="badge warn-text">à réexporter</span> : <span className="badge">exportée</span>) : null}{' '}
+                  <span className="muted">({t('seq.photos', { n: s.count })})</span>{' '}
+                  {s.last_export ? (s.needs_export ? <span className="badge warn-text">{t('seq.reexportNeeded')}</span> : <span className="badge">{t('exp.exported')}</span>) : null}{' '}
                   {p && (
                     <span className={`badge ${p.state === 'error' || p.state === 'uploading' || s.changed_since_publication ? 'warn-text' : ''}`} title={p.message ?? p.instance}>
-                      {s.changed_since_publication ? 'modifiée depuis la publication' : `${PUBLICATION_STATES[p.state]} le ${new Date(p.ts * 1000).toLocaleDateString(locale())}`}
+                      {s.changed_since_publication ? t('exp.changedSincePub') : t('exp.pubOn', { state: publicationStates()[p.state], date: new Date(p.ts * 1000).toLocaleDateString(locale()) })}
                     </span>
                   )}
                 </label>
@@ -163,7 +155,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
                   <span className="row export-row-actions">
                     {p?.first_picture_id && (
                       <a className="button-link small" href={viewerUrl(p.instance, p.first_picture_id)} target="_blank" rel="noreferrer">
-                        Voir ↗
+                        {t('exp.view')}
                       </a>
                     )}
                     <PublishButton projectId={projectId} s={s} o={pub} running={publishing} onStarted={onStarted} onError={onError} />
@@ -175,17 +167,14 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
         </ul>
       )}
       <label className="small-text option-line">
-        <input type="checkbox" checked={compat} onChange={(e) => setCompat(e.target.checked)} /> Compatibilité Panoramax : un cap
-        arrondi à 0° est écrit 0,6° (Panoramax considère 0 comme « absent » et le recalculerait)
+        <input type="checkbox" checked={compat} onChange={(e) => setCompat(e.target.checked)} /> {t('exp.compat')}
       </label>
       <label className="small-text option-line">
-        <input type="checkbox" checked={excludeJumps} onChange={(e) => setExcludeJumps(e.target.checked)} /> Exclure les photos en
-        saut GPS non corrigées{jumps > 0 ? ` (${jumps})` : ''} : leur position est fausse
+        <input type="checkbox" checked={excludeJumps} onChange={(e) => setExcludeJumps(e.target.checked)} /> {t('exp.excludeJumps', { count: jumps > 0 ? ` (${jumps})` : '' })}
       </label>
       {noHeading > 0 && (
         <p className="warn-text small-text">
-          {noHeading} photo(s) sans cap fiable (arrêt, GPS manquant) : elles seront exportées sans cap. Corrigez-les dans
-          l'onglet Photo si besoin.
+          {t('exp.noHeading', { n: noHeading })}
         </p>
       )}
       <div className="actions">
@@ -195,29 +184,29 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           onClick={() => (mode === 'copy' ? start() : setConfirm('export'))}
         >
           {running
-            ? 'Tâche en cours…'
+            ? t('exp.running')
             : chosen.length === 0 && sequences.length > 0 && sequences.every((s) => !s.needs_export)
-              ? 'Toutes les séquences sont à jour'
-              : `Exporter ${chosen.length} séquence(s)`}
+              ? t('exp.allUpToDate')
+              : t('exp.export', { n: chosen.length })}
         </button>
       </div>
 
       {toTrash > 0 && (
         <div className="small-text trash-box">
-          {toTrash} photo(s) exclue(s) (touche X) : elles ne sont pas exportées.{' '}
+          {t('exp.toTrash', { n: toTrash })}{' '}
           <button className="small" disabled={running} onClick={() => setConfirm('trash')}>
-            Déplacer leurs fichiers dans « _exclues »
+            {t('exp.trashBtn')}
           </button>
         </div>
       )}
       {(sources.modified > 0 || sources.moved > 0) && (
         <div className="sources-box small-text">
-          <strong>Photos sources modifiées par l'application :</strong> {sources.modified} avec EXIF modifiés
-          {sources.moved > 0 && `, ${sources.moved} déplacées`}
-          {sources.trashed > 0 && ` (dont ${sources.trashed} exclues dans « _exclues »)`}.
+          <strong>{t('exp.sourcesChanged')}</strong> {t('exp.sourcesModified', { n: sources.modified })}
+          {sources.moved > 0 && t('exp.sourcesMoved', { n: sources.moved })}
+          {sources.trashed > 0 && t('exp.sourcesTrashed', { n: sources.trashed })}.
           <div className="actions">
             <button className="danger small" disabled={running} onClick={() => setConfirm('restore')}>
-              Restaurer les photos sources
+              {t('exp.restoreBtn')}
             </button>
           </div>
         </div>
@@ -227,48 +216,47 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           <div className="modal small-modal" role="alertdialog">
             {confirm === 'trash' ? (
               <>
-                <h2>Déplacer les photos exclues ?</h2>
+                <h2>{t('exp.trashTitle')}</h2>
                 <p>
-                  Les fichiers des {toTrash} photo(s) exclue(s) vont être déplacés dans un dossier « _exclues » à côté d'eux. Rien n'est
-                  supprimé : « Restaurer les photos sources » les remet en place.
+                  {t('exp.trashBody', { n: toTrash })}
                 </p>
                 <div className="actions">
-                  <button onClick={() => setConfirm(null)}>Annuler</button>
+                  <button onClick={() => setConfirm(null)}>{t('common.cancel')}</button>
                   <button className="danger" onClick={trash}>
-                    Déplacer
+                    {t('exp.move')}
                   </button>
                 </div>
               </>
             ) : confirm === 'export' ? (
               <>
-                <h2>Modifier les photos sources ?</h2>
+                <h2>{t('exp.modifyTitle')}</h2>
                 <p>
-                  {count} photo(s) source(s) vont être {mode === 'move' ? 'déplacées dans les dossiers de séquence, renommées, et ' : ''}modifiées
-                  (cap{sequences.some((s) => s.corrected > 0) ? ', positions corrigées' : ''}).
+                  {t('exp.modifyBody', {
+                    n: count,
+                    moved: mode === 'move' ? t('exp.modifyMoved') : '',
+                    what: sequences.some((s) => s.corrected > 0) ? t('exp.modifyHeadPos') : t('exp.modifyHead'),
+                  })}
                 </p>
                 <p className="small-text muted">
-                  L'image n'est pas recompressée. Les valeurs d'origine des balises sont sauvegardées et peuvent être remises avec
-                  « Restaurer les photos sources ».
+                  {t('exp.modifyNote')}
                 </p>
                 <div className="actions">
-                  <button onClick={() => setConfirm(null)}>Annuler</button>
+                  <button onClick={() => setConfirm(null)}>{t('common.cancel')}</button>
                   <button className="danger" onClick={start}>
-                    Modifier les photos sources
+                    {t('exp.modifyBtn')}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h2>Restaurer les photos sources ?</h2>
+                <h2>{t('exp.restoreTitle')}</h2>
                 <p>
-                  Les balises modifiées reprennent leurs valeurs d'origine
-                  {sources.moved > 0 ? ' et les photos déplacées retournent à leur emplacement et à leur nom d\'origine' : ''}. Les
-                  corrections restent dans le projet.
+                  {t('exp.restoreBody', { moved: sources.moved > 0 ? t('exp.restoreMoved') : '' })}
                 </p>
                 <div className="actions">
-                  <button onClick={() => setConfirm(null)}>Annuler</button>
+                  <button onClick={() => setConfirm(null)}>{t('common.cancel')}</button>
                   <button className="danger" onClick={restore}>
-                    Restaurer
+                    {t('exp.restore')}
                   </button>
                 </div>
               </>
@@ -281,24 +269,24 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
 
       {history.length > 0 && (
         <>
-          <h3>Historique des exports</h3>
+          <h3>{t('exp.history')}</h3>
           <ul className="export-history small-text">
             {history.map((h) => (
               <li key={h.id}>
-                <strong>{h.sequence_name}</strong> — {h.photo_count} photos, {h.report.with_heading} avec cap
-                {h.report.corrected_positions > 0 && `, ${h.report.corrected_positions} positions corrigées`}
-                {(h.report.excluded_gps_jumps?.length ?? 0) > 0 && `, ${h.report.excluded_gps_jumps?.length} sauts GPS exclus`}
-                {h.report.mode === 'move' ? ' · photos sources déplacées' : h.report.mode === 'in_place' ? ' · photos sources modifiées sur place' : ''} ·{' '}
+                <strong>{h.sequence_name}</strong> — {t('exp.histPhotos', { n: h.photo_count, h: h.report.with_heading })}
+                {h.report.corrected_positions > 0 && t('exp.histPos', { n: h.report.corrected_positions })}
+                {(h.report.excluded_gps_jumps?.length ?? 0) > 0 && t('exp.histJumps', { n: h.report.excluded_gps_jumps?.length ?? 0 })}
+                {h.report.mode === 'move' ? t('exp.histMoved') : h.report.mode === 'in_place' ? t('exp.histInPlace') : ''} ·{' '}
                 {new Date(h.ts * 1000).toLocaleString(locale())}
                 <div className="mono break muted">{h.path}</div>
                 {(h.report.foreign_files?.length ?? 0) > 0 && (
                   <div className="warn-text">
-                    {h.report.foreign_files?.length} autre(s) JPEG dans le dossier, hors séquence (ex. {h.report.foreign_files?.[0]})
+                    {t('exp.foreign', { n: h.report.foreign_files?.length ?? 0, ex: h.report.foreign_files?.[0] ?? '' })}
                   </div>
                 )}
                 {Object.keys(h.report.problems).length > 0 && (
                   <details className="error">
-                    <summary>{Object.keys(h.report.problems).length} problème(s) de vérification</summary>
+                    <summary>{t('exp.problems', { n: Object.keys(h.report.problems).length })}</summary>
                     <ul className="problems">
                       {Object.entries(h.report.problems)
                         .slice(0, 20)
@@ -317,7 +305,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
       )}
       {picking && (
         <FolderPicker
-          title="Dossier d'export"
+          title={t('exp.folderTitle')}
           initial={dir || '~'}
           onClose={() => setPicking(false)}
           onPick={(p) => {

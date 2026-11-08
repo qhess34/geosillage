@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { locale } from './i18n'
+import { locale, rich, t, useLang } from './i18n'
 import { api, PublishedDiff, Sequence } from './api'
 import { Confirm } from './Dialogs'
 
@@ -16,6 +16,7 @@ export default function PublishedEdit({
   onStarted: () => void
   onError: (msg: string) => void
 }) {
+  useLang()
   const [diff, setDiff] = useState<PublishedDiff | null>(null)
   const [busy, setBusy] = useState(false)
   const [delExcluded, setDelExcluded] = useState(false)
@@ -46,51 +47,48 @@ export default function PublishedEdit({
   return (
     <div className="published-edit small-text">
       {!diff ? (
-        <button className="small" disabled={busy} onClick={compare} title="Compare les positions, caps et orientations avec ceux de la séquence publiée">
-          {busy ? 'Comparaison…' : 'Comparer avec Panoramax'}
+        <button className="small" disabled={busy} onClick={compare} title={t('pe.compareTitle')}>
+          {busy ? t('pe.comparing') : t('pe.compare')}
         </button>
       ) : (
         <div className="confirm-box">
           {nothing ? (
-            <div>✓ La séquence publiée est à jour.</div>
+            <div>{t('pe.upToDate')}</div>
           ) : (
             <div>
-              À envoyer : {diff.photos_to_update} photo(s) — {diff.positions} position(s), {diff.headings} cap(s), {diff.orientations}{' '}
-              orientation(s)
-              {diff.to_delete > 0 && <>, {diff.to_delete} photo(s) exclue(s) depuis</>}.
+              {t('pe.toSend', { n: diff.photos_to_update, p: diff.positions, h: diff.headings, o: diff.orientations })}
+              {diff.to_delete > 0 && t('pe.excludedSince', { n: diff.to_delete })}.
             </div>
           )}
           {diff.not_published > 0 && (
             <div className="warn-text">
-              {diff.not_published} photo(s) de la séquence ne sont pas sur Panoramax (ajoutées depuis) : elles ne peuvent pas être ajoutées,
-              republiez la séquence pour les inclure.
+              {t('pe.notPublished', { n: diff.not_published })}
             </div>
           )}
           {!nothing && (
             <>
               {diff.to_delete > 0 && (
                 <label className="option-line">
-                  <input type="checkbox" checked={delExcluded} onChange={(e) => setDelExcluded(e.target.checked)} /> Supprimer aussi de Panoramax
-                  les {diff.to_delete} photo(s) exclue(s) (définitif)
+                  <input type="checkbox" checked={delExcluded} onChange={(e) => setDelExcluded(e.target.checked)} /> {t('pe.deleteToo', { n: diff.to_delete })}
                 </label>
               )}
               <div className="muted">
-                Les corrections sont enregistrées par l'instance (affichage, carte), pas dans le fichier d'origine stocké sur Panoramax.
+                {t('pe.note')}
               </div>
               <button className="small primary" onClick={() => setConfirm(true)}>
-                Envoyer les corrections
+                {t('pe.push')}
               </button>
               {confirm && (
                 <Confirm
-                  title="Envoyer les corrections ?"
-                  confirmLabel="Envoyer"
+                  title={t('pe.pushTitle')}
+                  confirmLabel={t('pe.send')}
                   danger={delExcluded && diff.to_delete > 0}
                   onCancel={() => setConfirm(false)}
                   onConfirm={() => api.pnxPush(projectId, s.id, delExcluded).then(started, (e) => onError(e.message))}
                 >
                   <p>
-                    {diff.photos_to_update} photo(s) corrigée(s) sur <strong>{diff.instance.replace(/^https?:\/\//, '')}</strong>
-                    {delExcluded && diff.to_delete > 0 ? <>, et {diff.to_delete} photo(s) supprimée(s) définitivement</> : ''}.
+                    {rich(t('pe.pushBody', { n: diff.photos_to_update, instance: diff.instance.replace(/^https?:\/\//, '') }))}
+                    {delExcluded && diff.to_delete > 0 ? t('pe.pushDeleted', { n: diff.to_delete }) : ''}.
                   </p>
                 </Confirm>
               )}
@@ -101,13 +99,13 @@ export default function PublishedEdit({
               <button
                 className="small"
                 onClick={() => api.pnxRevert(projectId, s.id).then(started, (e) => onError(e.message))}
-                title="Renvoie les valeurs qu'avait Panoramax avant le dernier envoi de corrections (les photos supprimées ne reviennent pas)"
+                title={t('pe.revertTitle')}
               >
-                Remettre les valeurs d'avant (envoi du {new Date(diff.last_edit.ts * 1000).toLocaleString(locale())})
+                {t('pe.revert', { date: new Date(diff.last_edit.ts * 1000).toLocaleString(locale()) })}
               </button>
             )}
             <button className="small" onClick={() => setDiff(null)}>
-              Fermer
+              {t('common.close')}
             </button>
           </div>
         </div>

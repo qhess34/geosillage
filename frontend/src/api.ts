@@ -506,18 +506,6 @@ export const FLAGS = {
   MISSING_FILE: 256,
 } as const
 
-export const FLAG_LABELS: Record<string, string> = {
-  no_gps: 'Sans GPS',
-  no_date: 'Sans date',
-  duplicate: 'Doublon',
-  invalid_coord: 'Coordonnées invalides',
-  gps_jump: 'Saut GPS',
-  gap_before: 'Interruption avant cette photo',
-  unreadable: 'Illisible',
-  same_time: 'Même horodatage que la précédente',
-  missing_file: 'Fichier source introuvable',
-}
-
 // Sequence colours (cycled), readable on light and dark basemaps
 export const SEQ_COLORS = ['#2563eb', '#db2777', '#059669', '#d97706', '#7c3aed', '#0891b2', '#65a30d', '#dc2626', '#4f46e5', '#c026d3']
 
