@@ -109,3 +109,11 @@ cd backend && ../.venv/bin/python -m pytest -q                           # tests
 
 Vérifications avant commit, tests de bout en bout et recettes : [doc/DEVELOPPEMENT.md](doc/DEVELOPPEMENT.md).
 Agents IA : [AGENTS.md](AGENTS.md).
+
+## Licence
+
+© 2026 qhess34 et les contributeurs de GeoSillage. Logiciel libre sous
+[Licence publique de l'Union européenne (EUPL) v1.2](LICENSE) (texte officiel en français :
+[joinup.ec.europa.eu](https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)). Compatible notamment avec la
+GPL v3 et l'AGPL v3. Les bibliothèques utilisées gardent leur propre licence (MIT, BSD, Apache…) ; ExifTool est un
+programme distinct (licence Perl).
