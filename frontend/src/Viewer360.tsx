@@ -2,6 +2,7 @@ import { PanoData, Viewer } from '@photo-sphere-viewer/core'
 import '@photo-sphere-viewer/core/index.css'
 import { useEffect, useRef, useState } from 'react'
 import PhotoViewer from './PhotoViewer'
+import { t, useLang } from './i18n'
 
 interface Props {
   thumbUrl: string
@@ -23,6 +24,19 @@ interface Props {
 
 const norm180 = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180
 
+// Labels of the viewer's own buttons (Photo Sphere Viewer); a function: the language can change
+const psvLang = () => ({
+  zoom: t('v360.zoom'),
+  zoomIn: t('v360.zoomIn'),
+  zoomOut: t('v360.zoomOut'),
+  moveUp: t('v360.up'),
+  moveDown: t('v360.down'),
+  moveLeft: t('v360.left'),
+  moveRight: t('v360.right'),
+  fullscreen: t('v360.fullscreen'),
+  loadError: t('v360.loadError'),
+})
+
 const MODE_KEY = 'pss-viewer-mode'
 
 function savedMode(): '360' | 'flat' {
@@ -37,6 +51,7 @@ function savedMode(): '360' | 'flat' {
 // direction is kept from one photo to the next, so stepping through a ride keeps looking the same way.
 // Keyboard handling stays with the application (arrows = previous / next photo).
 function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onResetYaw, fixLabel, onView }: Props) {
+  const lang = useLang()
   const onViewRef = useRef(onView)
   onViewRef.current = onView
   const el = useRef<HTMLDivElement>(null)
@@ -54,7 +69,7 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
       mousewheelCtrlKey: false,
       navbar: ['zoom', 'move', 'fullscreen'],
       loadingTxt: '',
-      lang: { zoom: 'Zoom', zoomIn: 'Zoom avant', zoomOut: 'Zoom arrière', moveUp: 'Haut', moveDown: 'Bas', moveLeft: 'Gauche', moveRight: 'Droite', fullscreen: 'Plein écran', loadError: 'Image illisible' },
+      lang: psvLang(),
     })
     viewer.current = v
     ;(window as unknown as { __pssViewer?: Viewer }).__pssViewer = v // inspection in end-to-end tests
@@ -72,6 +87,10 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
     // the viewer is created once; photos are changed with setPanorama below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    viewer.current?.setOptions({ lang: psvLang() })
+  }, [lang])
 
   useEffect(() => {
     const v = viewer.current
@@ -102,7 +121,7 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
       .catch(() => undefined)
       .then(() => (cancelled ? undefined : v.setPanorama(imageUrl, keep())))
       .catch((e) => {
-        if (!cancelled && e?.type !== 'abort' && !String(e).includes('abort')) setError('Photo illisible')
+        if (!cancelled && e?.type !== 'abort' && !String(e).includes('abort')) setError(t('v360.unreadable'))
       })
     return () => {
       cancelled = true
@@ -129,17 +148,17 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
       <button
         className="small viewer360-reset"
         onClick={() => viewer.current?.animate({ yaw: 0, pitch: 0, zoom: 0, speed: '3rpm' })}
-        title="Recentrer la vue : face à l'avant (le sens de déplacement s'il est fixé), à l'horizon, sans zoom"
+        title={t('v360.recenterTitle')}
       >
-        ⟲ Recentrer
+        {t('v360.recenter')}
       </button>
       {onFixYaw && (
         <div className="viewer360-fix">
-          <button className="small primary" onClick={fix} title="Règle l'orientation de la caméra : tournez la vue vers l'avant (le sens de déplacement), puis cliquez. Le cap ne change pas.">
-            🧭 {fixLabel ?? 'Fixer le sens de déplacement'}
+          <button className="small primary" onClick={fix} title={t('v360.fixTitle')}>
+            🧭 {fixLabel ?? t('v360.fix')}
           </button>
           {yaw != null && yaw !== 0 && onResetYaw && (
-            <button className="small" onClick={onResetYaw} title="Le centre de l'image regarde dans le sens de déplacement">
+            <button className="small" onClick={onResetYaw} title={t('v360.resetTitle')}>
               ↻ {yaw > 0 ? '+' : ''}
               {yaw}° ✕
             </button>
@@ -151,6 +170,7 @@ function Sphere({ thumbUrl, imageUrl, height, yaw, pitch, roll, onFixYaw, onRese
 }
 
 export default function Viewer360(props: Props) {
+  useLang()
   const [mode, setMode] = useState<'360' | 'flat'>(savedMode)
   const toggle = () => {
     const m = mode === '360' ? 'flat' : '360'
@@ -165,11 +185,11 @@ export default function Viewer360(props: Props) {
     <div className="viewer-wrap">
       {mode === '360' ? <Sphere {...props} /> : <PhotoViewer {...props} />}
       <div className="viewer-tools">
-        <button className="small" onClick={toggle} title="Basculer entre la vue 360° et l'image à plat (équirectangulaire)">
-          {mode === '360' ? 'À plat' : 'Vue 360°'}
+        <button className="small" onClick={toggle} title={t('v360.toggleTitle')}>
+          {mode === '360' ? t('v360.flat') : t('v360.view360')}
         </button>
-        <a className="button-link small" href={`${props.imageUrl}?hd=1`} target="_blank" rel="noreferrer" title="Image d'origine en pleine définition, dans un nouvel onglet">
-          Original ↗
+        <a className="button-link small" href={`${props.imageUrl}?hd=1`} target="_blank" rel="noreferrer" title={t('v360.originalTitle')}>
+          {t('v360.original')}
         </a>
       </div>
     </div>

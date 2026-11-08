@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { api, PanoramaxStatus, Sequence, Tag } from './api'
 import { Confirm } from './Dialogs'
+import { rich, t, useLang } from './i18n'
 
-export const PUBLICATION_STATES: Record<string, string> = {
-  uploading: 'envoi interrompu',
-  processing: 'en traitement sur Panoramax',
-  ready: 'publiée',
-  error: 'erreur',
-}
+// Wording of a publication state (a function: the language can change)
+export const publicationStates = (): Record<string, string> => ({
+  uploading: t('pub.state.uploading'),
+  processing: t('pub.state.processing'),
+  ready: t('pub.state.ready'),
+  error: t('pub.state.error'),
+})
 
 // Link opening a published sequence in the instance's viewer, on its first picture
 export function viewerUrl(instance: string, pictureId: string): string {
@@ -52,6 +54,7 @@ export function PublishOptionsPanel({
   onStarted: () => void
   onError: (msg: string) => void
 }) {
+  useLang()
   // exported sequences not (fully) on Panoramax yet: never published, or upload interrupted / failed
   const pending = sequences.filter((s) => s.last_export && s.last_publication?.state !== 'ready' && s.last_publication?.state !== 'processing')
   const [confirmAll, setConfirmAll] = useState(false)
@@ -61,68 +64,59 @@ export function PublishOptionsPanel({
   }
   return (
     <div className="publish small-text">
-      <h3>Publier sur Panoramax</h3>
-      <p className="muted">
-        Une fois une séquence exportée, « Publier » sur sa ligne (ou « Publier les n séquences… » ci-dessous pour toutes celles
-        qui ne sont pas encore en ligne) l'envoie telle qu'exportée (dossier de son dernier export), comme{' '}
-        <strong>une seule</strong> séquence Panoramax : ni redécoupée, ni dédoublonnée. Une séquence modifiée depuis son export est
-        d'abord réexportée ; un envoi interrompu reprend où il s'était arrêté.
-      </p>
+      <h3>{t('pub.heading')}</h3>
+      <p className="muted">{rich(t('pub.intro'))}</p>
       <PnxConnection onChange={o.setSt} onError={onError} />
       {o.st?.connected && (
         <>
           <fieldset className="modes">
-            <legend>Visibilité</legend>
+            <legend>{t('pub.visibility')}</legend>
             <label>
-              <input type="radio" checked={o.visibility === 'anyone'} onChange={() => o.setVisibility('anyone')} /> Tout le monde
+              <input type="radio" checked={o.visibility === 'anyone'} onChange={() => o.setVisibility('anyone')} /> {t('pub.everyone')}
             </label>
             <label>
-              <input type="radio" checked={o.visibility === 'owner-only'} onChange={() => o.setVisibility('owner-only')} /> Moi seulement
-              (essai, modifiable ensuite sur Panoramax)
+              <input type="radio" checked={o.visibility === 'owner-only'} onChange={() => o.setVisibility('owner-only')} /> {t('pub.onlyMe')}
             </label>
           </fieldset>
           <fieldset className="modes">
-            <legend>Attributs de la séquence (sémantique Panoramax)</legend>
-            <div className="row wrap" role="radiogroup" aria-label="Mode de déplacement">
-              {TRANSPORTS.map(([v, label]) => (
+            <legend>{t('pub.attrs')}</legend>
+            <div className="row wrap" role="radiogroup" aria-label={t('pub.transportLabel')}>
+              {transports().map(([v, label]) => (
                 <label key={v}>
                   <input type="radio" checked={o.transport === v} onChange={() => o.setTransport(v)} /> {label}
                 </label>
               ))}
             </div>
             <label className="tags-input">
-              Autres attributs, un par ligne <span className="muted">(clé=valeur, ex. hashtag=gravel)</span>
-              <textarea rows={3} value={o.extra} onChange={(e) => o.setExtra(e.target.value)} spellCheck={false} aria-label="Autres attributs" />
+              {t('pub.otherAttrs')} <span className="muted">{t('pub.otherAttrsHint')}</span>
+              <textarea rows={3} value={o.extra} onChange={(e) => o.setExtra(e.target.value)} spellCheck={false} aria-label={t('pub.otherAttrsLabel')} />
             </label>
-            {o.parsed.bad.length > 0 && <p className="warn-text">Ligne(s) sans « clé=valeur » : {o.parsed.bad.join(', ')}</p>}
+            {o.parsed.bad.length > 0 && <p className="warn-text">{t('pub.badLines', { lines: o.parsed.bad.join(', ') })}</p>}
             <p className="muted">
-              {o.semantics.length ? `Envoyés : ${o.semantics.map((t) => `${t.key}=${t.value}`).join(', ')}.` : 'Aucun attribut envoyé.'}{' '}
-              Ils sont copiés sur la séquence Panoramax et reproposés au prochain envoi.
+              {o.semantics.length ? t('pub.sent', { list: o.semantics.map((x) => `${x.key}=${x.value}`).join(', ') }) : t('pub.noneSent')}{' '}
+              {t('pub.attrsNote')}
             </p>
           </fieldset>
           <div className="actions">
             <button
               className="primary"
               disabled={!pending.length || running || o.parsed.bad.length > 0}
-              title={pending.length ? '' : 'Toutes les séquences exportées sont déjà publiées'}
+              title={pending.length ? '' : t('pub.allPublished')}
               onClick={() => setConfirmAll(true)}
             >
-              {running ? 'Publication en cours…' : `⇪ Publier les ${pending.length} séquence(s) exportée(s) non publiée(s)`}
+              {running ? t('pub.running') : t('pub.publishAll', { n: pending.length })}
             </button>
           </div>
           {confirmAll && (
-            <Confirm title={`Publier ${pending.length} séquence(s) ?`} confirmLabel="Publier" onCancel={() => setConfirmAll(false)} onConfirm={publishAll}>
+            <Confirm title={t('pub.confirmAllTitle', { n: pending.length })} confirmLabel={t('pub.publish')} onCancel={() => setConfirmAll(false)} onConfirm={publishAll}>
               <p>
-                Sur <strong>{o.st!.instance.replace(/^https?:\/\//, '')}</strong>,{' '}
-                {o.visibility === 'anyone' ? 'visibles par tout le monde' : 'visibles par vous seulement'}
-                {o.semantics.length ? <>, avec {o.semantics.map((t) => `${t.key}=${t.value}`).join(', ')}</> : ', sans attribut'}. Envoyées
-                l'une après l'autre ; une séquence modifiée depuis son export est d'abord réexportée.
+                {rich(t('pub.confirmAllBody', { instance: o.st!.instance.replace(/^https?:\/\//, ''), vis: visText(o), attrs: attrsText(o, true) }))}
               </p>
               <ul className="small-text">
                 {pending.map((s) => (
                   <li key={s.id}>
-                    {s.name} ({s.count} photos){s.last_publication?.state === 'uploading' ? ' — reprise de l\'envoi interrompu' : ''}
-                    {s.needs_export ? ' — réexportée d\'abord' : ''}
+                    {s.name} ({t('seq.photos', { n: s.count })}){s.last_publication?.state === 'uploading' ? t('pub.resumeUpload') : ''}
+                    {s.needs_export ? t('pub.reexportFirst') : ''}
                   </li>
                 ))}
               </ul>
@@ -150,15 +144,16 @@ export function PublishButton({
   onStarted: () => void
   onError: (msg: string) => void
 }) {
+  useLang()
   const [confirm, setConfirm] = useState(false)
   const pub = s.last_publication
-  const label = pub?.state === 'uploading' ? 'Reprendre l\'envoi' : pub ? 'Republier' : 'Publier'
+  const label = pub?.state === 'uploading' ? t('pub.resume') : pub ? t('pub.republish') : t('pub.publish')
   const why = !o.st?.connected
-    ? 'Connectez-vous à Panoramax (section « Publier sur Panoramax » ci-dessous)'
+    ? t('pub.whyConnect')
     : o.parsed.bad.length
-      ? 'Attributs à corriger (section « Publier sur Panoramax »)'
+      ? t('pub.whyAttrs')
       : running
-        ? 'Une publication est en cours'
+        ? t('pub.whyRunning')
         : ''
   const publish = () => {
     setConfirm(false)
@@ -166,21 +161,18 @@ export function PublishButton({
   }
   return (
     <>
-      <button className={pub ? 'small' : 'small primary'} disabled={!!why} title={why || `Publier « ${s.name} » sur Panoramax`} onClick={() => setConfirm(true)}>
+      <button className={pub ? 'small' : 'small primary'} disabled={!!why} title={why || t('pub.publishTitle', { name: s.name })} onClick={() => setConfirm(true)}>
         ⇪ {label}
       </button>
       {confirm && o.st && (
-        <Confirm title={`${label} « ${s.name} » ?`} confirmLabel={label} onCancel={() => setConfirm(false)} onConfirm={publish}>
+        <Confirm title={t('pub.confirmTitle', { label, name: s.name })} confirmLabel={label} onCancel={() => setConfirm(false)} onConfirm={publish}>
           <p>
-            {s.count} photos sur <strong>{o.st.instance.replace(/^https?:\/\//, '')}</strong>,{' '}
-            {o.visibility === 'anyone' ? 'visibles par tout le monde' : 'visibles par vous seulement'}
-            {o.semantics.length ? <>, avec {o.semantics.map((t) => `${t.key}=${t.value}`).join(', ')}</> : ''}.
-            {s.needs_export ? ' La séquence a changé depuis son export : elle est d\'abord réexportée.' : ''}
+            {rich(t('pub.confirmBody', { n: t('seq.photos', { n: s.count }), instance: o.st.instance.replace(/^https?:\/\//, ''), vis: visText(o), attrs: attrsText(o, false) }))}
+            {s.needs_export ? t('pub.changedSinceExport') : ''}
           </p>
           {pub && pub.state !== 'uploading' && (
             <p className="small-text warn-text">
-              Elle est déjà sur Panoramax : republier crée une nouvelle séquence. Pour envoyer seulement des corrections, utilisez
-              « Comparer avec Panoramax » (onglet Séquences).
+              {t('pub.alreadyOn')}
             </p>
           )}
         </Confirm>
@@ -190,12 +182,16 @@ export function PublishButton({
 }
 
 // Transport modes offered by the Panoramax website (attribute transport); "other": no attribute
-const TRANSPORTS: [string, string][] = [
-  ['walk', 'À pied'],
-  ['bike', 'Vélo'],
-  ['car', 'Voiture'],
-  ['', 'Autre / non précisé'],
+const transports = (): [string, string][] => [
+  ['walk', t('pub.walk')],
+  ['bike', t('pub.bike')],
+  ['car', t('pub.car')],
+  ['', t('pub.otherTransport')],
 ]
+
+const visText = (o: PublishOptions) => (o.visibility === 'anyone' ? t('pub.visAnyone') : t('pub.visOwner'))
+const attrsText = (o: PublishOptions, always: boolean) =>
+  o.semantics.length ? t('pub.withAttrs', { list: o.semantics.map((x) => `${x.key}=${x.value}`).join(', ') }) : always ? t('pub.noAttr') : ''
 
 // "key=value" lines → attributes; blank lines are ignored, lines without "=" are reported
 export function parseTags(text: string): { tags: Tag[]; bad: string[] } {
@@ -215,6 +211,7 @@ export function parseTags(text: string): { tags: Tag[]; bad: string[] } {
 
 // Instance address and connection (claim link); the token stays on the server
 export function PnxConnection({ onChange, onError }: { onChange: (s: PanoramaxStatus) => void; onError: (msg: string) => void }) {
+  useLang()
   const [st, setSt] = useState<PanoramaxStatus | null>(null)
   const [url, setUrl] = useState('')
   const take = (p: Promise<PanoramaxStatus>) =>
@@ -241,46 +238,46 @@ export function PnxConnection({ onChange, onError }: { onChange: (s: PanoramaxSt
         }}
       >
         <label className="grow">
-          Instance{' '}
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.openstreetmap.fr" aria-label="Instance Panoramax" />
+          {t('pub.instance')}{' '}
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://panoramax.openstreetmap.fr" aria-label={t('pub.instanceLabel')} />
         </label>
         <button className="small" type="submit" disabled={url.trim() === st.instance}>
-          Changer
+          {t('pub.change')}
         </button>
       </form>
 
       {st.connected ? (
         <p>
-          ✓ Connecté à <strong>{st.instance.replace(/^https?:\/\//, '')}</strong>
-          {st.account ? <> en tant que <strong>{st.account}</strong></> : ''} ·{' '}
+          {rich(t('pub.connectedTo', { instance: st.instance.replace(/^https?:\/\//, '') }))}
+          {st.account ? rich(t('pub.asAccount', { account: st.account })) : ''} ·{' '}
           <button className="link" onClick={() => take(api.pnxLogout())}>
-            Se déconnecter
+            {t('pub.logout')}
           </button>
         </p>
       ) : st.claim_url ? (
         <div className="claim-box">
           <p>
-            1. Ouvrez ce lien et connectez-vous sur Panoramax pour autoriser l'application :{' '}
+            {t('pub.claim1')}{' '}
             <a href={st.claim_url} target="_blank" rel="noreferrer">
-              valider la connexion
+              {t('pub.claimLink')}
             </a>
           </p>
           <p>
-            2. Puis :{' '}
+            {t('pub.claim2')}{' '}
             <button className="small primary" onClick={() => take(api.pnxCheck())}>
-              J'ai validé, vérifier
+              {t('pub.claimCheck')}
             </button>{' '}
             <button className="small" onClick={() => take(api.pnxLogin())}>
-              Nouveau lien
+              {t('pub.claimNew')}
             </button>
           </p>
         </div>
       ) : (
         <p>
           <button className="small primary" onClick={() => take(api.pnxLogin())}>
-            Se connecter
+            {t('pub.login')}
           </button>{' '}
-          <span className="muted">Un lien à ouvrir vous est donné ; aucun mot de passe n'est saisi dans l'application.</span>
+          <span className="muted">{t('pub.loginNote')}</span>
         </p>
       )}
 

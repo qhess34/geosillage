@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, GpxSummary, PhotoDetail, PhotoRow, Project, SeqState, Sequence, UndoState } from './api'
-import { BUILTIN_BASEMAPS } from './basemaps'
+import { builtinBasemaps } from './basemaps'
 import { useCustomBasemaps } from './useCustomBasemaps'
 import SettingsDialog from './SettingsDialog'
 import ExportTab from './ExportTab'
@@ -43,7 +43,7 @@ function shifted(lat: number, lon: number, east: number, north: number): { lat: 
 type Tab = 'photo' | 'sequences' | 'sync' | 'export' | 'send' | 'summary'
 
 export default function ProjectView({ projectId, onBack }: { projectId: string; onBack: () => void }) {
-  useLang() // re-render (menus, help) when the language changes
+  const lang = useLang() // re-render (menus, help) when the language changes
   const [project, setProject] = useState<Project | null>(null)
   const isPnx = project?.kind === 'panoramax' // sequences already published: corrections only, no cut, no export
   const [photos, setPhotos] = useState<PhotoRow[]>([])
@@ -158,7 +158,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const { custom, add: addBasemap, remove: removeBasemap } = useCustomBasemaps()
-  const basemaps = useMemo(() => [...BUILTIN_BASEMAPS, ...custom], [custom])
+  const basemaps = useMemo(() => [...builtinBasemaps(), ...custom], [custom, lang])
   const [basemapId, setBasemapId] = useState(() => {
     try {
       return localStorage.getItem('pss-basemap') || 'osm'

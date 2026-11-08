@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { locale, t, useLang } from './i18n'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
-import { PUBLICATION_STATES, viewerUrl } from './Publication'
+import { publicationStates, viewerUrl } from './Publication'
 import PublishedEdit from './PublishedEdit'
 
 interface Props {
@@ -96,7 +96,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
               className={`badge ${s.last_publication.state === 'ready' && !s.changed_since_publication ? '' : 'warn-text'}`}
               title={s.last_publication.message ?? s.last_publication.instance}
             >
-              {s.changed_since_publication ? t('seq.changedSincePub') : t('seq.onPanoramax', { state: PUBLICATION_STATES[s.last_publication.state] })}
+              {s.changed_since_publication ? t('seq.changedSincePub') : t('seq.onPanoramax', { state: publicationStates()[s.last_publication.state] })}
             </span>
             {s.last_publication.first_picture_id && (
               <>

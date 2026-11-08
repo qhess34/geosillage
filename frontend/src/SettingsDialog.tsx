@@ -3,7 +3,7 @@ import { api, Project } from './api'
 import { Basemap } from './basemaps'
 import { Confirm } from './Dialogs'
 import { getLang, Key, LANGS, setLang, t, useLang } from './i18n'
-import { OverlaySettings, PANORAMAX_PRESETS } from './panoramaxLayer'
+import { OverlaySettings, panoramaxPresets } from './panoramaxLayer'
 
 // Settings (button ⚙ of the toolbar): display of the map for every ride, heading computation of this project
 export default function SettingsDialog({
@@ -180,7 +180,7 @@ function OverlayUrl({ overlay, onSave }: { overlay: OverlaySettings; onSave: (o:
       <h3>{t('settings.overlay.title')}</h3>
       <p className="muted">{t('settings.overlay.help')}</p>
       <div className="row wrap">
-        {PANORAMAX_PRESETS.map((p) => (
+        {panoramaxPresets().map((p) => (
           <label key={p.url}>
             <input
               type="radio"

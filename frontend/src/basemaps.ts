@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 // Raster basemaps. Each provider's attribution is shown on the map, as their terms require.
 
 export interface Basemap {
@@ -13,7 +15,8 @@ const IGN_ORTHO =
   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS' +
   '&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
 
-export const BUILTIN_BASEMAPS: Basemap[] = [
+// A function: names depend on the language
+export const builtinBasemaps = (): Basemap[] => [
   {
     id: 'osm',
     name: 'OpenStreetMap',
@@ -23,7 +26,7 @@ export const BUILTIN_BASEMAPS: Basemap[] = [
   },
   {
     id: 'esri',
-    name: 'Satellite Esri World Imagery',
+    name: t('map.base.esri'),
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
     maxzoom: 19,
@@ -32,14 +35,14 @@ export const BUILTIN_BASEMAPS: Basemap[] = [
   // open data (Licence Ouverte Etalab 2.0), no key. Tiles beyond maxzoom are enlarged by the map.
   {
     id: 'ign-ortho',
-    name: 'Satellite IGN Ortho (France, 20 cm)',
+    name: t('map.base.ign'),
     url: IGN_ORTHO,
     attribution: '© <a href="https://geoservices.ign.fr" target="_blank">IGN</a> – Géoplateforme (orthophotographies)',
     maxzoom: 19,
   },
   {
     id: 'ign-ortho-max',
-    name: 'Satellite IGN Ortho — zoom max (selon zones)',
+    name: t('map.base.ignMax'),
     url: IGN_ORTHO,
     attribution: '© <a href="https://geoservices.ign.fr" target="_blank">IGN</a> – Géoplateforme (orthophotographies)',
     maxzoom: 21,

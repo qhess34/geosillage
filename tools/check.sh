@@ -32,6 +32,15 @@ back() {
   args=("${args[@]/#backend\//}")
   step "backend (pytest)" "$ROOT/backend" "$PY" -m pytest -q --no-header -p no:cacheprovider "${args[@]}"
 }
+i18n() { # French texts left outside frontend/src/i18n/
+  if node "$ROOT/tools/check_i18n.mjs" >"$LOG" 2>&1; then
+    echo "OK    i18n : $(tail -1 "$LOG")"
+  else
+    echo "ÉCHEC i18n :"
+    tail -40 "$LOG"
+    FAILED=1
+  fi
+}
 front() { # vite --logLevel error n'imprime rien en cas de succès : résumé écrit ici
   if (cd "$ROOT/frontend" && npm run build --silent -- --logLevel error) >"$LOG" 2>&1; then
     echo "OK    interface : construction réussie (tsc + vite)"
@@ -45,10 +54,11 @@ e2e() { step "interface (Playwright)" "$ROOT/e2e" npx playwright test --trace of
 
 case "$WHAT" in
   back) back "$@" ;;
-  front) front ;;
+  front) i18n; front ;;
   e2e) e2e "$@" ;;
   all)
     back
+    i18n
     front
     # e2e needs the built interface
     [ "$FAILED" = 0 ] && e2e || echo "e2e ignoré (échec plus haut)"
