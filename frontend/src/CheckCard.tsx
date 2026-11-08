@@ -1,6 +1,7 @@
 import { PhotoDetail } from './api'
 import StopRangeEditor from './StopRangeEditor'
-import { Issue, ISSUE_TEXT, issueDetail, MISSING_EDGE_FIX } from './issues'
+import { t, useLang } from './i18n'
+import { Issue, issueText, issueDetail, missingEdgeFix } from './issues'
 
 export type CheckAction = 'interpolate' | 'clear-headings' | 'ignore-headings' | 'create-sequence' | 'exclude'
 
@@ -35,20 +36,21 @@ export default function CheckCard({
   onClose: () => void
   stopEditor?: React.ComponentProps<typeof StopRangeEditor> // stop: photos of the stop, adjustable before comparing
 }) {
-  const t = ISSUE_TEXT[issue.kind]
-  const where = issue.end > issue.start ? `photos ${issue.start + 1} → ${issue.end + 1}` : `photo ${issue.start + 1}`
+  useLang()
+  const tx = issueText(issue.kind)
+  const where = issue.end > issue.start ? t('check.photosRange', { a: issue.start + 1, b: issue.end + 1 }) : t('check.photoOne', { a: issue.start + 1 })
   const next = (
-    <button className="small" onClick={onNext} title="Point suivant à vérifier (N)">
-      Suivant (N) →
+    <button className="small" onClick={onNext} title={t('check.nextTitle')}>
+      {t('check.next')}
     </button>
   )
   if (fixed)
     return (
       <section className="check-card fixed small-text" role="status">
         <header>
-          <strong>Traité ✓ : {t.one}</strong>
+          <strong>{t('check.treated', { name: tx.one })}</strong>
           <span className="muted">{where}</span>
-          <button className="small icon" onClick={onClose} title="Fermer" aria-label="Fermer">
+          <button className="small icon" onClick={onClose} title={t('common.close')} aria-label={t('common.close')}>
             ✕
           </button>
         </header>
@@ -60,22 +62,22 @@ export default function CheckCard({
     )
 
   const positions = (
-    <button className={editMode ? 'small primary' : 'small'} onClick={onPositions} title="Mode Positions (M) : glisser le point violet de la photo sur la carte">
-      ✥ {editMode ? 'Mode Positions actif' : 'Corriger la position (M)'}
+    <button className={editMode ? 'small primary' : 'small'} onClick={onPositions} title={t('check.positionsTitle')}>
+      ✥ {editMode ? t('check.positionsOn') : t('check.positions')}
     </button>
   )
   // what this issue is precisely, on these photos
   const precise: Partial<Record<Issue['kind'], string | null>> = {
-    spacing: `${issueDetail(issue)} entre les photos ${issue.start + 1} et ${issue.end + 1}.`,
+    spacing: t('check.spacing', { detail: issueDetail(issue), a: issue.start + 1, b: issue.end + 1 }),
     gps_dop: issue.detail,
     stop: issue.detail,
     no_heading:
       detail?.heading_auto_state === 'uncertain'
-        ? 'La caméra ne bouge pas sur tout le tronçon : pas de sens de déplacement.'
-        : 'Pas de position utilisable autour de cette photo pour calculer le sens de déplacement.',
+        ? t('check.noHeadingStill')
+        : t('check.noHeadingNoPos'),
     heading:
       detail?.heading_manual != null && detail.heading_auto != null
-        ? `Cap saisi ${detail.heading_manual.toFixed(0)}°, calculé ${detail.heading_auto.toFixed(0)}°.`
+        ? t('check.headingDiff', { typed: detail.heading_manual.toFixed(0), computed: detail.heading_auto.toFixed(0) })
         : issue.detail,
   }
   const actions: Record<Issue['kind'], React.ReactNode> = {
@@ -83,7 +85,7 @@ export default function CheckCard({
       <>
         {positions}
         <button className="small" onClick={() => onAction('exclude')}>
-          Exclure ces photos
+          {t('check.excludeThese')}
         </button>
       </>
     ),
@@ -94,13 +96,13 @@ export default function CheckCard({
       <>
         {interpolable && (
           <button className="small primary" onClick={() => onAction('interpolate')}>
-            Interpoler entre les voisines
+            {t('check.interpolate')}
           </button>
         )}
         {positions}
         {!interpolable && (
           <button className="small" onClick={() => onAction('exclude')}>
-            Exclure ces photos
+            {t('check.excludeThese')}
           </button>
         )}
       </>
@@ -108,29 +110,29 @@ export default function CheckCard({
     heading: (
       <>
         <button className="small primary" onClick={() => onAction('clear-headings')}>
-          Revenir au cap calculé
+          {t('photo.backToComputed')}
         </button>
         <button
           className="small"
           onClick={() => onAction('ignore-headings')}
-          title="Le cap saisi est le bon (le cap calculé est faux, par exemple après une perte du GPS) : ne plus le signaler, tant qu'il ne change pas"
+          title={t('check.ignoreTitle')}
         >
-          Ignorer : le cap saisi est bon
+          {t('check.ignore')}
         </button>
       </>
     ),
     stop: (
       <button className="small primary" onClick={onCompare}>
-        Comparer {stopEditor ? `ces ${stopEditor.range[1] - stopEditor.range[0] + 1} photos` : 'les photos'}
+        {stopEditor ? t('check.compareN', { n: stopEditor.range[1] - stopEditor.range[0] + 1 }) : t('check.compare')}
       </button>
     ),
     unclassified: (
       <>
         <button className="small primary" onClick={() => onAction('create-sequence')}>
-          Créer une séquence avec ces photos
+          {t('check.createSeq')}
         </button>
         <button className="small" onClick={() => onAction('exclude')}>
-          Exclure ces photos
+          {t('check.excludeThese')}
         </button>
       </>
     ),
@@ -138,19 +140,19 @@ export default function CheckCard({
   return (
     <section className="check-card small-text" role="status">
       <header>
-        <strong>À corriger : {t.one}</strong>
+        <strong>{t('check.toFix', { name: tx.one })}</strong>
         <span className="muted">
           {where} · {index + 1}/{total}
         </span>
-        <button className="small icon" onClick={onClose} title="Fermer" aria-label="Fermer">
+        <button className="small icon" onClick={onClose} title={t('common.close')} aria-label={t('common.close')}>
           ✕
         </button>
       </header>
       {precise[issue.kind] && <p className="check-precise">{precise[issue.kind]}</p>}
       <p>
-        <strong>Cause :</strong> {t.cause}
+        <strong>{t('issues.cause')}</strong> {tx.cause}
         <br />
-        <strong>Correction :</strong> {issue.kind === 'missing' && !interpolable ? MISSING_EDGE_FIX : t.fix}
+        <strong>{t('issues.fix')}</strong> {issue.kind === 'missing' && !interpolable ? missingEdgeFix() : tx.fix}
       </p>
       {issue.kind === 'stop' && stopEditor && <StopRangeEditor {...stopEditor} />}
       <div className="row wrap">

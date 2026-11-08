@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, FsListing } from './api'
 import FsBrowser from './FsBrowser'
+import { t, useLang } from './i18n'
 
 interface Props {
   projectId: string
@@ -20,6 +21,7 @@ function lastDir(): string {
 
 // Folder picker over the local file system (served by the backend, which runs on this machine)
 export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
+  useLang()
   const [listing, setListing] = useState<FsListing | null>(null)
   const [typed, setTyped] = useState('')
   const [chosen, setChosen] = useState<string[]>([])
@@ -63,10 +65,10 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-label="Importer des photos">
-        <h2>Importer des photos</h2>
+      <div className="modal" role="dialog" aria-label={t('imp.title')}>
+        <h2>{t('imp.title')}</h2>
         <p className="muted">
-          L'import est récursif. Les fichiers sont seulement référencés : rien n'est copié ni modifié.
+          {t('imp.help')}
         </p>
         <form
           className="row"
@@ -75,8 +77,8 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
             go(typed)
           }}
         >
-          <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="/chemin/vers/les/photos" />
-          <button type="submit">Ouvrir</button>
+          <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={t('imp.pathPh')} />
+          <button type="submit">{t('common.open')}</button>
         </form>
         <FsBrowser
           listing={listing}
@@ -85,28 +87,28 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
           headExtra={
             listing && (
               <>
-                <span className="muted" style={{ whiteSpace: 'nowrap' }}>{listing.jpeg_count} JPEG ici</span>
+                <span className="muted" style={{ whiteSpace: 'nowrap' }}>{t('imp.jpegHere', { n: listing.jpeg_count })}</span>
                 <button className="primary" onClick={() => add(listing.path)}>
-                  Ajouter ce dossier
+                  {t('imp.addFolder')}
                 </button>
               </>
             )
           }
           rowExtra={(path) => (
             <button className="small" onClick={() => add(path)}>
-              + Ajouter
+              + {t('common.add')}
             </button>
           )}
         />
         {chosen.length > 0 && (
           <div>
-            <h3>Dossiers à importer</h3>
+            <h3>{t('imp.chosen')}</h3>
             <ul className="chosen">
               {chosen.map((c) => (
                 <li key={c}>
                   <span className="mono ellipsis">{c}</span>
                   <button className="small" onClick={() => setChosen(chosen.filter((x) => x !== c))}>
-                    Retirer
+                    {t('common.remove')}
                   </button>
                 </li>
               ))}
@@ -114,9 +116,9 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
           </div>
         )}
         <div className="actions">
-          <button onClick={onClose}>Annuler</button>
+          <button onClick={onClose}>{t('common.cancel')}</button>
           <button className="primary" disabled={!chosen.length || busy} onClick={start}>
-            Importer {chosen.length > 1 ? `${chosen.length} dossiers` : ''}
+            {chosen.length > 1 ? t('imp.start.many', { n: chosen.length }) : t('imp.start')}
           </button>
         </div>
       </div>

@@ -2,13 +2,14 @@
 // - heading (cap): direction of travel, from north (GPSImgDirection) — Panoramax: navigation arrows, map;
 // - orientation: where the centre of the image looks, from the direction of travel (XMP PoseHeadingDegrees) —
 //   Panoramax: the photo opens facing forward. Changing one never changes the other.
-export const CAP_HELP =
-  'Cap = sens de déplacement, mesuré depuis le nord (0° nord, 90° est). Écrit dans GPSImgDirection ; Panoramax s\'en sert pour les flèches de navigation et la carte.'
-export const ORIENTATION_HELP =
-  'Orientation = angle entre le centre de l\'image et le sens de déplacement (caméra sur casque, mal alignée ou à l\'envers). Écrite dans PoseHeadingDegrees ; Panoramax s\'en sert pour ouvrir la photo face à l\'avant. Elle ne change pas le cap.'
+import { t, useLang } from './i18n'
+
+export const capHelp = () => t('cap.help')
+export const orientationHelp = () => t('cap.orientHelp')
 
 // Small top view: north, the heading (blue) and where the centre of the image looks (orange)
 export function CapOrientationDiagram({ heading, yaw }: { heading: number | null; yaw: number | null }) {
+  useLang()
   const r = 30
   const at = (deg: number, len: number) => {
     const a = ((deg - 90) * Math.PI) / 180
@@ -18,7 +19,7 @@ export function CapOrientationDiagram({ heading, yaw }: { heading: number | null
   const [hx, hy] = at(h, r)
   const [cx, cy] = at(h + (yaw ?? 0), r)
   return (
-    <svg className="cap-diagram" width="80" height="80" viewBox="0 0 64 64" role="img" aria-label="Cap et orientation, vue de dessus">
+    <svg className="cap-diagram" width="80" height="80" viewBox="0 0 64 64" role="img" aria-label={t('cap.diagram')}>
       <circle cx="32" cy="32" r="31" fill="none" stroke="currentColor" strokeOpacity="0.25" />
       <text x="32" y="8" textAnchor="middle" fontSize="8" fill="currentColor" opacity="0.6">
         N

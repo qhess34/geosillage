@@ -41,6 +41,14 @@ test('langue : passer en anglais dans les réglages, vérifier des libellés, re
   await page.keyboard.press('?')
   await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toContainText('Previous / next photo')
   await page.keyboard.press('Escape')
+  // project screen: tabs, empty sequences list, import dialog
+  await page.getByRole('tab', { name: /^Sequences/ }).click()
+  await expect(page.getByText('No sequence. Create some from a range or the suggested cut.')).toBeVisible()
+  await page.getByRole('tab', { name: 'Summary' }).click()
+  await expect(page.getByRole('heading', { name: 'Heading and orientation of the whole ride' })).toBeVisible()
+  await page.getByRole('button', { name: 'Import', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Import photos' })).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel' }).click()
   // remembered after a reload; the home page is translated too
   await page.reload()
   await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toHaveCount(0)

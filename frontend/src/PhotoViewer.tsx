@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { t, useLang } from './i18n'
 
 interface Props {
   thumbUrl: string
@@ -10,6 +11,7 @@ interface Props {
 // Flat viewer for the full-resolution photo (equirectangular shown as is): wheel = zoom, drag = pan,
 // double-click = reset. The thumbnail is shown while the original loads.
 export default function PhotoViewer({ thumbUrl, imageUrl, alt, height = 260 }: Props) {
+  useLang()
   const box = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ z: 1, x: 0, y: 0 })
   const [full, setFull] = useState(false)
@@ -55,7 +57,7 @@ export default function PhotoViewer({ thumbUrl, imageUrl, alt, height = 260 }: P
       }}
       onPointerUp={() => (drag.current = null)}
       onDoubleClick={() => setView({ z: 1, x: 0, y: 0 })}
-      title="Molette : zoom · glisser : déplacer · double-clic : recentrer"
+      title={t('viewer.hint')}
     >
       <img
         src={full ? imageUrl : thumbUrl}

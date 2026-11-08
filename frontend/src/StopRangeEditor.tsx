@@ -1,5 +1,6 @@
 import { PhotoRow } from './api'
 import { fmtTime } from './format'
+import { t, useLang } from './i18n'
 
 const R = 6371008.8
 const rad = Math.PI / 180
@@ -31,6 +32,7 @@ export default function StopRangeEditor({
   onRange: (r: [number, number]) => void
   onGo: (idx: number) => void
 }) {
+  useLang()
   const [s, e] = range
   const last = photos.length - 1
   const from = Math.max(0, s - AROUND)
@@ -41,28 +43,28 @@ export default function StopRangeEditor({
     <div className="stop-range">
       <div className="row wrap">
         <strong>
-          Photos {s + 1} → {e + 1}
+          {t('stoprange.range', { a: s + 1, b: e + 1 })}
         </strong>
         <span className="muted">
           ({e - s + 1}
-          {kept < e - s + 1 ? `, dont ${e - s + 1 - kept} déjà exclue(s)` : ''})
+          {kept < e - s + 1 ? t('stoprange.alreadyExcluded', { n: e - s + 1 - kept }) : ''})
         </span>
         <span className="spacer" />
-        <span className="muted">Début</span>
+        <span className="muted">{t('stoprange.start')}</span>
         <span className="btn-group">
-          <button className="small" disabled={s === 0} onClick={() => onRange([s - 1, e])} title="Ajouter la photo précédente">
+          <button className="small" disabled={s === 0} onClick={() => onRange([s - 1, e])} title={t('stoprange.addPrev')}>
             ◀
           </button>
-          <button className="small" disabled={s >= e} onClick={() => onRange([s + 1, e])} title="Retirer la première photo">
+          <button className="small" disabled={s >= e} onClick={() => onRange([s + 1, e])} title={t('stoprange.removeFirst')}>
             ▶
           </button>
         </span>
-        <span className="muted">Fin</span>
+        <span className="muted">{t('stoprange.end')}</span>
         <span className="btn-group">
-          <button className="small" disabled={e <= s} onClick={() => onRange([s, e - 1])} title="Retirer la dernière photo">
+          <button className="small" disabled={e <= s} onClick={() => onRange([s, e - 1])} title={t('stoprange.removeLast')}>
             ◀
           </button>
-          <button className="small" disabled={e >= last} onClick={() => onRange([s, e + 1])} title="Ajouter la photo suivante">
+          <button className="small" disabled={e >= last} onClick={() => onRange([s, e + 1])} title={t('stoprange.addNext')}>
             ▶
           </button>
         </span>
@@ -75,21 +77,21 @@ export default function StopRangeEditor({
           const d = prev ? meters(prev, p) : null
           return (
             <li key={p.id} className={`${inside ? 'in' : 'out'}${i === currentIdx ? ' current' : ''}${p.excluded ? ' excluded' : ''}`}>
-              <button className="stop-range-go" onClick={() => onGo(i)} title="Voir cette photo (carte et onglet Photo)">
-                <span>Photo {i + 1}</span>
+              <button className="stop-range-go" onClick={() => onGo(i)} title={t('stoprange.view')}>
+                <span>{t('stoprange.photo', { n: i + 1 })}</span>
                 <span className="muted">{fmtTime(p.ts, false)}</span>
                 <span className="muted">{d != null ? `${d < 10 ? d.toFixed(1) : Math.round(d)} m` : ''}</span>
-                {p.excluded ? <span className="muted">exclue</span> : null}
+                {p.excluded ? <span className="muted">{t('stoprange.excluded')}</span> : null}
               </button>
               <span className="stop-range-act">
                 {!inside && (
-                  <button className="small" onClick={() => onRange([Math.min(s, i), Math.max(e, i)])} title="Ajouter à l'arrêt (avec les photos entre les deux)">
-                    + Ajouter
+                  <button className="small" onClick={() => onRange([Math.min(s, i), Math.max(e, i)])} title={t('stoprange.addTitle')}>
+                    + {t('common.add')}
                   </button>
                 )}
                 {inside && s < e && (i === s || i === e) && (
-                  <button className="small" onClick={() => onRange(i === s ? [s + 1, e] : [s, e - 1])} title="Retirer de l'arrêt">
-                    − Retirer
+                  <button className="small" onClick={() => onRange(i === s ? [s + 1, e] : [s, e - 1])} title={t('stoprange.removeTitle')}>
+                    − {t('common.remove')}
                   </button>
                 )}
               </span>
@@ -97,7 +99,7 @@ export default function StopRangeEditor({
           )
         })}
       </ul>
-      <p className="muted small-text">Distance : depuis la photo précédente. Les photos de l'arrêt sont sélectionnées sur la carte et la timeline.</p>
+      <p className="muted small-text">{t('stoprange.help')}</p>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { Dispatch, MutableRefObject, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react'
 import { api, PhotoRow, QualityIssue, SeqState, UndoState } from './api'
 import { CheckAction } from './CheckCard'
+import { t } from './i18n'
 import { computeIssues, Issue, IssueStep, sameIssue, STEP_KINDS } from './issues'
 
 interface IssuesParams {
@@ -82,7 +83,7 @@ export function useIssues({
       api.ignoreHeadings(projectId, ids).then((res) => {
         setQuality(res.issues)
         afterHeadingChange(res.undo)
-        setNotice('Cap gardé : il n\'est plus signalé tant qu\'il ne change pas — Ctrl+Z pour annuler')
+        setNotice(t('issues.headingKept'))
       }, (er) => setError(er.message)),
     [projectId, afterHeadingChange],
   )
@@ -96,18 +97,18 @@ export function useIssues({
       if (what === 'ignore-headings') return ignoreHeadings(kept.map((p) => p.id))
       if (what === 'interpolate')
         return api.positionsBatch(projectId, { photo_ids: kept.map((p) => p.id), mode: 'interpolate' }).then((res) => {
-          if (!res.changed) setError('Impossible d\'interpoler : pas de photo positionnée avant et après')
-          else setNotice(`${res.changed} photo(s) placée(s) entre les voisines — Ctrl+Z pour annuler`)
+          if (!res.changed) setError(t('issues.cannotInterp'))
+          else setNotice(t('issues.interpDone', { n: res.changed }))
           afterHeadingChange(res.undo)
         }, (er) => setError(er.message))
       if (what === 'clear-headings')
         return api.headingRange(projectId, r[0], r[1], 'clear').then((res) => {
           afterHeadingChange(res.undo)
-          setNotice('Cap calculé rétabli — Ctrl+Z pour annuler')
+          setNotice(t('issues.clearDone'))
         }, (er) => setError(er.message))
       return api
         .createSequence(projectId, r[0], r[1])
-        .then((st) => applyState({ ...st, done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` }), (er) => setError(er.message))
+        .then((st) => applyState({ ...st, done: t('menu.seqCreated', { from: r[0] + 1, to: r[1] + 1 }) }), (er) => setError(er.message))
     },
     [focusPoint, photos, projectId, afterHeadingChange, applyState, ignoreHeadings],
   )
@@ -118,7 +119,7 @@ export function useIssues({
       api.missingPositions(projectId).then((runs) => {
         const ids = runs.filter((r) => r.prev && r.next).flatMap((r) => r.ids)
         if (ids.length) setConfirmInterp(ids)
-        else setNotice('Aucun trou entre deux photos positionnées')
+        else setNotice(t('issues.noGap'))
       }, (e) => setError(e.message)),
     [projectId],
   )
@@ -126,7 +127,7 @@ export function useIssues({
     (ids: number[]) =>
       api.positionsBatch(projectId, { photo_ids: ids, mode: 'interpolate' }).then((r) => {
         afterHeadingChange(r.undo)
-        setNotice(`${r.changed} photo(s) placée(s) entre leurs voisines — Ctrl+Z pour annuler`)
+        setNotice(t('issues.interpAllDone', { n: r.changed }))
       }, (e) => setError(e.message)),
     [projectId, afterHeadingChange],
   )
@@ -134,7 +135,7 @@ export function useIssues({
     if (!focusPoint) return
     const c = checkPoints.find((x) => x.start > focusPoint.end) ?? checkPoints.find((x) => x.start > focusPoint.start)
     if (c) focusOn(c)
-    else setNotice('Plus aucun point à vérifier après celui-ci')
+    else setNotice(t('issues.noMore'))
   }, [focusPoint, checkPoints, focusOn])
 
   return {

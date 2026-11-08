@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, GpxSummary, MANUAL_METHODS, PhotoDetail, PhotoRow, Sequence, SyncPoint, SyncRun } from './api'
 import { GpxSection } from './Gpx'
+import { rich, t, useLang } from './i18n'
 import Viewer360 from './Viewer360'
 
 interface Props {
@@ -34,6 +35,7 @@ function median(v: number[]): number {
 const fmt = (o: number) => `${o >= 0 ? '+' : ''}${o.toFixed(1)} s`
 
 export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, projectId, photo, photos, sequences, range, offset, dragged, onOffset, onGo, onApplied, onNotice, onError }: Props) {
+  useLang()
   const [points, setPoints] = useState<SyncPoint[]>([])
   // First sync: the whole ride; later ones: from the current photo on (the GPS delay can change during a ride,
   // and earlier photos must not be moved again nor marked for re-export). The user's choice wins.
@@ -111,9 +113,12 @@ export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, p
         if (!scopeChosen && scope === 'all') setScopeState('from')
         onApplied()
         onNotice(
-          `Synchronisation ${fmt(offset)} : ${r.changed} photo(s)` +
-            (r.kept_manual ? `, ${r.kept_manual} correction(s) manuelle(s) gardée(s)` : '') +
-            (r.uncovered ? `, ${r.uncovered} hors trace` : ''),
+          t('sync.notice', {
+            offset: fmt(offset),
+            n: r.changed,
+            kept: r.kept_manual ? t('sync.notice.kept', { n: r.kept_manual }) : '',
+            uncovered: r.uncovered ? t('sync.notice.uncovered', { n: r.uncovered }) : '',
+          }),
         )
       }, (e) => onError(e.message))
   }
@@ -132,16 +137,16 @@ export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, p
           </div>
         </>
       ) : (
-        <p className="muted">Choisissez une photo (carte, timeline, ← →).</p>
+        <p className="muted">{t('sync.choose')}</p>
       )}
       <ol className="small-text sync-help">
-        <li>Repérez dans la photo un élément visible sur la vue satellite (passage piéton, intersection, bâtiment…).</li>
-        <li>Faites glisser le marqueur orange <strong>le long de la trace</strong> jusqu'à cet endroit : le décalage s'affiche, et toutes les photos se décalent en aperçu (points orange).</li>
-        <li>Vérifiez sur d'autres photos (← →), ajoutez des points de calage, puis appliquez.</li>
+        <li>{t('sync.help1')}</li>
+        <li>{rich(t('sync.help2'))}</li>
+        <li>{t('sync.help3')}</li>
       </ol>
 
       <div className="sync-offset">
-        <span>Décalage :</span>
+        <span>{t('sync.offset')}</span>
         <strong className="big">{offset == null ? '—' : fmt(offset)}</strong>
         <input
           type="range"
@@ -150,7 +155,7 @@ export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, p
           step={0.1}
           value={offset ?? 0}
           onChange={(e) => onOffset(Number(e.target.value))}
-          aria-label="Décalage en secondes"
+          aria-label={t('sync.offsetSeconds')}
         />
         <input
           className="num"
@@ -158,41 +163,41 @@ export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, p
           step={0.1}
           value={offset ?? ''}
           onChange={(e) => onOffset(e.target.value === '' ? null : Number(e.target.value))}
-          aria-label="Décalage"
+          aria-label={t('sync.offsetLabel')}
         />
       </div>
-      {lastApplied != null && <div className="small-text muted">Dernier décalage appliqué : {fmt(lastApplied)}</div>}
+      {lastApplied != null && <div className="small-text muted">{t('sync.lastApplied', { offset: fmt(lastApplied) })}</div>}
 
       <div className="row wrap">
         <button
           className="small"
           disabled={!dragged}
-          title={dragged ? '' : 'Faites d\'abord glisser le marqueur orange d\'une photo'}
+          title={dragged ? '' : t('sync.dragFirst')}
           onClick={() =>
             dragged && savePoints([...points.filter((p) => p.photo_id !== dragged.photoId), { photo_id: dragged.photoId, offset_s: dragged.offset }])
           }
         >
-          {dragged ? `Ajouter le calage de la photo ${(idxOf(dragged.photoId) ?? -1) + 1} (${fmt(dragged.offset)})` : 'Ajouter un point de calage'}
+          {dragged ? t('sync.addPointPhoto', { n: (idxOf(dragged.photoId) ?? -1) + 1, offset: fmt(dragged.offset) }) : t('sync.addPoint')}
         </button>
         {med != null && (
           <button className="small" onClick={() => onOffset(Math.round(med * 10) / 10)}>
-            Utiliser la médiane ({fmt(med)}{scoped.length < points.length ? `, ${scoped.length} point(s) de la portée` : ''})
+            {t('sync.useMedian', { offset: fmt(med), scope: scoped.length < points.length ? t('sync.medianScope', { n: scoped.length }) : '' })}
           </button>
         )}
       </div>
       {points.length > 0 && (
         <>
-          <h3>Points de calage ({points.length})</h3>
+          <h3>{t('sync.points', { n: points.length })}</h3>
           {points.length > 1 && (
             <p className={`small-text ${spread > 1 ? 'warn-text' : 'muted'}`}>
-              Écart entre points : {spread.toFixed(1)} s{spread > 1 ? ' — retard variable : appliquez par tronçons (« À partir de cette photo »), par séquence ou par plage' : ''}
+              {t('sync.spread', { spread: spread.toFixed(1), warn: spread > 1 ? t('sync.spreadWarn') : '' })}
             </p>
           )}
           <ul className="sync-points small-text">
             {points.map((p) => (
               <li key={p.photo_id}>
                 <button className="link" onClick={() => idxOf(p.photo_id) != null && onGo(idxOf(p.photo_id) as number)}>
-                  photo {(idxOf(p.photo_id) ?? -1) + 1}
+                  {t('sync.pointPhoto', { n: (idxOf(p.photo_id) ?? -1) + 1 })}
                 </button>{' '}
                 {fmt(p.offset_s)}
                 <button className="small" onClick={() => savePoints(points.filter((x) => x.photo_id !== p.photo_id))}>
@@ -206,20 +211,20 @@ export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, p
 
       {runs.some((r) => r.offset_s != null) && (
         <>
-          <h3>Décalages appliqués</h3>
+          <h3>{t('sync.runs')}</h3>
           <ul className="sync-runs small-text">
             {runs.map((r) => {
               const here = photo != null && photo.idx >= r.start_idx && photo.idx <= r.end_idx
               return (
                 <li key={r.start_idx} className={here ? 'current' : ''}>
                   <span>
-                    Photos {r.start_idx + 1} → {r.end_idx + 1} <span className="muted">({r.count})</span>
-                    {r.manual > 0 && <span className="muted" title="Positions corrigées à la main dans ce lot : elles gardent leur position"> · dont {r.manual} corrigée(s) à la main</span>}
+                    {t('sync.runPhotos', { a: r.start_idx + 1, b: r.end_idx + 1 })} <span className="muted">({r.count})</span>
+                    {r.manual > 0 && <span className="muted" title={t('sync.runManualTitle')}>{t('sync.runManual', { n: r.manual })}</span>}
                   </span>
                   <span className="row">
-                    {r.offset_s == null ? <span className="muted">non synchronisées</span> : <strong>{fmt(r.offset_s)}</strong>}
-                    <button className="small" onClick={() => onGo(r.start_idx)} title="Aller à la première photo du lot">
-                      Voir
+                    {r.offset_s == null ? <span className="muted">{t('sync.notSynced')}</span> : <strong>{fmt(r.offset_s)}</strong>}
+                    <button className="small" onClick={() => onGo(r.start_idx)} title={t('sync.runGoTitle')}>
+                      {t('sync.view')}
                     </button>
                   </span>
                 </li>
@@ -229,39 +234,37 @@ export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, p
         </>
       )}
 
-      <h3>Appliquer</h3>
+      <h3>{t('sync.apply.title')}</h3>
       <fieldset className="modes small-text">
         <label>
-          <input type="radio" checked={scope === 'all'} onChange={() => setScope('all')} /> Toute la sortie
+          <input type="radio" checked={scope === 'all'} onChange={() => setScope('all')} /> {t('sync.scope.all')}
         </label>
-        <label title="Le retard GPS peut changer pendant une sortie : les photos d'avant gardent leur décalage et ne sont pas à réexporter">
-          <input type="radio" checked={scope === 'from'} disabled={!photo} onChange={() => setScope('from')} /> À partir de cette photo
+        <label title={t('sync.scope.fromTitle')}>
+          <input type="radio" checked={scope === 'from'} disabled={!photo} onChange={() => setScope('from')} /> {t('sync.scope.from')}
           {photo ? ` (${photo.idx + 1} → ${photos.length})` : ''}
         </label>
         <label>
-          <input type="radio" checked={scope === 'sequence'} disabled={!seq} onChange={() => setScope('sequence')} /> Séquence de la photo
-          {seq ? ` (${seq.name})` : ' (photo non classée)'}
+          <input type="radio" checked={scope === 'sequence'} disabled={!seq} onChange={() => setScope('sequence')} /> {t('sync.scope.seq')}
+          {seq ? ` (${seq.name})` : t('sync.scope.seqNone')}
         </label>
         <label>
-          <input type="radio" checked={scope === 'range'} disabled={!range} onChange={() => setScope('range')} /> Plage
-          {range ? ` ${range[0] + 1} → ${range[1] + 1}` : ' (D / F pour la définir)'}
+          <input type="radio" checked={scope === 'range'} disabled={!range} onChange={() => setScope('range')} /> {t('sync.scope.range')}
+          {range ? ` ${range[0] + 1} → ${range[1] + 1}` : t('sync.scope.rangeNone')}
         </label>
         <label>
-          <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} /> Garder les positions corrigées à la main
+          <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} /> {t('sync.keepManual')}
         </label>
       </fieldset>
       <p className="small-text muted">
-        Aperçu sur la carte (points orange) : les {preview.count} photo(s) que « Appliquer » déplacerait.
+        {t('sync.previewInfo', { n: preview.count })}
       </p>
       <div className="actions">
         <button className="primary" disabled={offset == null || (scope === 'sequence' && !seq) || (scope === 'range' && !range) || (scope === 'from' && !photo)} onClick={apply}>
-          Appliquer {offset == null ? '' : fmt(offset)}
+          {t('sync.applyBtn', { offset: offset == null ? '' : fmt(offset) }).trim()}
         </button>
       </div>
       <p className="small-text muted">
-        Retard variable : synchronisez d'abord toute la sortie, puis, plus loin, à partir de la photo où le retard change
-        (proposé par défaut après une première synchronisation). Les photos sont placées sur la trace GPS à l'instant de prise de vue + décalage (sans traverser une interruption).
-        Les sauts GPS et photos sans GPS reçoivent aussi une position sur la trace. Annulable (Ctrl+Z).
+        {t('sync.footer')}
       </p>
     </div>
   )

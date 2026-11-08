@@ -371,7 +371,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     setSeqStart(current.idx)
     setRange([current.idx, current.idx])
     anchor.current = current.idx
-    setNotice(`Début : photo ${current.idx + 1} — naviguez puis « Fin »`)
+    setNotice(t('pv.markStart', { n: current.idx + 1 }))
   }, [current])
   // Index reached by moving `count` photos from idx in direction dir, skipping excluded photos unless shown
   const stepIdx = useCallback(
@@ -398,7 +398,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     const r: [number, number] | null =
       seqStart != null && current ? [Math.min(seqStart, current.idx), Math.max(seqStart, current.idx)] : range
     if (!r) {
-      setError('Marquez d\'abord le début de la séquence (bouton « Début » ou touche D)')
+      setError(t('pv.markStartFirst'))
       return
     }
     api.createSequence(projectId, r[0], r[1]).then((s) => {
@@ -407,7 +407,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       const chain = next != null && next.sequence_id == null
       applyState({
         ...s,
-        done: `Séquence créée : photos ${r[0] + 1} → ${r[1] + 1}` + (chain ? ` · début suivant : photo ${next!.idx + 1}` : ''),
+        done: t('menu.seqCreated', { from: r[0] + 1, to: r[1] + 1 }) + (chain ? t('pv.nextStart', { n: next!.idx + 1 }) : ''),
       })
       if (chain) {
         setSeqStart(next.idx)
@@ -438,7 +438,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       lastCarry.current = { id: to.id, east, north, ...shifted(to.lat, to.lon, east, north) }
       api.positionsBatch(projectId, { start_idx: to.idx, end_idx: to.idx, mode: 'offset', east_m: r2(east), north_m: r2(north) }).then((r) => {
         afterHeadingChange(r.undo)
-        setNotice(`Correction reportée sur la photo ${to.idx + 1} : ${Math.round(Math.hypot(east, north) * 10) / 10} m`)
+        setNotice(t('pv.carried', { n: to.idx + 1, m: Math.round(Math.hypot(east, north) * 10) / 10 }))
       }, (er) => setError(er.message))
     },
     [projectId, afterHeadingChange],
@@ -447,7 +447,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   const excludeRange = useCallback(
     (r: [number, number], n: number) =>
       api.excludePhotos(projectId, { start_idx: r[0], end_idx: r[1] }).then((s) => {
-        applyState({ ...s, done: `${n} photo(s) exclue(s) — Ctrl+Z pour annuler` })
+        applyState({ ...s, done: t('pv.excludedN', { n }) })
         setRange(null)
       }, (er) => setError(er.message)),
     [projectId, applyState],
@@ -542,45 +542,45 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     window.addEventListener('mouseup', up)
   }
 
-  if (!project) return <div className="home">{error ? <p className="error">{error}</p> : 'Chargement…'}</div>
+  if (!project) return <div className="home">{error ? <p className="error">{error}</p> : t('pv.loading')}</div>
 
   return (
     <div className="workspace">
       <header className="toolbar">
-        <button className="brand-back" onClick={onBack} title="GeoSillage — retour aux projets" aria-label="Retour aux projets">
+        <button className="brand-back" onClick={onBack} title={t('pv.backTitle')} aria-label={t('pv.back')}>
           ← <img src="/logo.svg" alt="" width="20" height="20" />
         </button>
         <strong className="ellipsis project-title" title={project.name}>
           {project.name}
         </strong>
         {isPnx ? (
-          <span className="badge" title={`Séquences déjà publiées sur ${project.pnx_instance ?? 'Panoramax'} : corrigées ici, puis envoyées (onglet Envoi)`}>
+          <span className="badge" title={t('pv.pnxBadge', { instance: project.pnx_instance ?? 'Panoramax' })}>
             Panoramax
           </span>
         ) : (
           <button className="primary" onClick={() => setShowImport(true)}>
-            Importer
+            {t('pv.import')}
           </button>
         )}
         <span className="tool-sep" />
         <div className="btn-group">
-          <button disabled={!undoState.undo} onClick={() => undoRedo('undo')} title={undoState.undo ? `Annuler : ${undoState.undo} (Ctrl+Z)` : 'Rien à annuler'}>
-            ↶ Annuler
+          <button disabled={!undoState.undo} onClick={() => undoRedo('undo')} title={undoState.undo ? t('pv.undoTitle', { name: undoState.undo }) : t('pv.nothingUndo')}>
+            {t('pv.undo')}
           </button>
-          <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? `Rétablir : ${undoState.redo} (Ctrl+Y)` : 'Rien à rétablir'}>
-            ↷ Rétablir
+          <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? t('pv.redoTitle', { name: undoState.redo }) : t('pv.nothingRedo')}>
+            {t('pv.redo')}
           </button>
         </div>
         {!isPnx && (
           <>
             <span className="tool-sep" />
-            <div className="btn-group" role="group" aria-label="Découpage en séquences">
+            <div className="btn-group" role="group" aria-label={t('pv.cutGroup')}>
               <button
                 disabled={!current}
                 onClick={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
-                title="Découper la sortie avant la photo courante (C)"
+                title={t('pv.cutTitle')}
               >
-                ✂ Couper
+                {t('pv.cut')}
               </button>
               <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} />
             </div>
@@ -591,9 +591,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           className={editMode ? 'primary' : ''}
           aria-pressed={editMode}
           onClick={() => setEditMode(!editMode)}
-          title="Mode positions (M) : glisser le marqueur de la photo courante pour corriger sa position"
+          title={t('pv.positionsTitle')}
         >
-          ✥ Positions
+          {t('pv.positions')}
         </button>
         <span className="spacer" />
         {notice && <div className="toast small-text">✓ {notice}</div>}
@@ -662,17 +662,17 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             <div className="selection-chip small-text" role="status">
               {seqStart != null ? (
                 <>
-                  <strong>Début : photo {seqStart + 1}</strong>
-                  {current && current.idx !== seqStart ? ` → ${current.idx + 1} (${Math.abs(current.idx - seqStart) + 1} photos)` : ''} · F pour créer
-                  la séquence
+                  <strong>{t('pv.selStart', { n: seqStart + 1 })}</strong>
+                  {current && current.idx !== seqStart ? t('pv.selStartTo', { to: current.idx + 1, n: Math.abs(current.idx - seqStart) + 1 }) : ''}
+                  {t('pv.selStartHelp')}
                 </>
               ) : (
                 range && (
                   <>
                     <strong>
-                      Photos {range[0] + 1} → {range[1] + 1}
+                      {t('pv.selRange', { a: range[0] + 1, b: range[1] + 1 })}
                     </strong>{' '}
-                    ({range[1] - range[0] + 1}) · clic droit : actions
+                    {t('pv.selRangeHelp', { n: range[1] - range[0] + 1 })}
                   </>
                 )
               )}
@@ -682,9 +682,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   setSeqStart(null)
                   setRange(null)
                 }}
-                title="Désélectionner (Échap)"
+                title={t('pv.deselectTitle')}
               >
-                ✕ Échap
+                {t('pv.deselect')}
               </button>
             </div>
           )}
@@ -694,31 +694,31 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               className={overlay.enabled ? 'small primary' : 'small'}
               aria-pressed={overlay.enabled}
               onClick={() => setOverlay({ ...overlay, enabled: !overlay.enabled })}
-              title={`Afficher les photos 360° déjà publiées sur Panoramax (${overlay.url}) et leur date ; visible à partir du zoom 7, photos à partir du zoom 15`}
+              title={t('pv.overlayTitle', { url: overlay.url })}
             >
               Panoramax
             </button>
-            <select className="small" value={basemap.id} onChange={(e) => chooseBasemap(e.target.value)} aria-label="Fond de carte" title="Fond de carte">
+            <select className="small" value={basemap.id} onChange={(e) => chooseBasemap(e.target.value)} aria-label={t('pv.basemap')} title={t('pv.basemap')}>
               {basemaps.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
-              <option value="__add">+ Ajouter un fond XYZ…</option>
+              <option value="__add">{t('pv.addBasemap')}</option>
             </select>
             <span className="tool-sep" />
-            <button className="small" disabled={!current} onClick={() => setCenterTick((t) => t + 1)} title="Centrer la carte sur la photo courante">
-              ◎ Centrer
+            <button className="small" disabled={!current} onClick={() => setCenterTick((n) => n + 1)} title={t('pv.centerTitle')}>
+              {t('pv.center')}
             </button>
-            <label title="Garder la photo courante au centre de la carte pendant la navigation (← →) ; décocher pour une carte fixe">
-              <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Suivre
+            <label title={t('pv.followTitle')}>
+              <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> {t('pv.follow')}
             </label>
-            <label title="Photos exclues (X) : masquées sur la carte et sautées par ← → ; cocher pour les revoir et les réintégrer (Maj+X)">
-              <input type="checkbox" checked={showExcluded} onChange={(e) => { setShowExcluded(e.target.checked); e.target.blur() }} /> Exclues
+            <label title={t('pv.excludedTitle')}>
+              <input type="checkbox" checked={showExcluded} onChange={(e) => { setShowExcluded(e.target.checked); e.target.blur() }} /> {t('pv.excluded')}
             </label>
             {editMode && (
-              <label title="Mode Positions : → reporte sur la photo suivante la correction de la photo courante (même décalage par rapport à sa position d'origine), si la suivante n'est pas déjà corrigée. Ctrl+Z annule.">
-                <input type="checkbox" checked={carryPos} onChange={(e) => { setCarryPos(e.target.checked); e.target.blur() }} /> Reporter la correction (→)
+              <label title={t('pv.carryTitle')}>
+                <input type="checkbox" checked={carryPos} onChange={(e) => { setCarryPos(e.target.checked); e.target.blur() }} /> {t('pv.carry')}
               </label>
             )}
           </div>
@@ -749,7 +749,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onRange={setSnapHighlight}
                 onDone={(u, moved) => {
                   setSnapOpen(null)
-                  setNotice(`${moved} photo(s) recalée(s) sur OpenStreetMap — Ctrl+Z pour annuler`)
+                  setNotice(t('pv.snapped', { n: moved }))
                   afterHeadingChange(u)
                 }}
                 onClose={() => setSnapOpen(null)}
@@ -770,22 +770,22 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           />
           {ctx && <ContextMenu x={ctx.x} y={ctx.y} {...ctxItems()} onClose={() => setCtx(null)} />}
         </div>
-        <div className="resizer" onMouseDown={startResize} title="Redimensionner" />
+        <div className="resizer" onMouseDown={startResize} title={t('pv.resize')} />
         <aside className="side">
           <nav className="tabs" role="tablist">
             {(
               [
-                ['photo', 'Photo'],
-                ['sequences', 'Séquences'],
-                ['sync', 'Synchro'],
-                ['export', 'Export et envoi'],
-                ['send', 'Envoi'],
-                ['summary', 'Bilan'],
+                ['photo', t('tab.photo')],
+                ['sequences', t('tab.sequences')],
+                ['sync', t('tab.sync')],
+                ['export', t('tab.export')],
+                ['send', t('tab.send')],
+                ['summary', t('tab.summary')],
               ] as [Tab, string][]
-            ).filter(([t]) => (isPnx ? t !== 'export' : t !== 'send')).map(([t, label]) => (
-              <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'tab active' : 'tab'} onClick={() => setTab(t)}>
+            ).filter(([id]) => (isPnx ? id !== 'export' : id !== 'send')).map(([id, label]) => (
+              <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'tab active' : 'tab'} onClick={() => setTab(id)}>
                 {label}
-                {t === 'sequences' && <span className="count">{sequences.length}</span>}
+                {id === 'sequences' && <span className="count">{sequences.length}</span>}
               </button>
             ))}
           </nav>
@@ -843,7 +843,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   onError={fail}
                 />
               ) : (
-                <p className="muted">{photos.length ? 'Cliquez sur une photo de la carte ou de la timeline, ou utilisez ← →.' : 'Importez un dossier de photos pour commencer.'}</p>
+                <p className="muted">{photos.length ? t('pv.pickPhoto') : t('pv.importFirst')}</p>
               ))}
             {tab === 'sequences' && (
               <SequencesTab
@@ -859,11 +859,11 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 }}
                 onGo={(idx) => goIdx(idx)}
                 onRefresh={() => {
-                  setNotice('Orientation corrigée')
+                  setNotice(t('pv.orientFixed'))
                   afterHeadingChange()
                 }}
                 onExported={() => {
-                  setNotice('Réexport lancé')
+                  setNotice(t('pv.reexportStarted'))
                   refresh()
                 }}
                 onError={fail}
@@ -875,7 +875,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 gpx={gpx}
                 onGpx={(g) => {
                   setGpx(g)
-                  setNotice(g ? (g.in_use ? `Synchro sur la trace GPX « ${g.name} »` : 'Synchro sur le GPS de la caméra') : 'Trace GPX retirée : synchro sur le GPS de la caméra')
+                  setNotice(g ? (g.in_use ? t('pv.syncGpx', { name: g.name }) : t('pv.syncCamera')) : t('pv.gpxRemoved'))
                 }}
                 onGpxSnap={() => openGpxSnap()}
                 onView={setViewYaw}
@@ -950,14 +950,14 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             if (basemapId === id) chooseBasemap('osm')
           }}
           onHeadingsSaved={() => {
-            setNotice('Caps recalculés')
+            setNotice(t('pv.headingsRecomputed'))
             lastPhotosKey.current = ''
             refresh()
           }}
           onQualitySaved={() => {
             api.project(projectId).then(setProject, () => undefined)
             api.quality(projectId).then(setQuality, (e) => setError(e.message))
-            setNotice('Seuils enregistrés : points à vérifier recalculés')
+            setNotice(t('pv.thresholdsSaved'))
           }}
           onError={fail}
           onClose={() => setShowSettings(false)}
@@ -1014,7 +1014,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           }}
           onDone={(s, n) => {
             setStopCompare(null)
-            applyState({ ...s, done: `${n} photo(s) de l'arrêt exclue(s) — Ctrl+Z pour annuler` })
+            applyState({ ...s, done: t('pv.stopExcluded', { n }) })
           }}
           onError={fail}
         />

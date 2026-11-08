@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { t, useLang } from './i18n'
 
 interface Props {
   value: number | null // final heading
@@ -10,6 +11,7 @@ interface Props {
 
 // Circular control: drag the arrow to set the heading (north up, clockwise). Shift = 5° steps.
 export default function HeadingDial({ value, computed, onChange, onCommit, size = 120 }: Props) {
+  useLang()
   const ref = useRef<SVGSVGElement>(null)
   const r = size / 2
 
@@ -38,7 +40,7 @@ export default function HeadingDial({ value, computed, onChange, onCommit, size 
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       role="slider"
-      aria-label="Cap"
+      aria-label={t('dial.label')}
       aria-valuemin={0}
       aria-valuemax={359.99}
       aria-valuenow={value ?? undefined}
@@ -56,7 +58,7 @@ export default function HeadingDial({ value, computed, onChange, onCommit, size 
         const [x, y] = ray(d, r - 14)
         return (
           <text key={d} x={x} y={y + 4} textAnchor="middle" className="dial-label">
-            {{ 0: 'N', 90: 'E', 180: 'S', 270: 'O' }[d]}
+            {{ 0: 'N', 90: 'E', 180: 'S', 270: t('dial.west') }[d]}
           </text>
         )
       })}
