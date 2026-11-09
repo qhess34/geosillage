@@ -6,7 +6,7 @@ import { capHelp, orientationHelp } from './CapOrientation'
 import { t, useLang } from './i18n'
 
 // logical cut); series of photos: context menu or range tools of the Photo tab
-function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDone: (u?: UndoState) => void; onError: (m: string) => void }) {
+function RideHeadings({ projectId, flat, onDone, onError }: { flat: boolean; projectId: string; onDone: (u?: UndoState) => void; onError: (m: string) => void }) {
   useLang()
   const [value, setValue] = useState('0')
   return (
@@ -27,7 +27,7 @@ function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDon
         </span>
       </div>
       <div className="form-row">
-        <span title={`${orientationHelp()} ${t('sum.yawHelp')}`}>{t('photo.orient.title')}</span>
+        <span title={`${orientationHelp()} ${t(flat ? 'sum.yawHelpFlat' : 'sum.yawHelp')}`}>{flat ? t('photo.orient.titleFlat') : t('photo.orient.title')}</span>
         <YawRotate projectId={projectId} target={{ all: true }} what={t('sum.yawWhat')} onDone={onDone} onError={onError} />
       </div>
     </div>
@@ -35,7 +35,7 @@ function RideHeadings({ projectId, onDone, onError }: { projectId: string; onDon
 }
 
 
-function Summary({ p }: { p: Project }) {
+function Summary({ p, onSettings }: { p: Project; onSettings?: () => void }) {
   useLang()
   const s = p.summary
   const row = (label: string, value: React.ReactNode, warn = false) => (
@@ -57,7 +57,25 @@ function Summary({ p }: { p: Project }) {
         {row(t('sum.unreadable'), s.unreadable, s.unreadable > 0)}
         {row(t('sum.excluded'), s.excluded, s.excluded > 0)}
         {s.missing_files > 0 && row(t('sum.missing'), s.missing_files, true)}
-        {row(t('sum.photos360'), s.is_360)}
+        {row(t('sum.media'), p.media === 'flat' ? t('sum.mediaFlat') : p.media === '360' ? t('sum.media360') : '—')}
+        {s.median_interval_s != null &&
+          row(
+            t('sum.interval'),
+            <>
+              {s.median_interval_s.toLocaleString(undefined, { maximumFractionDigits: 1 })} s
+              {s.interval_warning && (
+                <div className="small-text">
+                  {t('sum.intervalWarn', { gap: p.settings.gap_seconds })}{' '}
+                  {onSettings && (
+                    <button className="small" onClick={onSettings}>
+                      ⚙ {t('sum.openSettings')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>,
+            s.interval_warning,
+          )}
         {row(t('sum.start'), fmtTime(s.start))}
         {row(t('sum.end'), fmtTime(s.end))}
         {row(t('sum.duration'), fmtDuration(s.duration_s))}
@@ -78,7 +96,9 @@ export default function SummaryTab({
   onRefresh,
   onHeadingsChanged,
   onError,
+  onSettings,
 }: {
+  onSettings?: () => void
   projectId: string
   project: Project
   isPnx: boolean
@@ -89,7 +109,7 @@ export default function SummaryTab({
   useLang()
   return (
     <>
-      <Summary p={project} />
+      <Summary p={project} onSettings={onSettings} />
       <div className="row wrap">
         {!isPnx && (
           <button className="small" onClick={() => api.checkFiles(projectId).then(onRefresh)} title={t('sum.checkFiles')}>
@@ -102,7 +122,7 @@ export default function SummaryTab({
           </button>
         )}
       </div>
-      <RideHeadings projectId={projectId} onDone={(u) => onHeadingsChanged(u)} onError={onError} />
+      <RideHeadings projectId={projectId} flat={project.media === 'flat'} onDone={(u) => onHeadingsChanged(u)} onError={onError} />
       {project.source_dirs.length > 0 && (
         <>
           <h3>{t('sum.sources')}</h3>

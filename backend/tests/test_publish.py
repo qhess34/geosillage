@@ -291,7 +291,7 @@ class FakeAccount(FakeWithItems):
             return httpx.Response(200, content=b"\xff\xd8jpeg-" + p.encode(), headers={"Content-Type": "image/jpeg"})
         return super().__call__(req)
 
-    def add_sequence(self, n=30, yaw=0.0):
+    def add_sequence(self, n=30, yaw=0.0, fov=360):
         from app.core import geo
         cid = str(uuid.uuid4())
         lat, lon, feats = 43.6, 3.87, {}
@@ -300,7 +300,7 @@ class FakeAccount(FakeWithItems):
             feats[pic] = {"id": pic, "geometry": {"type": "Point", "coordinates": [lon, lat]},
                           "properties": {"datetime": f"2024-05-01T08:{i // 30:02d}:{(2 * i) % 60:02d}Z", "view:azimuth": 90,
                                          "pers:yaw": yaw, "pers:pitch": 0.01 if yaw else 0, "pers:roll": 0.01 if yaw else 0,
-                                         "pers:interior_orientation": {"field_of_view": 360}, "original_file:name": f"GSAC{i:04d}.JPG"}}
+                                         "pers:interior_orientation": {"field_of_view": fov}, "original_file:name": f"GSAC{i:04d}.JPG"}}
             lon, lat, _ = geo.GEOD.fwd(lon, lat, 90, 8)
         self.items[cid] = feats
         return cid
@@ -311,6 +311,20 @@ def account(monkeypatch):
     f = FakeAccount()
     monkeypatch.setattr(panoramax, "TRANSPORT", httpx.MockTransport(f))
     return f
+
+
+def test_panoramax_project_type_from_field_of_view(account):
+    with TestClient(main.app) as client:
+        connect(client, account)
+        flat, sphere = account.add_sequence(10, fov=65), account.add_sequence(10)
+        pid = client.post("/api/panoramax/projects", json={"name": "Plat", "collections": [flat]}).json()["id"]
+        wait_jobs(client, pid)
+        p = client.get(f"/api/projects/{pid}").json()
+        assert p["media"] == "flat" and p["summary"]["total"] == 10 and p["summary"]["is_360"] == 0
+        # a sequence of the other type cannot join the project
+        pid2 = client.post("/api/panoramax/projects", json={"name": "Mixte", "collections": [flat, sphere]}).json()["id"]
+        jobs = wait_jobs(client, pid2)
+        assert jobs[0]["state"] == "error" and "séquences plates" in jobs[0]["message"]
 
 
 def test_panoramax_project_import_and_corrections(account):

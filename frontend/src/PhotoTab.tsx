@@ -68,6 +68,7 @@ interface PhotoTabProps {
 
 export default function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onView, onChanged, onError }: PhotoTabProps) {
   useLang()
+  const flat = !photo.is_360 // flat picture: the yaw is the direction of the camera
   const [draft, setDraft] = useState<number | null>(null)
   const [typed, setTyped] = useState('')
   const [rangeValue, setRangeValue] = useState('15')
@@ -122,6 +123,7 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
           yaw={photo.yaw_offset}
           pitch={photo.pitch_orig}
           roll={photo.roll_orig}
+          flat={!photo.is_360}
           onView={onView}
           fixLabel={range ? t('photo.fixRange', { a: range[0] + 1, b: range[1] + 1 }) : t('photo.fix')}
           onFixYaw={(y) =>
@@ -208,25 +210,25 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
           )}
         </div>
       </div>
-      <h3 title={orientationHelp()}>{t('photo.orient.title')}</h3>
-      <p className="small-text muted section-help">{t('photo.orient.help')}</p>
+      <h3 title={orientationHelp()}>{flat ? t('photo.orient.titleFlat') : t('photo.orient.title')}</h3>
+      <p className="small-text muted section-help">{flat ? t('photo.orient.helpFlat') : t('photo.orient.help')}</p>
       <div className="orientation-box small-text">
         <CapOrientationDiagram heading={shown} yaw={photo.yaw_offset} />
         <div>
           <div>
             {photo.yaw_offset ? (
               <>
-                {rich(t('photo.orient.at', { value: `${photo.yaw_offset > 0 ? '+' : ''}${photo.yaw_offset}` }))}
+                {rich(t(flat ? 'photo.orient.atFlat' : 'photo.orient.at', { value: `${photo.yaw_offset > 0 ? '+' : ''}${photo.yaw_offset}` }))}
                 {Math.abs(photo.yaw_offset) >= 170 ? t('photo.orient.upside') : photo.yaw_offset > 0 ? t('photo.orient.right') : t('photo.orient.left')}
               </>
             ) : (
-              <>{rich(t('photo.orient.zero'))}</>
+              <>{rich(t(flat ? 'photo.orient.zeroFlat' : 'photo.orient.zero'))}</>
             )}
           </div>
           <div className="muted">
             <span className="cap-key blue" /> {t('photo.orient.keyHeading')} · <span className="cap-key orange" /> {t('photo.orient.keyCentre')}
           </div>
-          <div className="muted">{t('photo.orient.fixHelp')}</div>
+          {!flat && <div className="muted">{t('photo.orient.fixHelp')}</div>}
           {photo.yaw_offset ? (
             <button className="small" onClick={() => api.setYaw(projectId, { photo_ids: [photo.id] }, null).then((r) => onChanged(r.undo), (e) => onError(e.message))}>
               {t('photo.orient.reset')}
@@ -378,10 +380,18 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
             <th>{t('photo.info.exifHeading')}</th>
             <td>{photo.heading_exif != null ? `${photo.heading_exif}°` : t('photo.info.absent')}</td>
           </tr>
+          {(photo.pitch_orig != null || photo.roll_orig != null) && (
+            <tr>
+              <th title={t('photo.info.poseHelp')}>{t('photo.info.pose')}</th>
+              <td>
+                {photo.pitch_orig ?? '—'}° / {photo.roll_orig ?? '—'}°
+              </td>
+            </tr>
+          )}
           <tr>
             <th>{t('photo.info.camera')}</th>
             <td>
-              {photo.make} {photo.model} {photo.is_360 ? '· 360°' : ''}
+              {photo.make} {photo.model} {photo.is_360 ? '· 360°' : `· ${t('photo.info.flat')}`}
             </td>
           </tr>
           <tr>

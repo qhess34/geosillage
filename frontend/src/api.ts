@@ -47,6 +47,8 @@ export interface Summary {
   missing_files: number
   excluded: number
   is_360: number
+  median_interval_s: number | null // median interval between photos (s)
+  interval_warning: boolean // photos too sparse for the thresholds, or very many stops
   start: number | null
   end: number | null
   duration_s: number | null
@@ -61,6 +63,7 @@ export interface Project {
   name: string
   kind: ProjectKind
   pnx_instance: string | null
+  media: '360' | 'flat' | null // type of the pictures (one per project), null = no picture yet
   created_at: number
   settings: Record<string, number>
   source_dirs: string[]
@@ -357,7 +360,10 @@ export const api = {
   deleteProject: (id: string) => req<void>('DELETE', `/api/projects/${id}`),
   project: (id: string) => req<Project>('GET', `/api/projects/${id}`),
   updateProject: (id: string, body: object) => req<Project>('PATCH', `/api/projects/${id}`, body),
-  importPaths: (id: string, paths: string[]) => req<{ job_id: string }>('POST', `/api/projects/${id}/import`, { paths }),
+  importCheck: (id: string, paths: string[], media?: '360' | 'flat') =>
+    req<{ media: '360' | 'flat' | 'mixed' | null; ask: boolean }>('POST', `/api/projects/${id}/import/check`, { paths, media }),
+  importPaths: (id: string, paths: string[], media?: '360' | 'flat') =>
+    req<{ job_id: string }>('POST', `/api/projects/${id}/import`, { paths, media }),
   checkFiles: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/check-files`),
   retryThumbs: (id: string) => req<{ job_id: string }>('POST', `/api/projects/${id}/thumbnails?retry_failed=true`),
   cancelJob: (id: string, job: string) => req<unknown>('POST', `/api/projects/${id}/jobs/${job}/cancel`),

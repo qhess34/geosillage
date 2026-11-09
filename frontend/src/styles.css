@@ -1654,3 +1654,6 @@ a.button-link:hover {
 .gpx-snap-stats {
   font-weight: 600;
 }
+
+.warn-box { border: 1px solid #d97706; background: rgba(217, 119, 6, 0.1); border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0.5rem 0; }
+.warn-box p { margin: 0 0 0.5rem; }

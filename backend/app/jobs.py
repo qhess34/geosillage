@@ -20,6 +20,10 @@ class Cancelled(Exception):
 class UserError(Exception):
     """Error whose message is meant for the user (shown as is on the job)."""
 
+    def __init__(self, message: str, **params):
+        super().__init__(message.format(**params) if params else message)
+        self.template, self.params = message, params
+
 
 class JobContext:
     def __init__(self, project_id: str, job_id: str):

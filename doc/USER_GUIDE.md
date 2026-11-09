@@ -61,6 +61,15 @@ paths saved in the project are not the same).
 
 ## 2. Projects
 
+**Picture type.** A ride contains a single type of pictures: **360°** or **flat** (smartphone…). The type is
+detected at the first import from each picture's panorama XMP tags; the other type cannot be imported into the same
+project afterwards (a message says so: create another ride). A 2:1 image without XMP tags is asked about: 360° or
+flat? In a flat-picture project the viewer shows the plain image (no sphere view) and the orientation becomes the
+**camera direction** (0° = forwards, 180° = backwards, ±90° = sideways). Pitch and roll read from the picture are
+shown (read only). A Panoramax project follows the same rule (type from the field of view of the published pictures).
+The **Summary** shows the median interval between pictures and warns you, with a link to *⚙ Settings*, when it is too
+large for the thresholds (tuned for about 1 picture every 2 s).
+
 A **project** = one ride (or several). Home page: type a name then *Create project*; open a project by clicking its name; *Delete*
 (with confirmation).
 The project name is used to name the exported folders (`<name>_1`, `<name>_2`…).

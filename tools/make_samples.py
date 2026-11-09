@@ -12,7 +12,10 @@ No GPSImgDirection is written (the application has to compute the heading).
 
 A ground-truth CSV (true position, recorded position, delay) is written next to the photos.
 
-Usage: python tools/make_samples.py OUT_DIR [--count 300] [--width 2048] [--seed 1]
+Flat (smartphone) pictures: --flat writes 4:3 pictures without GPano tags (Open Camera-like Make/Model), and
+--compass also writes a varying GPSImgDirection (the bike direction at the capture time).
+
+Usage: python tools/make_samples.py OUT_DIR [--count 300] [--width 2048] [--seed 1] [--flat [--compass]]
 """
 
 import argparse
@@ -88,12 +91,14 @@ def main():
     ap.add_argument("--count", type=int, default=300)
     ap.add_argument("--width", type=int, default=2048)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--flat", action="store_true", help="flat 4:3 smartphone pictures instead of 360° ones")
+    ap.add_argument("--compass", action="store_true", help="with --flat: write GPSImgDirection")
     a = ap.parse_args()
     rng = random.Random(a.seed)
     out = Path(a.out)
     (out / "100GOPRO").mkdir(parents=True, exist_ok=True)
     (out / "101GOPRO").mkdir(parents=True, exist_ok=True)
-    w, h = a.width, a.width // 2
+    w, h = a.width, (a.width * 3 // 4 if a.flat else a.width // 2)
 
     base = Image.new("RGB", (w, h))
     px = ImageDraw.Draw(base)
@@ -132,7 +137,10 @@ def main():
 
         img = base.copy()
         ImageDraw.Draw(img).text((w // 2 - 40, h // 2), f"#{i + 1}", fill=(255, 255, 0))
-        zeroth = {piexif.ImageIFD.Make: b"GoPro", piexif.ImageIFD.Model: b"GoPro Max", piexif.ImageIFD.Software: b"H19.03.02.06.00"}
+        if a.flat:
+            zeroth = {piexif.ImageIFD.Make: b"Google", piexif.ImageIFD.Model: b"Pixel 8", piexif.ImageIFD.Software: b"Open Camera"}
+        else:
+            zeroth = {piexif.ImageIFD.Make: b"GoPro", piexif.ImageIFD.Model: b"GoPro Max", piexif.ImageIFD.Software: b"H19.03.02.06.00"}
         exif = {}
         if i != a.count - 5:  # one picture without date
             exif[piexif.ExifIFD.DateTimeOriginal] = when.strftime("%Y:%m:%d %H:%M:%S").encode()
@@ -149,9 +157,17 @@ def main():
                 piexif.GPSIFD.GPSDateStamp: when.strftime("%Y:%m:%d").encode(),
                 piexif.GPSIFD.GPSDOP: rational(rng.uniform(0.8, 3.0), 100),
             }
+            if a.flat and a.compass:
+                nlat, nlon = at(pts, t + 0.5)
+                bearing = GEOD.inv(true_lon, true_lat, nlon, nlat)[0] % 360
+                gps[piexif.GPSIFD.GPSImgDirectionRef] = b"T"
+                gps[piexif.GPSIFD.GPSImgDirection] = rational(bearing, 100)
         exif_bytes = piexif.dump({"0th": zeroth, "Exif": exif, "GPS": gps})
         path = out / folder / name
-        img.save(path, "JPEG", quality=80, exif=exif_bytes, xmp=XMP.format(w=w, h=h).encode())
+        if a.flat:
+            img.save(path, "JPEG", quality=80, exif=exif_bytes)
+        else:
+            img.save(path, "JPEG", quality=80, exif=exif_bytes, xmp=XMP.format(w=w, h=h).encode())
         truth.append([f"{folder}/{name}", round(t, 3), true_lat, true_lon, None if no_fix else rec_lat, None if no_fix else rec_lon, round(delay, 2), int(jump)])
 
     # Duplicate file (same content imported from two folders) and a corrupted JPEG

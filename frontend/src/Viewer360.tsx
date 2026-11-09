@@ -20,6 +20,7 @@ interface Props {
   fixLabel?: string
   // view direction relative to the front (degrees, right > 0): lets the map arrow turn with the view
   onView?: (yawDeg: number) => void
+  flat?: boolean // flat (non 360°) picture: plain image viewer, no sphere, no toggle
 }
 
 const norm180 = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180
@@ -181,13 +182,16 @@ export default function Viewer360(props: Props) {
       /* ignore */
     }
   }
+  const flat = props.flat || mode === 'flat'
   return (
     <div className="viewer-wrap">
-      {mode === '360' ? <Sphere {...props} /> : <PhotoViewer {...props} />}
+      {flat ? <PhotoViewer {...props} /> : <Sphere {...props} />}
       <div className="viewer-tools">
-        <button className="small" onClick={toggle} title={t('v360.toggleTitle')}>
-          {mode === '360' ? t('v360.flat') : t('v360.view360')}
-        </button>
+        {!props.flat && (
+          <button className="small" onClick={toggle} title={t('v360.toggleTitle')}>
+            {mode === '360' ? t('v360.flat') : t('v360.view360')}
+          </button>
+        )}
         <a className="button-link small" href={`${props.imageUrl}?hd=1`} target="_blank" rel="noreferrer" title={t('v360.originalTitle')}>
           {t('v360.original')}
         </a>

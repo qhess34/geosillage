@@ -28,10 +28,11 @@ TAGS = [
     "-GPSTrack",
     "-GPSDOP",
     "-XMP-GPano:ProjectionType",
+    "-XMP-GPano:UsePanoramaViewer",
+    "-XMP-GPano:FullPanoWidthPixels",
+    "-XMP-GPano:PosePitchDegrees",
+    "-XMP-GPano:PoseRollDegrees",
 ]
-
-# Cameras known to produce 360° pictures even without GPano tags (subset of Panoramax cameras.csv)
-KNOWN_360 = {("gopro", "max"), ("gopro", "gopro max"), ("gopro", "max2"), ("gopro", "fusion")}
 
 _DT_RE = re.compile(r"^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$")
 
@@ -55,6 +56,9 @@ class PhotoMeta:
     height: int | None = None
     projection: str | None = None
     is_360: bool = False
+    maybe_360: bool = False  # 2:1 picture without GPano projection: only a hint, confirmed by the user at import
+    pitch: float | None = None  # XMP-GPano pose of the file (read only)
+    roll: float | None = None
     error: str | None = None
 
 
@@ -113,9 +117,10 @@ def to_meta(d: dict) -> PhotoMeta:
     m.width = int(d["ImageWidth"]) if _num(d.get("ImageWidth")) else None
     m.height = int(d["ImageHeight"]) if _num(d.get("ImageHeight")) else None
     m.projection = d.get("ProjectionType")
-    known = (m.make or "").lower(), (m.model or "").lower()
-    ratio_2_1 = bool(m.width and m.height and m.width == 2 * m.height)
-    m.is_360 = m.projection == "equirectangular" or (known in KNOWN_360 and ratio_2_1)
+    m.pitch, m.roll = _num(d.get("PosePitchDegrees")), _num(d.get("PoseRollDegrees"))
+    # 360° is declared by the XMP projection (UsePanoramaViewer / FullPanoWidthPixels only support it)
+    m.is_360 = m.projection == "equirectangular"
+    m.maybe_360 = not m.projection and bool(m.width and m.height and m.width == 2 * m.height)
     if d.get("Error"):
         m.error = str(d["Error"])
     return m

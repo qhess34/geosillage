@@ -33,3 +33,15 @@ def samples(tmp_path_factory) -> Path:
 
 def tree_hash(root: Path) -> dict[str, str]:
     return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+@pytest.fixture(scope="session")
+def flat_samples(tmp_path_factory) -> Path:
+    """Synthetic smartphone ride: flat 4:3 pictures, no GPano tags, with GPSImgDirection."""
+    out = tmp_path_factory.mktemp("flat") / "sortie"
+    subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "make_samples.py"), str(out), "--count", "40", "--width", "400", "--seed", "5", "--flat", "--compass"],
+        check=True,
+        capture_output=True,
+    )
+    return out
