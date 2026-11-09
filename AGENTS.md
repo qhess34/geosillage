@@ -60,8 +60,9 @@ chercher (`grep -n`) plutôt que le lire en entier.
   français ; tout nouveau texte d'interface y passe, jamais en dur ; chantier #37) ; erreurs du serveur en français (clé) avec traduction anglaise dans
   `backend/app/i18n.py` (table `EN`, langue = en-tête `Accept-Language`), documentation et
   commits en **français** ; code et commentaires en anglais, courts.
-- **Documentation dans le même commit** : `GUIDE_UTILISATEUR.md` pour tout changement visible (ses captures,
-  `tools/captures.sh`, seulement quand l'utilisateur le demande), `GUIDE_CODE.md` pour le fonctionnement, ce fichier si une règle
+- **Documentation dans le même commit** : `GUIDE_UTILISATEUR.md` **et** `USER_GUIDE.md` (anglais, mêmes sections) pour tout
+  changement visible (leurs captures, `tools/captures.sh` puis `CAPTURE_LANG=en tools/captures.sh`, seulement quand
+  l'utilisateur le demande), `GUIDE_CODE.md` pour le fonctionnement, ce fichier si une règle
   ou l'organisation change.
 - **Ne pas prétendre avoir vérifié** ce qui ne peut pas l'être hors ligne (tuiles réelles, site Panoramax) : le
   dire.
@@ -77,7 +78,8 @@ Pour limiter le temps et les tokens consommés :
 - **Tests plutôt que captures** : pytest et e2e (« 10 passed ») suffisent pour un comportement. Une capture seulement
   pour une mise en page nouvelle, **recadrée** sur la zone modifiée.
 - **Captures du guide (`tools/captures.sh`) : uniquement quand l'utilisateur le demande.** Une PR qui change un
-  écran montré dans le guide ne régénère pas : elle ajoute la ou les captures concernées (nom, changement, numéro de
+  écran montré dans le guide ne régénère pas : elle ajoute la ou les captures concernées (`doc/images/` et
+  `doc/images/en/` ; nom, changement, numéro de
   PR) à l'issue ouverte « Mettre à jour les captures du guide » (label `documentation`), ou la crée si aucune n'est
   ouverte. La PR qui régénère les captures ferme l'issue (« Closes #… »).
 - **Tests ciblés pendant la mise au point** (`tools/check.sh back tests/test_osm.py`, `e2e --grep …`), suite complète

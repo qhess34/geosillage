@@ -1,10 +1,15 @@
 // Screenshots of the user guide (doc/images), on the demo project created by tools/captures.sh.
-// Usage: node tools/captures.js <output dir> [base url]
+// Usage: node tools/captures.js <output dir> [base url] [fr|en]  (language of the interface and of the demo project names)
 const { chromium } = require('playwright');
 const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
+const LANG = process.argv[4] === 'en' ? 'en' : 'fr';
+// Labels the script clicks on, per language (exact texts of frontend/src/i18n)
+const L = LANG === 'en'
+  ? { ride: 'Ride 14 June', seq: 'Sequences', summary: 'Summary', export: 'Export and send', sync: 'Sync', photo: 'Photo', basemap: 'Background map', heading: /heading/i, info: /information/i }
+  : { ride: 'Sortie 14 juin', seq: 'Séquences', summary: 'Bilan', export: 'Export', sync: 'Synchro', photo: 'Photo', basemap: 'Fond de carte', heading: /cap/i, info: /informations/i };
 (async () => {
   const b = await chromium.launch(); const errors = [];
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 760 }, colorScheme: 'light', locale: 'fr-FR' });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 760 }, colorScheme: 'light', locale: LANG === 'en' ? 'en-GB' : 'fr-FR' });
   const p = await ctx.newPage();
   p.on('pageerror', e => errors.push(e.message));
   const wait = (ms = 700) => p.waitForTimeout(ms);
@@ -12,11 +17,11 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   const shot = async (name, opts = {}) => { await p.screenshot({ path: `${OUT}/${name}.png`, ...opts }); console.log('ok', name); };
   const go = async (n) => { await p.keyboard.press('Home'); for (let i = 0; i < Math.floor(n / 10); i++) await p.keyboard.press('Shift+ArrowRight'); for (let i = 0; i < n % 10; i++) await p.keyboard.press('ArrowRight'); await wait(); };
 
-  await p.addInitScript(() => { try { localStorage.setItem('pss-basemap', 'osm'); localStorage.setItem('pss-follow', '1') } catch {} });
+  await p.addInitScript((lang) => { try { localStorage.setItem('pss-basemap', 'osm'); localStorage.setItem('pss-follow', '1'); localStorage.setItem('pss-lang', lang) } catch {} }, LANG);
   await p.goto(BASE); await p.waitForSelector('.project-name'); await wait();
   await shot('01-projets');
 
-  await p.click('.project-name:has-text("Sortie 14 juin")'); await p.waitForSelector('.tabs');
+  await p.click(`.project-name:has-text("${L.ride}")`); await p.waitForSelector('.tabs');
   await go(40); await p.evaluate(() => window.__pssMap.zoomTo(16.3, { duration: 0 })); await tiles();
   await shot('02-ecran');
 
@@ -25,22 +30,22 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   await shot('03-debut-fin');
   await p.keyboard.press('Escape');
 
-  await p.click('.tab:has-text("Séquences")'); await wait();
+  await p.click(`.tab:has-text("${L.seq}")`); await wait();
   await shot('04-sequences');
 
-  await p.click('.tab:has-text("Bilan")'); await wait();
+  await p.click(`.tab:has-text("${L.summary}")`); await wait();
   await shot('09-bilan');
 
-  await p.click('.tab:has-text("Export")'); await wait();
+  await p.click(`.tab:has-text("${L.export}")`); await wait();
   await shot('08-export');
 
   // satellite IGN for sync and positions
-  await p.selectOption('select[aria-label="Fond de carte"]', 'ign-ortho'); await wait(1000);
-  await p.click('.tab:has-text("Synchro")'); await wait(1500);
+  await p.selectOption(`select[aria-label="${L.basemap}"]`, 'ign-ortho'); await wait(1000);
+  await p.click(`.tab:has-text("${L.sync}")`); await wait(1500);
   await go(150); await p.evaluate(() => window.__pssMap.zoomTo(18, { duration: 0 })); await tiles();
   await shot('05-synchro');
 
-  await p.click('.tab:has-text("Photo")'); await wait();
+  await p.click(`.tab:has-text("${L.photo}")`); await wait();
   await go(100); await p.keyboard.press('m'); await p.evaluate(() => window.__pssMap.zoomTo(18.5, { duration: 0 })); await tiles();
   const mk = await p.locator('.maplibregl-marker').last().boundingBox();
   if (mk) { const x = mk.x + mk.width / 2, y = mk.y + mk.height - 4; await p.mouse.move(x, y); await p.mouse.down(); await p.mouse.move(x + 40, y - 25, { steps: 8 }); await p.mouse.up(); await wait(1200); }
@@ -50,12 +55,12 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   // heading / orientation part of the photo panel
   await go(130); await wait(1500);
   await p.setViewportSize({ width: 1280, height: 1500 }); await wait(1200);
-  const box = await p.evaluate(() => {
+  const box = await p.evaluate(([capRe, infoRe]) => {
     const hs = [...document.querySelectorAll('aside.side h3')];
-    const cap = hs.find(h => /cap/i.test(h.textContent)), info = hs.find(h => /informations/i.test(h.textContent));
+    const cap = hs.find(h => new RegExp(capRe, 'i').test(h.textContent)), info = hs.find(h => new RegExp(infoRe, 'i').test(h.textContent));
     const a = cap.getBoundingClientRect(), b = info.getBoundingClientRect(), side = document.querySelector('aside.side').getBoundingClientRect();
     return { x: side.x, y: a.y - 12, width: side.width, height: b.y - a.y };
-  });
+  }, [L.heading.source, L.info.source]);
   await p.screenshot({ path: `${OUT}/07-cap.png`, clip: box }); console.log('ok 07-cap');
   await p.setViewportSize({ width: 1280, height: 760 }); await wait();
 
@@ -63,7 +68,7 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
   if (await p.locator('.modal').count()) await p.keyboard.press('?');
 
   // Panoramax overlay (real data from the meta-catalogue)
-  await p.selectOption('select[aria-label="Fond de carte"]', 'osm'); await wait(800);
+  await p.selectOption(`select[aria-label="${L.basemap}"]`, 'osm'); await wait(800);
   await go(250); await p.click('button:has-text("Panoramax")'); await wait();
   await p.click('.map-legend button'); await wait(300); await tiles(); // legend open: age classes of the coverage
   await p.evaluate(() => window.__pssMap.jumpTo({ zoom: 16.5 })); await tiles(); await wait(2500);

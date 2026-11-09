@@ -40,7 +40,7 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 
 | Pour | Document |
 |---|---|
-| **Utiliser l'outil** (écran par écran, raccourcis, questions fréquentes) | [doc/GUIDE_UTILISATEUR.md](doc/GUIDE_UTILISATEUR.md) |
+| **Utiliser l'outil** (écran par écran, raccourcis, questions fréquentes) | [doc/GUIDE_UTILISATEUR.md](doc/GUIDE_UTILISATEUR.md) · 🇬🇧 [doc/USER_GUIDE.md](doc/USER_GUIDE.md) (English) |
 | Développer (installation, vérifications, recettes, conventions) | [doc/DEVELOPPEMENT.md](doc/DEVELOPPEMENT.md) |
 | Agents IA : règles du dépôt | [AGENTS.md](AGENTS.md) |
 | Organisation IA : rôles, choix du modèle, cycle d'une demande | [doc/ORGANISATION_IA.md](doc/ORGANISATION_IA.md) |
