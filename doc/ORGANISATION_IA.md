@@ -65,29 +65,28 @@ reprise, le profil reste. On peut ainsi recréer toute l'organisation depuis ce 
 
 [`doc/agents/geosillage.yaml`](agents/geosillage.yaml) reprend les rôles ci-dessus pour Docker Agent (cagent) : chef de
 projet en agent racine, développeurs S/M/L, relecteur, consultant et webagency en sous-agents (modèles et outils par
-rôle). Non testé : valider les clés avec la version installée.
+rôle). Fichier validé avec cagent v1.30.0 (`cagent debug config` et `cagent run --dry-run`, sans clé API) ; aucun agent réel
+n'a été lancé.
 
 **Un seul environnement pour tous les agents.** Les sous-agents de Docker Agent tournent dans le même processus, donc
 sur la même machine et les mêmes fichiers. Il suffit de lancer l'agent racine dans un conteneur qui a tout l'outillage
 et les deux dépôts :
 
-- image : celle du projet + Node, Playwright (Chromium), `git`, le binaire `docker agent` ;
-- volumes : `geosillage/` et `panoramax-tools/` côte à côte dans `/work`, plus un volume pour `.venv` et `node_modules`
-  (installés une fois, réutilisés par tous les agents) ;
-- secrets : `ANTHROPIC_API_KEY` et le jeton GitHub du serveur MCP `github-official`, en variables d'environnement,
-  jamais dans le dépôt.
+- image : [`Dockerfile.agent`](../Dockerfile.agent) = base du `Dockerfile` du projet (Ubuntu 24.04, ExifTool 12.76) +
+  Node 22, `git`, Playwright 1.63.0 (Chromium), le binaire cagent v1.30.0 (téléchargé depuis les releases de
+  `docker/cagent`), utilisateur `ubuntu` non root ; aucun secret dans l'image ;
+- volumes ([`compose.agent.yml`](../compose.agent.yml)) : `geosillage/` et `panoramax-tools/` (facultatif) côte à côte
+  dans `/work`, plus des volumes nommés pour `.venv` et les `node_modules`, installés une fois par
+  [`tools/agent-setup.sh`](../tools/agent-setup.sh) (idempotent) et réutilisés par tous les agents ;
+- secrets : `ANTHROPIC_API_KEY` et `GITHUB_PERSONAL_ACCESS_TOKEN` (serveur MCP `github-official`), en variables
+  d'environnement, jamais dans le dépôt.
 
-```yaml
-# compose.agent.yml (exemple, non testé)
-services:
-  agents:
-    build: { context: ., dockerfile: Dockerfile.agent }   # image du projet + node, playwright, git, docker agent
-    working_dir: /work/geosillage
-    volumes: [ "..:/work", "deps:/work/geosillage/.deps" ]
-    environment: [ ANTHROPIC_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN ]
-    command: docker agent run doc/agents/geosillage.yaml
-volumes: { deps: {} }
-```
+Dans l'image, la commande est `cagent run` (le plugin `docker agent` n'y est pas installé ; c'est le même binaire).
+
+**Testé** : construction de l'image, `tools/agent-setup.sh` (deux fois), `tools/check.sh back` (111 passed) dans le
+conteneur, validation du YAML, `docker compose config`. **Non testé** : un agent réel (pas de clé), le serveur MCP
+`docker:github-official` (demande Docker Desktop/MCP Gateway sur la machine), `tools/check.sh e2e` dans l'image
+(le téléchargement de Chromium était bloqué dans l'environnement de test ; Chromium y a été copié depuis l'hôte).
 
 **Pas de conflits entre tâches.** Même environnement ne veut pas dire même dossier : chaque tâche travaille dans son
 propre `git worktree` (`git worktree add ../wt/<branche> -b <branche> origin/main`), supprimé après la fusion. Les

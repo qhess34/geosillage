@@ -176,6 +176,16 @@ def foo(pid: str, body: FooIn):
   avant la première écriture, et la remettre dans `restore_sources` ;
 - ajouter la balise à la relecture de vérification et à `test_export.py`.
 
+### Lancer les agents IA en local (Docker Agent)
+
+```sh
+export ANTHROPIC_API_KEY=… GITHUB_PERSONAL_ACCESS_TOKEN=…     # jamais dans le dépôt
+docker compose -f compose.agent.yml run --rm agents          # construit l'image, tools/agent-setup.sh, puis cagent
+```
+
+Le dossier du dépôt doit s'appeler `geosillage` (`../panoramax-tools` à côté, facultatif). Détails :
+`doc/ORGANISATION_IA.md` § « Docker Agent ». Cette image n'est pas construite par le CI.
+
 ### Ajouter un réglage d'interface mémorisé
 
 État React initialisé depuis `localStorage['pss-…']` dans un `try` (stockage indisponible possible), valeur par

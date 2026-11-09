@@ -1,6 +1,6 @@
 # Organisation IA de GeoSillage pour Docker Agent (cagent) : chef de projet racine + sous-agents.
-# Voir doc/ORGANISATION_IA.md § « Docker Agent ». Non testé : valider les clés avec `docker agent --help`.
-# Lancement : docker agent run doc/agents/geosillage.yaml
+# Voir doc/ORGANISATION_IA.md § « Docker Agent ». Validé avec cagent v1.30.0 (`cagent debug config`, `cagent run --dry-run`).
+# Lancement : docker agent run doc/agents/geosillage.yaml (ou, dans l'image : cagent run …)
 version: "2"
 
 models:
