@@ -1,5 +1,7 @@
 # Guide d'utilisation — GeoSillage
 
+🇬🇧 [English version](USER_GUIDE.md)
+
 GeoSillage prépare les photos 360° d'une sortie (vélo — route, gravel, VTT —, à pied, en voiture…) prise avec une GoPro MAX (une photo toutes
 les ~2 s, souvent des milliers) avant leur publication sur [Panoramax](https://panoramax.fr) :
 
