@@ -156,6 +156,9 @@ def import_paths(ctx: jobs.JobContext, roots: list[str], hint: str | None = None
                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     rows,
                 )
+            has = conn.execute("SELECT 1 FROM photo LIMIT 1").fetchone()
+            if has and db.get_meta(conn, "heading_source") is None:  # chosen once, at the first import (then the user's choice)
+                db.set_meta(conn, "heading_source", headings.detect_source(conn))
         ctx.progress(done, total, "Analyse…", force=True)
         analysis.run(conn)
         headings.recompute(conn)

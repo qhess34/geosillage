@@ -114,6 +114,13 @@ l'arrêt (dernier point à plus du seuil avant elle, sans limite de temps, dans 
 état `stop`. Sans cela, la photo gardée d'un arrêt (les autres exclues) n'avait pas de cap. Seul un tronçon où la
 caméra ne bouge jamais reste `uncertain`.
 
+Source du cap automatique : `meta.heading_source` (`headings.get_source`, défaut `track`). `device` : `heading_auto`
+= `heading_exif` (boussole de l'appareil) quand il existe, sinon le cap calculé. Choisi au premier import
+(`importer`, `headings.detect_source` : `GPSImgDirection` sur au moins la moitié des photos, pas tout à 0, au moins
+deux valeurs entières différentes), puis par `PUT …/headings/source` (Bilan, ⚙ Réglages : `HeadingSource.tsx`).
+Annulable : `undo.META_KEYS` journalise ces clés de `meta` (`meta_before` / `meta_after`, toutes les séquences
+marquées modifiées).
+
 ## Recalage sur les voies OpenStreetMap
 
 `core/osm.py`. **Données** : `fetch_ways` interroge Overpass (`PSS_OVERPASS_URL`, défaut overpass-api.de) sur
@@ -238,6 +245,14 @@ chaque photo : caméra à l'envers = 180°), sur des photos, une plage, une séq
 (`all`). Interface : `YawRotate.tsx` (correction du montage de la caméra sur le casque : angle libre,
 `localStorage['pss-yaw-angle']`, « ↻ Corriger le montage » = `add`, jamais `yaw` qui effacerait les angles de tête)
 pour une séquence, tout le projet et la plage de l'onglet Photo.
+
+**Photos plates** (`photo.is_360 = 0`) : `yaw_offset` = direction de la caméra par rapport au sens de déplacement.
+`headings.written` donne le `GPSImgDirection` écrit : cap + lacet si la source est `track` (ou photo sans boussole), cap seul en `device`
+(la boussole donne déjà la direction de la caméra) ; 360° : cap seul. Utilisé par l'export (`exporter.plan`, aucune
+balise XMP-GPano : `_pose_heading` / `_pose_pitch_roll` renvoient `None`) et par la comparaison Panoramax
+(`_expected` : `yaw = None`, `_changes` n'envoie alors que position et cap, jamais `yaw` / `pitch` / `roll` ;
+« Remettre » ne renvoie que ce qui a été envoyé). Import d'une séquence Panoramax plate : `pers:yaw` ignoré
+(lacet de départ 0). Comment Panoramax traite `pers:yaw` sur une photo plate : non vérifié (hors ligne).
 
 ## Retard GPS (synchronisation temporelle)
 

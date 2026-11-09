@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, Project } from './api'
+import { api, Project, UndoState } from './api'
+import HeadingSource from './HeadingSource'
 import { Basemap } from './basemaps'
 import { Confirm } from './Dialogs'
 import { getLang, Key, LANGS, setLang, t, useLang } from './i18n'
@@ -13,6 +14,7 @@ export default function SettingsDialog({
   custom,
   onRemoveBasemap,
   onHeadingsSaved,
+  onHeadingSource,
   onQualitySaved,
   onError,
   onClose,
@@ -23,6 +25,7 @@ export default function SettingsDialog({
   custom: Basemap[]
   onRemoveBasemap: (id: string) => void
   onHeadingsSaved: () => void
+  onHeadingSource: (u?: UndoState) => void
   onQualitySaved: () => void // thresholds of the points to check changed: recompute them
   onError: (m: string) => void
   onClose: () => void
@@ -94,7 +97,7 @@ export default function SettingsDialog({
           </Confirm>
         )}
         <QualitySettings key={JSON.stringify(QUALITY_KEYS.map((k) => project.settings[k]))} p={project} onSaved={onQualitySaved} onError={onError} />
-        <HeadingSettings key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`} p={project} onSaved={onHeadingsSaved} onError={onError} />
+        <HeadingSettings key={`${project.settings.heading_min_m}-${project.settings.heading_window_s}`} p={project} onSaved={onHeadingsSaved} onSource={onHeadingSource} onError={onError} />
       </div>
     </div>
   )
@@ -147,7 +150,7 @@ function QualitySettings({ p, onSaved, onError }: { p: Project; onSaved: () => v
   )
 }
 
-function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => void; onError: (m: string) => void }) {
+function HeadingSettings({ p, onSaved, onSource, onError }: { p: Project; onSaved: () => void; onSource: (u?: UndoState) => void; onError: (m: string) => void }) {
   const [minM, setMinM] = useState(String(p.settings.heading_min_m))
   const [win, setWin] = useState(String(p.settings.heading_window_s))
   const save = () =>
@@ -158,6 +161,7 @@ function HeadingSettings({ p, onSaved, onError }: { p: Project; onSaved: () => v
     <div className="small-text">
       <h3>{t('settings.heading.title')}</h3>
       <p className="muted">{t('settings.heading.help')}</p>
+      <HeadingSource p={p} onDone={onSource} onError={onError} />
       <div className="row wrap">
         <label>
           {t('settings.heading.minDist')} <input className="num" type="number" min={1} max={100} value={minM} onChange={(e) => setMinM(e.target.value)} /> m

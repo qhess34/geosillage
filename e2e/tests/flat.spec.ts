@@ -19,6 +19,16 @@ test('projet plat : visionneuse sans 360°, direction de la caméra, autre type 
   await expect(page.locator('table.summary')).toContainText('Plates')
   await expect(page.locator('table.summary')).toContainText('Intervalle médian')
 
+  // heading source: the camera's compass is detected; back to the track, then Ctrl+Z
+  const source = page.getByRole('combobox', { name: 'Source du cap' })
+  await expect(source).toHaveValue('device')
+  await source.selectOption('track')
+  await expect(source).toHaveValue('track')
+  expect((await (await request.get(`/api/projects/${pid}`)).json()).heading_source).toBe('track')
+  await page.locator('body').click({ position: { x: 5, y: 5 } })
+  await page.keyboard.press('Control+z')
+  await expect(source).toHaveValue('device')
+
   // a 360° folder cannot join the project: clear message in the import dialog
   await page.getByRole('button', { name: 'Importer', exact: true }).click()
   const dlg = page.getByRole('dialog', { name: 'Importer des photos' })

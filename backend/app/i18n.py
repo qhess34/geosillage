@@ -14,6 +14,8 @@ _lang: contextvars.ContextVar[str] = contextvars.ContextVar("lang", default="fr"
 EN: dict[str, str] = {
     # main.py
     "Nom vide": "Empty name",
+    "Cap de l'appareil (boussole)": "Camera's heading (compass)",
+    "Cap calculé depuis la trace": "Heading computed from the track",
     "Réglage invalide : {x}": "Invalid setting: {x}",
     "Chemin introuvable : {p}": "Path not found: {p}",
     "Photo introuvable": "Photo not found",

@@ -83,18 +83,22 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
     project = slug(db.get_meta(conn, "name", "projet") or "projet")
     if sequence_ids:
         seqs = [s for s in seqs if s["id"] in set(sequence_ids)]
+    source = headings.get_source(conn)
     out = []
     for s in seqs:
         photos = conn.execute(
             f"""SELECT p.id, p.rank, p.ts, p.path, p.filename, p.flags, p.lat, p.lon, p.lat_orig, p.lon_orig, p.pos_method,
                        p.heading_auto, p.heading_auto_state, p.heading_manual, p.orig_tags, p.moved_from, p.yaw_offset,
-                       {headings.FINAL_SQL} AS heading
+                       p.is_360, p.heading_exif, {headings.FINAL_SQL} AS heading
                 FROM photo p JOIN sequence s ON s.id = p.sequence_id
                 WHERE p.sequence_id=? ORDER BY p.rank""",
             (s["id"],),
         ).fetchall()
+        photos = [dict(p) for p in photos]
+        for p in photos:  # flat picture: GPSImgDirection = direction of the camera (heading + yaw)
+            p["heading"] = headings.written(p["heading"], p["yaw_offset"], p["is_360"], source, p["heading_exif"] is not None and p["heading_manual"] is None)
         # folder: <project name>_<n>, n = 1, 2, 3… in the order of the ride
-        out.append({"id": s["id"], "name": s["name"], "dir": f"{project}_{numbered[s['id']]}", "photos": [dict(p) for p in photos]})
+        out.append({"id": s["id"], "name": s["name"], "dir": f"{project}_{numbered[s['id']]}", "photos": photos})
     return out
 
 
@@ -315,7 +319,10 @@ def _pose_pitch_roll(it: dict, pose_heading: float | None, current: dict | None)
     """PosePitchDegrees / PoseRollDegrees to write (None = untouched).
 
     - an orientation is written: a 0 (or absent) pitch / roll becomes NUDGE, otherwise untouched;
-    - no orientation but the source was modified before: its original values are put back (if they were saved)."""
+    - no orientation but the source was modified before: its original values are put back (if they were saved);
+    - flat picture: never any GPano tag."""
+    if not it.get("is_360", 1):
+        return None, None
     if pose_heading not in (None, 0):
         cur = current or {}
         return tuple(writer.NUDGE if not cur.get(k) else None for k in ("PosePitchDegrees", "PoseRollDegrees"))
@@ -331,7 +338,10 @@ def _pose_heading(it: dict) -> float | None:
 
     - yaw fixed by the user (helmet camera): that angle, in [0, 360);
     - otherwise, for a source photo already modified by the application: its original value (0.0 on the GoPro),
-      which also undoes a yaw written by a previous export or the heading written by versions before 2026-11."""
+      which also undoes a yaw written by a previous export or the heading written by versions before 2026-11;
+    - flat picture: None (no GPano tag; its yaw is part of GPSImgDirection)."""
+    if not it.get("is_360", 1):
+        return None
     if it.get("yaw_offset") is not None:
         return round(it["yaw_offset"] % 360.0, 2)
     if not it.get("orig_tags"):

@@ -387,6 +387,17 @@ le cap en bleu (depuis le nord), le centre de l'image en orange pointillé (déc
 comme « Centre de l'image à −35° du sens de déplacement (vers la gauche) ». *Remettre à 0°* annule l'orientation de
 la photo.
 
+**Source du cap** (onglet *Bilan* ou *⚙ Réglages*, pour toute la sortie) : *Calculé depuis la trace*, ou *Cap de
+l'appareil* (boussole, `GPSImgDirection` enregistré par la caméra ou le smartphone). Au premier import, le cap de
+l'appareil est choisi s'il est présent, non nul et variable le long de la sortie ; sinon il est calculé. Les photos
+sans cap de l'appareil gardent le cap calculé. `Ctrl+Z` annule le changement.
+
+**Photos plates.** Cap et direction de la caméra se règlent comme en 360° (photo, plage, toute la sortie). À l'export
+(et dans les corrections envoyées à Panoramax), le `GPSImgDirection` écrit est la direction de la caméra : cap +
+direction de la caméra (180° = caméra vers l'arrière) quand le cap est calculé depuis la trace, cap de l'appareil
+tel quel sinon. Aucune balise de panorama (XMP-GPano) n'est écrite, et seuls positions et caps sont envoyés à
+Panoramax.
+
 ### Vérifier les caps
 
 Flèches sur la carte (zoom ≥ 15). À un arrêt (feu rouge, pause), le cap calculé est la direction d'arrivée à

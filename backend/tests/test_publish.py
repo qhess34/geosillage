@@ -414,3 +414,29 @@ def test_publish_semantics_checked_and_remembered(project, fake):
     client.post(f"/api/projects/{pid}/publish", json={"sequence_ids": [seqs[0]["id"]], "semantics": tags})
     wait_jobs(client, pid)
     assert client.get("/api/panoramax").json()["semantics"] == [{"key": "transport", "value": "walk"}]  # proposed next time
+
+
+def test_panoramax_flat_project_sends_heading_only(account):
+    """Flat sequence: the yaw (direction of the camera) is part of the heading; never pers:yaw, pitch or roll."""
+    with TestClient(main.app) as client:
+        connect(client, account)
+        cid = account.add_sequence(6, yaw=30.0, fov=65)
+        pid = client.post("/api/panoramax/projects", json={"name": "Plat", "collections": [cid]}).json()["id"]
+        wait_jobs(client, pid)
+        from app import db
+
+        with db.open_project(pid) as conn:  # pers:yaw of a flat picture not taken
+            assert conn.execute("SELECT COUNT(*) FROM photo WHERE yaw_offset IS NOT NULL").fetchone()[0] == 0
+        (seq,) = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
+        base = f"/api/projects/{pid}/sequences/{seq['id']}/panoramax"
+        assert client.get(f"{base}/compare").json()["photos_to_update"] == 0  # yaw / pitch / roll not compared
+        # camera turned backwards: heading 90 + 180
+        client.post(f"/api/projects/{pid}/headings/yaw", json={"sequence_id": seq["id"], "add": 180})
+        d = client.get(f"{base}/compare").json()
+        assert (d["headings"], d["orientations"]) == (6, 0)
+        client.post(f"{base}/push", json={"delete_excluded": False})
+        wait_jobs(client, pid)
+        assert len(account.patches) == 6 and all(b == {"heading": 270} for _, b in account.patches)
+        client.post(f"{base}/revert")
+        wait_jobs(client, pid)
+        assert all(b == {"heading": 90} for _, b in account.patches[6:])

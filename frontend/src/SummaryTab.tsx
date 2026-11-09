@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { api, Project, UndoState } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
 import YawRotate from './YawRotate'
+import HeadingSource from './HeadingSource'
 import { capHelp, orientationHelp } from './CapOrientation'
 import { t, useLang } from './i18n'
 
 // logical cut); series of photos: context menu or range tools of the Photo tab
-function RideHeadings({ projectId, flat, onDone, onError }: { flat: boolean; projectId: string; onDone: (u?: UndoState) => void; onError: (m: string) => void }) {
+function RideHeadings({ project, flat, onDone, onError }: { flat: boolean; project: Project; onDone: (u?: UndoState) => void; onError: (m: string) => void }) {
+  const projectId = project.id
   useLang()
   const [value, setValue] = useState('0')
   return (
@@ -15,6 +17,7 @@ function RideHeadings({ projectId, flat, onDone, onError }: { flat: boolean; pro
       <p className="muted">
         {t('sum.rideHelp')}
       </p>
+      <HeadingSource p={project} onDone={onDone} onError={onError} />
       <div className="form-row">
         <span title={`${capHelp()} ${t('sum.headingShiftHelp')}`}>
           {t('sum.headingShift')}
@@ -122,7 +125,7 @@ export default function SummaryTab({
           </button>
         )}
       </div>
-      <RideHeadings projectId={projectId} flat={project.media === 'flat'} onDone={(u) => onHeadingsChanged(u)} onError={onError} />
+      <RideHeadings project={project} flat={project.media === 'flat'} onDone={(u) => { onHeadingsChanged(u); onRefresh() }} onError={onError} />
       {project.source_dirs.length > 0 && (
         <>
           <h3>{t('sum.sources')}</h3>

@@ -15,6 +15,8 @@ from . import db, i18n
 # new columns go at the end: operations journaled before they existed only restore the columns they knew
 PHOTO_COLS = ["sequence_id", "rank", "heading_manual", "lat", "lon", "pos_method", "time_offset", "excluded", "yaw_offset", "heading_offset", "heading_kept"]
 SEQ_COLS = ["id", "name", "heading_offset", "created_at", "modified_at"]
+# project-wide choices journaled with the edits (meta keys; absent = default)
+META_KEYS = ["heading_source"]
 MAX_OPS = 200
 
 
@@ -27,6 +29,10 @@ def _photos(conn) -> dict[int, tuple]:
     return {r[0]: tuple(r[1:]) for r in rows}
 
 
+def _meta(conn) -> dict:
+    return {k: db.get_meta(conn, k) for k in META_KEYS}
+
+
 def _sequences(conn) -> list[list]:
     return [list(r) for r in conn.execute(f"SELECT {', '.join(SEQ_COLS)} FROM sequence ORDER BY id")]
 
@@ -35,17 +41,20 @@ def _sequences(conn) -> list[list]:
 def undoable(conn, label: str):
     """Run the block in a transaction and journal its changes. Yields nothing."""
     with db.transaction(conn):
-        before_p, before_s = _photos(conn), _sequences(conn)
+        before_p, before_s, before_m = _photos(conn), _sequences(conn), _meta(conn)
         yield
-        after_p, after_s = _photos(conn), _sequences(conn)
+        after_p, after_s, after_m = _photos(conn), _sequences(conn), _meta(conn)
         changed = [i for i, v in after_p.items() if before_p.get(i) != v]
-        if not changed and before_s == after_s:
+        if not changed and before_s == after_s and before_m == after_m:
             return
         data = {
             "photos": [[i, before_p[i], after_p[i]] for i in changed],
             "seq_before": before_s,
             "seq_after": after_s,
         }
+        if before_m != after_m:
+            data.update(meta_before=before_m, meta_after=after_m)
+            touch_all(conn)  # e.g. the heading source: every heading may change
         touch(conn, affected_sequences(data))
         conn.execute("DELETE FROM op_log WHERE undone = 1")  # a new edit clears the redo stack
         conn.execute("INSERT INTO op_log(ts, label, data) VALUES(?, ?, ?)", (time.time(), label, json.dumps(data)))
@@ -87,6 +96,14 @@ def _apply(conn, data: dict, side: str) -> None:
     seqs = data["seq_before" if side == "before" else "seq_after"]
     conn.execute("DELETE FROM sequence")
     conn.executemany(f"INSERT INTO sequence({', '.join(SEQ_COLS)}) VALUES({', '.join('?' * len(SEQ_COLS))})", [(*s, None)[: len(SEQ_COLS)] for s in seqs])
+    meta = data.get(f"meta_{side}")
+    if meta is not None:
+        for key, v in meta.items():
+            if v is None:
+                conn.execute("DELETE FROM meta WHERE key=?", (key,))
+            else:
+                db.set_meta(conn, key, v)
+        touch_all(conn)
     touch(conn, affected_sequences(data))  # undone / redone content differs from what may have been exported
 
 

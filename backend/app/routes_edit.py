@@ -220,6 +220,21 @@ class HeadingRangeIn(BaseModel):
     value: float = 0.0
 
 
+class HeadingSourceIn(BaseModel):
+    source: str = Field(pattern="^(track|device)$")
+
+
+@router.put("/headings/source")
+def heading_source(pid: str, body: HeadingSourceIn):
+    """Source of the automatic headings for the whole project: trajectory or the camera's compass. Undoable."""
+    with db.open_project(pid) as conn:
+        label = "Cap de l'appareil (boussole)" if body.source == headings.DEVICE else "Cap calculé depuis la trace"
+        with undo.undoable(conn, label):
+            db.set_meta(conn, "heading_source", body.source)
+        headings.recompute(conn)
+        return {"heading_source": body.source, "headings": headings.stats(conn), "undo": undo.state(conn)}
+
+
 @router.post("/headings/recompute")
 def headings_recompute(pid: str):
     with db.open_project(pid) as conn:
