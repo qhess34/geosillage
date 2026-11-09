@@ -61,6 +61,42 @@ reprise, le profil reste. On peut ainsi recréer toute l'organisation depuis ce 
 | **GeoSillage** | Développement. ExifTool, `.venv`, `node_modules` du frontend et de l'e2e installés par le script de démarrage (~45 s). |
 | **Cartographie (tuiles de carte)** | Captures du guide : fonds de carte et Panoramax accessibles. |
 
+## Docker Agent (exécution locale)
+
+[`doc/agents/geosillage.yaml`](agents/geosillage.yaml) reprend les rôles ci-dessus pour Docker Agent (cagent) : chef de
+projet en agent racine, développeurs S/M/L, relecteur, consultant et webagency en sous-agents (modèles et outils par
+rôle). Non testé : valider les clés avec la version installée.
+
+**Un seul environnement pour tous les agents.** Les sous-agents de Docker Agent tournent dans le même processus, donc
+sur la même machine et les mêmes fichiers. Il suffit de lancer l'agent racine dans un conteneur qui a tout l'outillage
+et les deux dépôts :
+
+- image : celle du projet + Node, Playwright (Chromium), `git`, le binaire `docker agent` ;
+- volumes : `geosillage/` et `panoramax-tools/` côte à côte dans `/work`, plus un volume pour `.venv` et `node_modules`
+  (installés une fois, réutilisés par tous les agents) ;
+- secrets : `ANTHROPIC_API_KEY` et le jeton GitHub du serveur MCP `github-official`, en variables d'environnement,
+  jamais dans le dépôt.
+
+```yaml
+# compose.agent.yml (exemple, non testé)
+services:
+  agents:
+    build: { context: ., dockerfile: Dockerfile.agent }   # image du projet + node, playwright, git, docker agent
+    working_dir: /work/geosillage
+    volumes: [ "..:/work", "deps:/work/geosillage/.deps" ]
+    environment: [ ANTHROPIC_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN ]
+    command: docker agent run doc/agents/geosillage.yaml
+volumes: { deps: {} }
+```
+
+**Pas de conflits entre tâches.** Même environnement ne veut pas dire même dossier : chaque tâche travaille dans son
+propre `git worktree` (`git worktree add ../wt/<branche> -b <branche> origin/main`), supprimé après la fusion. Les
+sous-agents sont appelés l'un après l'autre par le chef de projet, mais deux worktrees évitent qu'une branche en cours
+écrase l'autre. Les dépendances (`.venv`, `node_modules`) restent partagées.
+
+Différences avec les sessions cloud : pas d'archivage ni de session par tâche, pas de coût par tâche (`get_session`) ni
+d'attente du CI par abonnement ; le coût se suit dans la facturation de l'API Anthropic.
+
 ## Instructions lues par les agents
 
 | Document | Lecture |

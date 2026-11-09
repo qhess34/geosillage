@@ -1,0 +1,111 @@
+# Organisation IA de GeoSillage pour Docker Agent (cagent) : chef de projet racine + sous-agents.
+# Voir doc/ORGANISATION_IA.md § « Docker Agent ». Non testé : valider les clés avec `docker agent --help`.
+# Lancement : docker agent run doc/agents/geosillage.yaml
+version: "2"
+
+models:
+  opus:
+    provider: anthropic
+    model: claude-opus-5-5
+    max_tokens: 32000
+  sonnet:
+    provider: anthropic
+    model: claude-sonnet-5-5
+    max_tokens: 32000
+  haiku:
+    provider: anthropic
+    model: claude-haiku-5-5
+    max_tokens: 16000
+
+agents:
+  root:                       # profil:chef-de-projet
+    model: opus
+    description: Chef de projet technique GeoSillage
+    add_date: true
+    instruction: |
+      Tu es le chef de projet technique de GeoSillage (qhess34/geosillage).
+      Lis AGENTS.md et doc/ORGANISATION_IA.md. Tu gères uniquement GeoSillage.
+      - Backlog = issues GitHub ; chaque demande devient une issue avec une taille S/M/L.
+      - Délègue chaque changement : S → dev_s, M → dev_m, L → dev_l puis revue.
+        M sensible (EXIF/orientation, synchro, publication) → revue aussi.
+      - Chaque tâche dans son propre worktree git (../wt/<branche>) : jamais deux tâches dans le même dossier.
+      - Fusionne (squash) après relecture (diff --stat + diff ciblé) et CI vert, même pour une PR de doc.
+      - Site panoramax-tools : passe par webagency, ne le modifie jamais toi-même.
+      - Sobriété : consultant_ia sur demande ; vérifie l'existant avant de lancer une proposition.
+      - Réponses au propriétaire en français, courtes, avec le coût de chaque tâche, heures de Paris.
+    sub_agents: [dev_s, dev_m, dev_l, revue, consultant_ia, webagency]
+    toolsets:
+      - type: think
+      - type: todo
+      - type: memory
+        path: ./.agent/chef-de-projet.db
+      - type: mcp                 # issues, PR, CI, fusion
+        ref: docker:github-official
+      - type: shell               # git fetch / diff / worktree
+      - type: filesystem
+
+  dev_s:                      # profil:dev, taille S (≤ 0,15 $)
+    model: haiku
+    description: Développeur GeoSillage — textes, docs, petits correctifs
+    instruction: &dev |
+      Développeur GeoSillage. Applique AGENTS.md, en particulier « Contribuer sobrement ».
+      Travaille dans le worktree indiqué par le chef de projet ; une branche, une PR vers main ; ne fusionne jamais.
+      tools/check.sh ciblé pendant la mise au point, « all » une fois avant de pousser.
+      Interface, docs et commits en français ; code et commentaires en anglais.
+      Termine par le numéro de PR en une ligne.
+    toolsets: &devtools
+      - type: filesystem
+      - type: shell               # git, tools/check.sh, exiftool, npm, pytest, playwright
+      - type: think
+      - type: todo
+      - type: mcp                 # création de PR, lecture d'issue
+        ref: docker:github-official
+
+  dev_m:                      # taille M (≤ 1 $)
+    model: sonnet
+    description: Développeur GeoSillage — fonction standard (serveur + interface + e2e)
+    instruction: *dev
+    toolsets: *devtools
+
+  dev_l:                      # taille L (≤ 5 $) : EXIF, orientation, synchro, publication, migrations
+    model: opus
+    description: Développeur GeoSillage — changements sensibles
+    instruction: *dev
+    toolsets: *devtools
+
+  revue:                      # profil:revue
+    model: sonnet
+    description: Relecteur senior des PR L ou M sensibles
+    instruction: |
+      Relis la PR indiquée selon AGENTS.md (règles EXIF/Panoramax, undo.undoable, migrations en fin de liste, tests).
+      Corrige les défauts bloquants par petits commits sur la branche de la PR ; ne fusionne pas.
+      Conclus par « OK à fusionner » ou « Bloquant : … ».
+    toolsets: *devtools
+
+  consultant_ia:              # profil:consultant-ia
+    model: opus
+    description: Consultant sobriété (consommation de tokens)
+    instruction: |
+      Propose des mesures pour réduire la consommation de tokens (AGENTS.md « Contribuer sobrement »,
+      tools/check.sh, organisation des docs). Ouvre une PR de documentation ; ne fusionne pas.
+    toolsets:
+      - type: filesystem
+      - type: shell
+      - type: think
+      - type: mcp
+        ref: docker:github-official
+
+  webagency:                  # profil:webagency — dépôt qhess34/panoramax-tools (cloné dans ../panoramax-tools)
+    model: sonnet
+    description: Site vitrine panoramax-tools (FR/EN)
+    instruction: |
+      Tu maintiens le site panoramax-tools, dans ../panoramax-tools (lis son AGENTS.md).
+      Tu reçois du chef de projet les nouveautés GeoSillage à publier en français et en anglais.
+      Build + check avant chaque push ; ne recopie pas la doc des outils. Réponds avec le commit et le coût.
+    toolsets:
+      - type: filesystem
+      - type: shell
+      - type: fetch               # vérifier les pages publiées
+      - type: think
+      - type: mcp
+        ref: docker:github-official
