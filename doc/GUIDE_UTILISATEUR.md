@@ -64,6 +64,15 @@ photos enregistrés ne sont pas les mêmes).
 
 ## 2. Projets
 
+**Type de photos.** Une sortie contient un seul type de photos : **360°** ou **plates** (smartphone…). Le type est
+reconnu au premier import grâce aux balises XMP de panorama de chaque photo ; on ne peut pas importer ensuite l'autre
+type dans le même projet (un message l'indique : créez une autre sortie). Une image 2:1 sans balise XMP vous est
+demandée : photo 360° ou plate ? Dans un projet de photos plates, la visionneuse affiche l'image à plat (pas de vue
+sphère) et l'orientation devient la **direction de la caméra** (0° = avant, 180° = arrière, ±90° = côté). Le tangage
+et le roulis lus dans la photo sont affichés (lecture seule). Un projet Panoramax suit la même règle (type d'après le
+champ de vision des photos publiées). Le **Bilan** indique l'intervalle médian entre photos et vous avertit, avec un
+lien vers *⚙ Réglages*, s'il est trop grand pour les seuils (réglés pour environ 1 photo toutes les 2 s).
+
 Un **projet** = une sortie (ou plusieurs). Page d'accueil : saisir un nom puis *Créer le projet* ; ouvrir un projet en cliquant son nom ; *Supprimer*
 (avec confirmation).
 Le nom du projet sert à nommer les dossiers exportés (`<nom>_1`, `<nom>_2`…).

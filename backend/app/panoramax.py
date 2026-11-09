@@ -661,6 +661,30 @@ def _ts(s: str | None) -> float | None:
         return None
 
 
+def _is_360(p: dict) -> bool:
+    return (p.get("pers:interior_orientation") or {}).get("field_of_view") == 360
+
+
+def _check_media(conn, feats: list[dict]) -> None:
+    """One type per project, deduced from the field of view: 360° (fov 360) or flat. The first sequence sets it."""
+    kinds = {"360" if _is_360(f.get("properties", {})) else "flat" for f in feats}
+    if not kinds:
+        return
+    if len(kinds) > 1:
+        raise PanoramaxError("Cette sélection mélange des photos 360° et des photos plates : une sortie n'a qu'un seul type de photos")
+    found = kinds.pop()
+    have = db.get_meta(conn, "media")
+    if have and have != found:
+        name = {"360": "360°", "flat": "plates"}
+        raise PanoramaxError(
+            "Ce projet contient des séquences {a} : on ne peut pas y ajouter des séquences {b}. Créez un autre projet Panoramax".format(
+                a=name[have], b=name[found]
+            )
+        )
+    if not have:
+        db.set_meta(conn, "media", found)
+
+
 def import_sequences(ctx, pid: str, collection_ids: list[str]) -> None:
     """Pictures of the published sequences → photos of the project (no file): Panoramax position, heading and
     yaw are the starting point; one local sequence per published sequence, linked for compare / send."""
@@ -682,6 +706,7 @@ def import_sequences(ctx, pid: str, collection_ids: list[str]) -> None:
             feats = _items(c, cid)
             now = time.time()
             with db.open_project(pid) as conn, db.transaction(conn):
+                _check_media(conn, feats)
                 sid = conn.execute("INSERT INTO sequence(name, created_at) VALUES(?, ?)", (title, now)).lastrowid
                 for f in feats:
                     p = f.get("properties", {})

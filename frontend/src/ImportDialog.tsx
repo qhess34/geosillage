@@ -27,6 +27,7 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
   const [chosen, setChosen] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [ask, setAsk] = useState(false) // 2:1 pictures without XMP: 360° or flat?
 
   const go = async (path: string) => {
     try {
@@ -50,10 +51,17 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
 
   const add = (p: string) => setChosen((c) => (c.includes(p) ? c : [...c, p]))
 
-  const start = async () => {
+  const start = async (media?: '360' | 'flat') => {
     setBusy(true)
     try {
-      await api.importPaths(projectId, chosen)
+      if (!media) {
+        const c = await api.importCheck(projectId, chosen) // refused here when the type differs from the project's
+        if (c.ask) {
+          setAsk(true)
+          return
+        }
+      }
+      await api.importPaths(projectId, chosen, media)
       onStarted()
       onClose()
     } catch (e) {
@@ -115,9 +123,23 @@ export default function ImportDialog({ projectId, onClose, onStarted }: Props) {
             </ul>
           </div>
         )}
+        {ask && (
+          <div className="warn-box small-text" role="alert">
+            <p>{t('imp.ask')}</p>
+            <div className="row">
+              <button className="primary" disabled={busy} onClick={() => start('360')}>
+                {t('imp.ask360')}
+              </button>
+              <button disabled={busy} onClick={() => start('flat')}>
+                {t('imp.askFlat')}
+              </button>
+            </div>
+          </div>
+        )}
+        {error && !listing && <p className="error">{error}</p>}
         <div className="actions">
           <button onClick={onClose}>{t('common.cancel')}</button>
-          <button className="primary" disabled={!chosen.length || busy} onClick={start}>
+          <button className="primary" disabled={!chosen.length || busy} onClick={() => start()}>
             {chosen.length > 1 ? t('imp.start.many', { n: chosen.length }) : t('imp.start')}
           </button>
         </div>

@@ -128,7 +128,7 @@ export default function SyncTab({ gpx, onGpx, onGpxSnap, onView, onPreviewIds, p
       <GpxSection projectId={projectId} gpx={gpx} onChanged={onGpx} onSnap={onGpxSnap} onError={onError} />
       {photo ? (
         <>
-          <Viewer360 thumbUrl={api.thumbUrl(projectId, photo.id)} imageUrl={api.imageUrl(projectId, photo.id)} alt={photo.filename} height={260} yaw={photo.yaw_offset} pitch={photo.pitch_orig} roll={photo.roll_orig} onView={onView} />
+          <Viewer360 thumbUrl={api.thumbUrl(projectId, photo.id)} imageUrl={api.imageUrl(projectId, photo.id)} alt={photo.filename} height={260} yaw={photo.yaw_offset} pitch={photo.pitch_orig} roll={photo.roll_orig} flat={!photo.is_360} onView={onView} />
           <div className="photo-title">
             <strong>{photo.filename}</strong>
             <span className="muted">

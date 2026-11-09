@@ -192,6 +192,12 @@ MIGRATIONS = [
     -- lost); the check comes back if the manual heading changes
     ALTER TABLE photo ADD COLUMN heading_kept REAL;
     """,
+    """
+    -- Type of the pictures of a project (meta « media »: "360" or "flat"), one per project. Projects that already
+    -- have pictures get the type they contain (any 360° picture: 360).
+    INSERT OR IGNORE INTO meta(key, value)
+        SELECT 'media', CASE WHEN SUM(is_360) > 0 THEN '"360"' ELSE '"flat"' END FROM photo HAVING COUNT(*) > 0;
+    """,
 ]
 
 # Position flags that no longer apply once the user has set a corrected position

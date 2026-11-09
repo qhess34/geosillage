@@ -9,6 +9,7 @@ PY=${PYTHON:-$ROOT/.venv/bin/python}
 [ -x "$PY" ] || PY=python3
 CACHE=$ROOT/e2e/.cache
 [ -d "$CACHE/photos/Sortie_test/100GOPRO" ] || "$PY" tools/make_samples.py "$CACHE/photos/Sortie_test" --count 160 --width 512 --seed 5
+[ -d "$CACHE/photos/Sortie_plat/100GOPRO" ] || "$PY" tools/make_samples.py "$CACHE/photos/Sortie_plat" --count 40 --width 512 --seed 7 --flat --compass
 DATA=$(mktemp -d)
 mkdir -p "$CACHE/photos/Sortie_test/sous-dossier/encore"
 cd backend

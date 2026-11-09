@@ -86,6 +86,7 @@ export default function StopCompare({
               yaw={shown?.detail?.yaw_offset ?? null}
               pitch={shown?.detail?.pitch_orig ?? null}
               roll={shown?.detail?.roll_orig ?? null}
+              flat={shown?.detail ? !shown.detail.is_360 : false}
             />
             <figcaption className="small-text muted">
               {t('stoprange.photo', { n: focus.idx + 1 })} · {fmtTime(focus.ts, false)}

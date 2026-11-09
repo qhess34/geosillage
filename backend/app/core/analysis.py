@@ -104,7 +104,21 @@ def summary(conn) -> dict:
     cams = conn.execute(
         "SELECT make, model, COUNT(*) n FROM photo GROUP BY make, model ORDER BY n DESC"
     ).fetchall()
+    from . import quality
+
+    steps = sorted(
+        b["ts"] - a["ts"]
+        for a, b in zip(good, good[1:])
+        if a["ts"] is not None and b["ts"] is not None and b["ts"] > a["ts"]
+    )
+    median = round(steps[len(steps) // 2], 2) if steps else None  # median interval between photos (s)
+    stop_photos = sum(i["count"] for i in quality.check(conn) if i["kind"] == "stop") if total else 0
+    gap = db.get_settings(conn)["gap_seconds"]
     return {
+        "median_interval_s": median,
+        "interval_warning": bool(
+            (median is not None and median > gap / 2) or (total and stop_photos > 0.2 * total)
+        ),  # photos too sparse for the thresholds (tuned for ~1 photo / 2 s) or very many stops
         "total": total,
         "geolocated": c("SELECT COUNT(*) FROM photo WHERE flags & ? = 0", db.NO_GPS | db.INVALID_COORD),
         "no_gps": flag(db.NO_GPS),

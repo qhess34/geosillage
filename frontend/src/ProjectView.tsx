@@ -911,7 +911,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               />
             )}
             {tab === 'summary' && (
-              <SummaryTab projectId={projectId} project={project} isPnx={isPnx} onRefresh={refresh} onHeadingsChanged={(u) => afterHeadingChange(u)} onError={fail} />
+              <SummaryTab projectId={projectId} project={project} isPnx={isPnx} onRefresh={refresh} onHeadingsChanged={(u) => afterHeadingChange(u)} onError={fail} onSettings={() => setShowSettings(true)} />
             )}
           </div>
         </aside>

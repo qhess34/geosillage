@@ -104,6 +104,7 @@ def _setting_error(x: dict) -> str:
 
 class ImportIn(BaseModel):
     paths: list[str] = Field(min_length=1)
+    media: str | None = Field(default=None, pattern="^(360|flat)$")  # answer to « 2:1 pictures without XMP: 360°? »
 
 
 @app.get("/api/projects")
@@ -125,6 +126,7 @@ def project_get(pid: str):
             "name": db.get_meta(conn, "name"),
             "kind": db.get_meta(conn, "kind", "ride"),
             "pnx_instance": db.get_meta(conn, "pnx_instance"),
+            "media": db.get_meta(conn, "media"),  # "360" / "flat" / None (no picture yet)
             "created_at": db.get_meta(conn, "created_at"),
             "settings": db.get_settings(conn),
             "source_dirs": [r[0] for r in conn.execute("SELECT path FROM source_dir ORDER BY added_at")],
@@ -169,12 +171,29 @@ def project_delete(pid: str):
 def project_import(pid: str, body: ImportIn):
     with db.open_project(pid) as conn:
         routes_edit.ride_only(conn)
-    for p in body.paths:
-        if not os.path.exists(os.path.expanduser(p)):
-            raise HTTPException(400, f"Chemin introuvable : {p}")
-    with db.open_project(pid):
-        pass
-    return {"job_id": jobs.start(pid, "import", lambda ctx: importer.import_paths(ctx, body.paths))}
+    info = _import_preflight(pid, body)
+    if info["ask"]:
+        raise HTTPException(409, "Images 2:1 sans balise XMP : confirmez s'il s'agit de photos 360° ou de photos plates")
+    return {"job_id": jobs.start(pid, "import", lambda ctx: importer.import_paths(ctx, body.paths, body.media))}
+
+
+def _import_preflight(pid: str, body: ImportIn) -> dict:
+    with db.open_project(pid) as conn:
+        routes_edit.ride_only(conn)
+        for p in body.paths:
+            if not os.path.exists(os.path.expanduser(p)):
+                raise HTTPException(400, f"Chemin introuvable : {p}")
+        try:
+            return importer.preflight(conn, body.paths, body.media)
+        except importer.MediaError as e:
+            raise HTTPException(409, str(e))
+
+
+@app.post("/api/projects/{pid}/import/check")
+def project_import_check(pid: str, body: ImportIn):
+    """Before an import: type of the pictures (360 / flat), refused if it differs from the project's;
+    `ask` = 2:1 pictures without XMP, to be confirmed by the user (then sent back as `media`)."""
+    return _import_preflight(pid, body)
 
 
 @app.post("/api/projects/{pid}/check-files", status_code=202)

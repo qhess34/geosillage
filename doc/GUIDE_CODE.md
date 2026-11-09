@@ -54,6 +54,17 @@ correction prévues pour les phases suivantes (`lat`/`lon` corrigés, `heading_a
 
 ## Flux d'import
 
+**Type du projet (360° / plat)** : méta `media` (`"360"` ou `"flat"`), fixé au premier import ; la migration de
+fin de liste le donne aux projets existants. Une photo est 360° si `XMP-GPano:ProjectionType = equirectangular`
+(`reader.is_360`) ; une image 2:1 sans XMP n'est qu'un indice (`maybe_360`). `importer.preflight` (sur un échantillon,
+route `POST …/import/check`) et la tâche (sur toutes les photos, rien n'est stocké avant) refusent un mélange ou un type
+différent de celui du projet (`MediaError`, 409) ; un indice 2:1 demande confirmation (`media` = `360`/`flat` renvoyé
+à l'import). Projet Panoramax : même règle, type d'après `pers:interior_orientation.field_of_view` (360 = sphère),
+vérifié par séquence (`panoramax._check_media`). `pitch_orig` / `roll_orig` : tangage / roulis lus dans le XMP (ou
+`pers:pitch` / `pers:roll`), affichés en lecture seule. Le Bilan donne l'intervalle médian (`summary.median_interval_s`) ;
+`interval_warning` s'il dépasse la moitié de `gap_seconds` ou si plus de 20 % des photos sont dans des arrêts.
+Échantillons plats : `tools/make_samples.py --flat [--compass]`.
+
 `POST /api/projects/{id}/import {paths}` lance la tâche `import` :
 
 1. scan récursif des `.jpg/.jpeg` (dossiers cachés ignorés), en sautant les chemins déjà importés ;
