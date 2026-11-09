@@ -1,0 +1,22 @@
+# Agents IA en local (Docker Agent) : voir doc/ORGANISATION_IA.md § « Docker Agent ».
+#   docker compose -f compose.agent.yml run --rm agents
+# Les dépôts sont côte à côte : ce dossier doit s'appeler « geosillage » ; ../panoramax-tools est facultatif.
+services:
+  agents:
+    build: { context: ., dockerfile: Dockerfile.agent }
+    working_dir: /work/geosillage
+    stdin_open: true
+    tty: true
+    volumes:
+      - ..:/work
+      - venv:/work/geosillage/.venv
+      - node_front:/work/geosillage/frontend/node_modules
+      - node_e2e:/work/geosillage/e2e/node_modules
+    environment:
+      - ANTHROPIC_API_KEY
+      - GITHUB_PERSONAL_ACCESS_TOKEN
+    command: ["sh", "-c", "tools/agent-setup.sh && exec cagent run doc/agents/geosillage.yaml"]
+volumes:
+  venv: {}
+  node_front: {}
+  node_e2e: {}
