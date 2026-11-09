@@ -9,8 +9,8 @@ les ~2 s, souvent des milliers) avant leur publication sur [Panoramax](https://p
 - **exporter** un dossier par séquence, avec des EXIF corrigés et lus correctement par Panoramax ;
 - **publier** les séquences sur Panoramax, avec leurs attributs (mode de déplacement…).
 
-La publication sur Panoramax ne se fait pas depuis l'application : on envoie ensuite les dossiers exportés (voir
-[§ 9](#9-publier-sur-panoramax)).
+La publication se fait depuis l'application (une séquence = un envoi), ou avec d'autres outils (voir
+[§ 9](#9-publier-sur-panoramax)). L'interface existe en français et en anglais (⚙ Réglages, *Langue*).
 
 Les captures d'écran de ce guide ont été faites avec une sortie simulée près de Montpellier : les photos sont des
 images de test (bandes de couleur), pas de vraies vues.
@@ -91,11 +91,10 @@ Onglet **Bilan** : nombre de photos, période, anomalies détectées :
 
 
 ![Onglet Bilan](images/09-bilan.webp)
-*Onglet *Bilan* : anomalies de la sortie (surlignées), réglage de la surcouche Panoramax, vérification des fichiers.*
+*Onglet *Bilan* : anomalies de la sortie (surlignées), vérification des fichiers, et réglages de cap et d'orientation de toute la sortie.*
 
 Les photos sans GPS, sans date, en doublon, illisibles ou introuvables ne peuvent pas entrer dans une séquence.
-L'onglet *Bilan* contient aussi le réglage de la surcouche Panoramax ([§ 3](#surcouche-panoramax)),
-*Vérifier les fichiers* et, s'il y en a, *Relancer les miniatures en échec*.
+L'onglet *Bilan* contient aussi *Vérifier les fichiers* et, s'il y en a, *Relancer les miniatures en échec*.
 
 ---
 
@@ -198,7 +197,7 @@ Une séquence = un passage continu que l'on publiera d'un bloc. On parcourt la s
 
 
 ![Début et Fin en cours](images/03-debut-fin.webp)
-**Début* posé sur la photo 341 : la plage suit la navigation (en jaune sur la timeline), le bouton *Fin* indique le nombre de photos de la future séquence.*
+*Début* posé sur la photo 341 : la plage suit la navigation (en jaune sur la timeline), le bouton *Fin* indique le nombre de photos de la future séquence.*
 
 **Couper** : `C` (*✂ Couper*) sur la première photo de chaque nouvelle séquence. Sur une photo non classée, la
 séquence est d'abord créée autour d'elle, puis coupée : il suffit d'appuyer sur `C` à chaque coupure.
@@ -634,7 +633,7 @@ comme Panoramax l'attend). Sinon, comparer pour une photo les valeurs `exiftool`
 Panoramax.
 
 **La surcouche Panoramax n'affiche rien.** Zoomer (séquences à partir du zoom 7, photos à partir du zoom 15) ;
-vérifier la source dans l'onglet *Bilan*.
+vérifier la source dans **⚙ Réglages** (§ 3).
 
 **Une nouvelle fonction annoncée n'apparaît pas.** Avec Docker : `git pull && docker compose up -d --build`, puis
 recharger la page.
