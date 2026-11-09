@@ -7,7 +7,11 @@ the window), the photo takes the direction of arrival at the stop (from the last
 away before it, in the same run), else the direction of departure: state `stop`. Only a run where the
 camera never moves is left uncertain.
 
-Final heading = manual heading if set, else (computed heading + sequence offset) mod 360.
+Final heading = manual heading if set, else (computed heading + offset of the photo) mod 360.
+
+Source of the automatic heading (meta `heading_source`, one choice for the whole project, undoable):
+`track` = computed from the trajectory (above), `device` = the camera's own GPSImgDirection (compass), used when
+present, non-zero and varying along the ride (`detect_source`); photos without it fall back to the trajectory.
 """
 
 from dataclasses import dataclass
@@ -16,6 +20,7 @@ from .. import db
 from . import geo
 
 OK, UNCERTAIN, MISSING, STOP = "ok", "uncertain", "missing", "stop"
+TRACK, DEVICE = "track", "device"  # source of the automatic heading
 
 # Positions that must not be used as trajectory points
 UNUSABLE = db.NO_GPS | db.INVALID_COORD | db.GPS_JUMP | db.DUPLICATE | db.NO_DATE | db.UNREADABLE
@@ -100,6 +105,29 @@ FINAL_SQL = f"""CASE WHEN p.heading_manual IS NOT NULL THEN p.heading_manual
     END"""
 
 
+def get_source(conn) -> str:
+    return db.get_meta(conn, "heading_source") or TRACK
+
+
+def device_usable(values: list[float | None]) -> bool:
+    """The camera's headings can be trusted: present on most photos, not all 0, and varying (not a constant)."""
+    v = [round(x % 360.0) % 360 for x in values if x is not None]
+    return bool(values) and len(v) * 2 >= len(values) and any(v) and len(set(v)) > 1
+
+
+def detect_source(conn) -> str:
+    return DEVICE if device_usable([r[0] for r in conn.execute("SELECT heading_exif FROM photo")]) else TRACK
+
+
+def written(heading: float | None, yaw: float | None, is_360, source: str) -> float | None:
+    """GPSImgDirection to write. 360°: the direction of travel (the yaw goes to XMP-GPano). Flat picture: the
+    direction of the camera = heading + yaw (camera turned backwards / sideways), except with the camera's
+    own compass, which already gives it."""
+    if heading is None or is_360 or source == DEVICE or not yaw:
+        return heading
+    return round(norm(heading + yaw), 2) % 360.0
+
+
 def recompute(conn, mark_stale_ids: set[int] | None = None) -> None:
     """Recompute automatic headings for the whole project (manual headings are never touched).
 
@@ -111,6 +139,9 @@ def recompute(conn, mark_stale_ids: set[int] | None = None) -> None:
     ).fetchall()
     pts = [Pt(*r) for r in rows]
     res = compute(pts, s["heading_min_m"], s["heading_window_s"])
+    if get_source(conn) == DEVICE:
+        for pid, h in conn.execute("SELECT id, heading_exif FROM photo WHERE heading_exif IS NOT NULL"):
+            res[pid] = (round(norm(h), 2) % 360.0, OK)
     stale = []
     if mark_stale_ids:
         order = [p.id for p in pts]

@@ -51,6 +51,11 @@ export const fr = {
     "Le cap d'une photo est la direction vers le premier point suivant situé à au moins cette distance (cherché dans la fenêtre de temps). Les caps manuels ne sont jamais recalculés.",
   'settings.heading.minDist': 'Distance min.',
   'settings.heading.window': 'Fenêtre',
+  'headingSource.label': 'Source du cap',
+  'headingSource.help':
+    "Cap de toute la sortie : calculé depuis la trace GPS (sens de déplacement), ou celui enregistré par l'appareil (boussole, GPSImgDirection). Détecté au premier import (cap de l'appareil s'il est présent, non nul et variable) ; Ctrl+Z annule le changement.",
+  'headingSource.track': 'Calculé depuis la trace',
+  'headingSource.device': "Cap de l'appareil (boussole, {n} photos)",
   'settings.heading.save': 'Enregistrer et recalculer',
 
   'steps.nav': 'Étapes',

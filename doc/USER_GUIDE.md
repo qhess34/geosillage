@@ -365,6 +365,16 @@ travel** (dial, computed and final heading) and **Camera orientation**, with a s
 blue (from north), the image centre as an orange dotted line (shifted by the orientation), and a sentence such as
 « Image centre at −35° from the direction of travel (to the left) ». *Reset to 0°* cancels the orientation of the photo.
 
+**Heading source** (*Summary* tab or *⚙ Settings*, for the whole ride): *Computed from the track*, or *Camera's
+heading* (compass, `GPSImgDirection` recorded by the camera or smartphone). At the first import the camera's heading
+is chosen when it is present, non-zero and varying along the ride; otherwise it is computed. Photos without a camera
+heading keep the computed one. `Ctrl+Z` undoes the change.
+
+**Flat pictures.** Heading and camera direction are set as for 360° (photo, range, whole ride). On export (and in the
+corrections sent to Panoramax), the `GPSImgDirection` written is the camera direction: heading + camera direction
+(180° = camera facing backwards) when the heading is computed from the track, the camera's heading as is otherwise.
+No panorama tag (XMP-GPano) is written, and only positions and headings are sent to Panoramax.
+
 ### Checking headings
 
 Arrows on the map (zoom ≥ 15). At a stop (red light, pause), the computed heading is the direction of arrival at the

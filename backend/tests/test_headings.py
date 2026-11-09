@@ -130,3 +130,56 @@ def test_default_points_to_the_next_photo_in_a_turn():
     res = headings.compute(pts, config.DEFAULT_SETTINGS["heading_min_m"], config.DEFAULT_SETTINGS["heading_window_s"])
     for a, b in zip(pts, pts[1:]):
         assert res[a.id][0] == pytest.approx(geo.azimuth(a.lat, a.lon, b.lat, b.lon), abs=0.01)
+
+
+def test_device_heading_detection_and_written_value():
+    assert headings.device_usable([10.0, 12.0, None, 200.0])
+    assert not headings.device_usable([None, None, 10.0])  # absent on most photos
+    assert not headings.device_usable([0.0, 0.0, 0.0])  # all 0
+    assert not headings.device_usable([45.0, 45.0, 45.2])  # constant
+    assert not headings.device_usable([])
+    # 360°: yaw goes to XMP-GPano; flat: camera direction = heading + yaw, unless the compass gives it
+    assert headings.written(90.0, 180.0, 1, headings.TRACK) == 90.0
+    assert headings.written(90.0, 180.0, 0, headings.TRACK) == 270.0
+    assert headings.written(300.0, 90.0, 0, headings.TRACK) == 30.0
+    assert headings.written(90.0, 180.0, 0, headings.DEVICE) == 90.0
+    assert headings.written(None, 180.0, 0, headings.TRACK) is None
+
+
+def _finals(pid):
+    with db.open_project(pid) as conn:
+        return conn.execute(f"SELECT p.heading_exif, {headings.FINAL_SQL} FROM photo p ORDER BY p.idx").fetchall()
+
+
+def test_heading_source_detected_switched_and_undone(flat_samples, flat_track_samples):
+    from fastapi.testclient import TestClient
+
+    from app import main
+
+    from .test_import import wait_jobs
+
+    with TestClient(main.app) as client:
+        pid = client.post("/api/projects", json={"name": "Boussole"}).json()["id"]
+        client.post(f"/api/projects/{pid}/import", json={"paths": [str(flat_samples)]})
+        wait_jobs(client, pid)
+        p = client.get(f"/api/projects/{pid}").json()
+        assert p["heading_source"] == "device" and p["device_headings"] > 0
+        rows = [r for r in _finals(pid) if r[0] is not None]
+        assert rows and all(abs(((f - e) + 180) % 360 - 180) < 0.01 for e, f in rows)  # the camera's compass
+        # back to the track: undoable
+        r = client.put(f"/api/projects/{pid}/headings/source", json={"source": "track"})
+        assert r.status_code == 200 and r.json()["undo"]["undo"] == "Cap calculé depuis la trace"
+        assert client.get(f"/api/projects/{pid}").json()["heading_source"] == "track"
+        assert client.post(f"/api/projects/{pid}/undo").status_code == 200
+        assert client.get(f"/api/projects/{pid}").json()["heading_source"] == "device"
+        assert all(abs(((f - e) + 180) % 360 - 180) < 0.01 for e, f in _finals(pid) if e is not None)
+        assert client.post(f"/api/projects/{pid}/redo").status_code == 200
+        assert client.get(f"/api/projects/{pid}").json()["heading_source"] == "track"
+        assert client.put(f"/api/projects/{pid}/headings/source", json={"source": "x"}).status_code == 422
+
+        # no GPSImgDirection: computed from the track
+        pid2 = client.post("/api/projects", json={"name": "Trace"}).json()["id"]
+        client.post(f"/api/projects/{pid2}/import", json={"paths": [str(flat_track_samples)]})
+        wait_jobs(client, pid2)
+        p = client.get(f"/api/projects/{pid2}").json()
+        assert p["heading_source"] == "track" and p["device_headings"] == 0 and p["headings"]["computed"] > 0

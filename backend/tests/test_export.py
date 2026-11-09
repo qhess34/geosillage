@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import main
-from app.exif import reader
+from app.exif import reader, writer
 
 from .conftest import tree_hash
 from .test_import import wait_jobs
@@ -296,3 +296,38 @@ def test_db_locked_gives_clear_message(tmp_path):
             holder.execute("ROLLBACK")
             holder.close()
         assert r.status_code == 503 and "occupée" in r.json()["detail"]
+
+
+def test_flat_export_heading_and_no_gpano(flat_samples, flat_track_samples, tmp_path):
+    """Flat picture: GPSImgDirection = heading (+ yaw when computed from the track), never an XMP-GPano tag."""
+    with TestClient(main.app) as client:
+        for name, src, source in (("PlatTrace", flat_track_samples, "track"), ("PlatBoussole", flat_samples, "device")):
+            pid = client.post("/api/projects", json={"name": name}).json()["id"]
+            client.post(f"/api/projects/{pid}/import", json={"paths": [str(src)]})
+            wait_jobs(client, pid)
+            assert client.get(f"/api/projects/{pid}").json()["heading_source"] == source
+            props = client.get(f"/api/projects/{pid}/sequences/proposals").json()
+            client.post(f"/api/projects/{pid}/sequences/bulk", json={"segments": [[p["start_idx"], p["end_idx"]] for p in props]})
+            client.post(f"/api/projects/{pid}/headings/yaw", json={"all": True, "add": 180})  # camera looking backwards
+            from app import db
+            from app.core import headings
+
+            with db.open_project(pid) as conn:
+                want = {r[0]: r[1] for r in conn.execute(
+                    f"SELECT p.filename, {headings.FINAL_SQL} FROM photo p WHERE p.sequence_id IS NOT NULL AND p.excluded = 0")}
+            out = tmp_path / name
+            client.post(f"/api/projects/{pid}/export", json={"out_dir": str(out)})
+            assert wait_jobs(client, pid)[0]["state"] == "done"
+            files = sorted(out.glob("*/*.JPG"))
+            assert files
+            checked = 0
+            for m in reader.read_batch([str(p) for p in files]):
+                h = want.get(Path(m.path).name.split("_", 1)[1])
+                if h is None:
+                    continue
+                exp = (h + 180) % 360 if source == "track" else h  # the compass already gives the camera direction
+                assert abs(((m.heading - writer.heading_value(exp, True)) + 180) % 360 - 180) < 0.01
+                checked += 1
+            assert checked >= len(files) - 2
+            tags = reader.dump_all(str(files[0]))
+            assert not any(k.startswith("XMP-GPano") for k in tags), tags

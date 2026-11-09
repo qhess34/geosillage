@@ -132,6 +132,8 @@ def project_get(pid: str):
             "source_dirs": [r[0] for r in conn.execute("SELECT path FROM source_dir ORDER BY added_at")],
             "summary": analysis.summary(conn),
             "headings": headings.stats(conn),
+            "heading_source": headings.get_source(conn),  # "track" / "device" (camera's compass)
+            "device_headings": conn.execute("SELECT COUNT(*) FROM photo WHERE heading_exif IS NOT NULL").fetchone()[0],
             "sources": exporter.modified_sources(conn),
             "sync_offset_s": db.get_meta(conn, "last_time_offset"),  # last GPS delay applied (step bar)
             "corrected_positions": conn.execute("SELECT COUNT(*) FROM photo WHERE lat IS NOT NULL").fetchone()[0],

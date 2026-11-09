@@ -53,6 +53,11 @@ export const en: Record<Key, string> = {
     'The heading of a photo is the direction to the first following point at least this far away (searched within the time window). Manual headings are never recomputed.',
   'settings.heading.minDist': 'Min. distance',
   'settings.heading.window': 'Window',
+  'headingSource.label': 'Heading source',
+  'headingSource.help':
+    "Heading of the whole ride: computed from the GPS track (direction of travel), or the one recorded by the camera (compass, GPSImgDirection). Detected at the first import (camera heading when present, non-zero and varying); Ctrl+Z undoes the change.",
+  'headingSource.track': 'Computed from the track',
+  'headingSource.device': "Camera's heading (compass, {n} photos)",
   'settings.heading.save': 'Save and recompute',
 
   'steps.nav': 'Steps',

@@ -45,3 +45,15 @@ def flat_samples(tmp_path_factory) -> Path:
         capture_output=True,
     )
     return out
+
+
+@pytest.fixture(scope="session")
+def flat_track_samples(tmp_path_factory) -> Path:
+    """Synthetic smartphone ride without GPSImgDirection (heading computed from the track)."""
+    out = tmp_path_factory.mktemp("flat_track") / "sortie"
+    subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "make_samples.py"), str(out), "--count", "40", "--width", "320", "--seed", "6", "--flat"],
+        check=True,
+        capture_output=True,
+    )
+    return out

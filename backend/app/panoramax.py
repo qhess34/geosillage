@@ -420,21 +420,23 @@ def _collection_id(c: httpx.Client, conn, pub) -> str:
 
 
 def _expected(conn, sid: int) -> dict[int, dict]:
-    """What the export writes for each photo of the sequence: position, heading (rounded like Panoramax), yaw."""
+    """What the export writes for each photo of the sequence: position, heading (rounded like Panoramax), yaw.
+    Flat picture: heading = direction of the camera (heading + yaw), yaw None (never sent)."""
+    source = headings.get_source(conn)
     rows = conn.execute(
-        f"""SELECT p.id, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon, p.yaw_offset,
+        f"""SELECT p.id, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon, p.yaw_offset, p.is_360,
                    {headings.FINAL_SQL} AS heading
             FROM photo p JOIN sequence s ON s.id = p.sequence_id WHERE p.sequence_id=?""",
         (sid,),
     ).fetchall()
     out = {}
     for r in rows:
-        h = r["heading"]
+        h = headings.written(r["heading"], r["yaw_offset"], r["is_360"], source)
         out[r["id"]] = {
             "lat": r["lat"],
             "lon": r["lon"],
             "heading": None if h is None else int(round(writer.heading_value(h, True))) % 360 or 360,
-            "yaw": round(r["yaw_offset"] % 360.0, 2) if r["yaw_offset"] is not None else 0.0,
+            "yaw": None if not r["is_360"] else round(r["yaw_offset"] % 360.0, 2) if r["yaw_offset"] is not None else 0.0,
         }
     return out
 
@@ -459,6 +461,8 @@ def _changes(exp: dict, srv: dict) -> dict:
         body.update(latitude=exp["lat"], longitude=exp["lon"])
     if exp["heading"] is not None and (srv["heading"] is None or abs((exp["heading"] - srv["heading"] + 180) % 360 - 180) >= 1):
         body["heading"] = exp["heading"]
+    if exp["yaw"] is None:  # flat picture: positions and heading only, never pers:yaw / pitch / roll
+        return body
     if abs((exp["yaw"] - srv["yaw"] + 180) % 360 - 180) > YAW_TOLERANCE:
         body["yaw"] = exp["yaw"]
     if exp["yaw"] and (abs(srv["pitch"]) < NUDGE / 2 or abs(srv["roll"]) < NUDGE / 2):
@@ -723,7 +727,8 @@ def import_sequences(ctx, pid: str, collection_ids: list[str]) -> None:
                         (
                             PNX_PREFIX + f["id"], p.get("original_file:name") or f["id"], t, p.get("datetime"), t, lat, lon,
                             head, head, 1 if fov == 360 else 0, "equirectangular" if fov == 360 else None,
-                            yaw or None, sid, p.get("pers:pitch"), p.get("pers:roll"),
+                            (yaw or None) if fov == 360 else None,  # flat: yaw = camera direction, starts at 0
+                            sid, p.get("pers:pitch"), p.get("pers:roll"),
                         ),
                     )
                 rows = conn.execute("SELECT id, path FROM photo WHERE sequence_id=?", (sid,)).fetchall()

@@ -69,6 +69,8 @@ export interface Project {
   source_dirs: string[]
   summary: Summary
   headings: HeadingStats
+  heading_source: 'track' | 'device' // automatic headings: computed from the track, or the camera's compass
+  device_headings: number // photos with a GPSImgDirection of the camera
   sources: SourcesState
   sync_offset_s: number | null // last GPS delay applied, null = never synchronised
   corrected_positions: number
@@ -403,6 +405,8 @@ export const api = {
   redo: (id: string) => req<SeqState & { done: string }>('POST', `/api/projects/${id}/redo`),
   setHeading: (id: string, photo: number, value: number | null) =>
     req<{ undo: UndoState }>('PUT', `/api/projects/${id}/photos/${photo}/heading`, { value }),
+  headingSource: (id: string, source: 'track' | 'device') =>
+    req<{ undo: UndoState }>('PUT', `/api/projects/${id}/headings/source`, { source }),
   // offset of the computed headings (replaces the previous one, 0 removes it): whole ride or photos start..end
   headingOffset: (id: string, target: { all: true } | { start_idx: number; end_idx: number }, value: number) =>
     req<{ changed: number; undo: UndoState }>('POST', `/api/projects/${id}/headings/offset`, { ...target, value }),

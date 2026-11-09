@@ -949,6 +949,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             removeBasemap(id)
             if (basemapId === id) chooseBasemap('osm')
           }}
+          onHeadingSource={(u) => {
+            afterHeadingChange(u)
+            refresh()
+          }}
           onHeadingsSaved={() => {
             setNotice(t('pv.headingsRecomputed'))
             lastPhotosKey.current = ''
