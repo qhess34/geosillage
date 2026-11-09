@@ -2,6 +2,8 @@
   <img src="frontend/public/logo.svg" alt="GeoSillage" width="120" />
 </p>
 
+<p align="center"><b>Français</b> · <a href="README.en.md">English</a></p>
+
 # GeoSillage
 
 **Préparez et corrigez vos relevés photo 360° pour [Panoramax](https://panoramax.fr).**
