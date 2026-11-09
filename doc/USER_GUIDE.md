@@ -2,10 +2,10 @@
 
 🇫🇷 [Version française](GUIDE_UTILISATEUR.md)
 
-GeoSillage prepares the 360° photos of a ride (bike — road, gravel, MTB —, on foot, by car…) taken with a GoPro MAX (one photo about every 2 s, often thousands of them) before they are published on [Panoramax](https://panoramax.fr):
+GeoSillage prepares the photos of a ride (bike — road, gravel, MTB —, on foot, by car…): **360° photos or smartphone photos** (Open Camera…), one photo about every 2 s, often thousands of them, before they are published on [Panoramax](https://panoramax.fr):
 
 - split the ride into **sequences** and set aside useless photos (stops, duplicates, failed shots);
-- fix the **GPS delay** of the GoPro and wrong **positions**;
+- fix the **GPS delay** of the camera and wrong **positions**;
 - check the **headings** (direction of travel) and the camera **orientation** (helmet, upside-down camera);
 - **export** one folder per sequence, with corrected EXIF that Panoramax reads properly;
 - **publish** the sequences on Panoramax, with their attributes (mode of travel…).
@@ -29,7 +29,7 @@ Contents: [1. Install and run](#1-install-and-run) · [2. Projects](#2-projects)
 
 ```sh
 git clone https://github.com/qhess34/geosillage.git && cd geosillage
-cp .env.example .env          # set PHOTOS_DIR (your GoPro rides) and PUID/PGID (commands: id -u ; id -g)
+cp .env.example .env          # set PHOTOS_DIR (your rides) and PUID/PGID (commands: id -u ; id -g)
 mkdir -p data photos exports  # (or the folders set in .env): create them BEFORE the first launch
 docker compose up -d --build
 ```
@@ -230,7 +230,7 @@ confirmation** (the number of photos is shown). Excluded photos:
 
 ## 5. Fixing the GPS delay (Sync tab)
 
-The GoPro records the position with a 0.5 to 3 s delay: each photo is placed a little behind where it was
+A GoPro records the position with a 0.5 to 3 s delay: each photo is placed a little behind where it was
 taken. You measure this delay once and apply it to the whole ride.
 
 **Reference track** (top of the tab): by default the camera GPS. A **GPX** track recorded at the same time

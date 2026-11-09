@@ -9,7 +9,7 @@
 **Prepare and fix your 360° photo rides for [Panoramax](https://panoramax.fr).**
 
 Local application for preparing, correcting and publishing [Panoramax](https://panoramax.fr) sequences from
-GoPro MAX 360° photos (bike, on foot, by car…; one photo about every 2 s, thousands of photos per ride).
+360° or smartphone photos (Open Camera…) (bike, on foot, by car…; one photo about every 2 s, thousands of photos per ride).
 
 By default the original files are **not modified**: projects only store references to the photos, the metadata read
 from them and the corrections, and export produces copies. On explicit request (with confirmation), the export can also
@@ -65,7 +65,7 @@ Everything can be undone (`Ctrl+Z`); `?` shows the keyboard shortcuts. Details: 
 ## Launching with Docker (recommended)
 
 ```sh
-cp .env.example .env        # then set PHOTOS_DIR (your GoPro rides), and PUID/PGID (commands: id -u ; id -g)
+cp .env.example .env        # then set PHOTOS_DIR (your rides), and PUID/PGID (commands: id -u ; id -g)
 mkdir -p data photos exports  # (or the folders set in .env): create them BEFORE the first launch
 docker compose up -d --build
 ```

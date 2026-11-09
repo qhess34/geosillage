@@ -9,7 +9,7 @@
 **Préparez et corrigez vos relevés photo 360° pour [Panoramax](https://panoramax.fr).**
 
 Application locale de préparation, correction et publication de séquences [Panoramax](https://panoramax.fr)
-à partir de photos 360° GoPro MAX (vélo, à pied, en voiture… ; une photo toutes les ~2 s, des milliers de photos par sortie).
+à partir de photos 360° ou de smartphone (Open Camera…) (vélo, à pied, en voiture… ; une photo toutes les ~2 s, des milliers de photos par sortie).
 
 Par défaut les fichiers originaux ne sont **pas modifiés** : les projets ne stockent que des références vers les
 photos, les métadonnées lues et les corrections, et l'export produit des copies. Sur demande explicite (avec
@@ -65,7 +65,7 @@ Tout est annulable (`Ctrl+Z`) ; `?` affiche les raccourcis. Détails : [guide d'
 ## Lancement avec Docker (recommandé)
 
 ```sh
-cp .env.example .env        # puis indiquer PHOTOS_DIR (vos sorties GoPro), et PUID/PGID (commande : id -u ; id -g)
+cp .env.example .env        # puis indiquer PHOTOS_DIR (vos sorties), et PUID/PGID (commande : id -u ; id -g)
 mkdir -p data photos exports  # (ou les dossiers indiqués dans .env) : à créer AVANT le premier lancement
 docker compose up -d --build
 ```
