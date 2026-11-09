@@ -424,14 +424,14 @@ def _expected(conn, sid: int) -> dict[int, dict]:
     Flat picture: heading = direction of the camera (heading + yaw), yaw None (never sent)."""
     source = headings.get_source(conn)
     rows = conn.execute(
-        f"""SELECT p.id, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon, p.yaw_offset, p.is_360,
+        f"""SELECT p.id, COALESCE(p.lat, p.lat_orig) lat, COALESCE(p.lon, p.lon_orig) lon, p.yaw_offset, p.is_360, p.heading_exif, p.heading_manual,
                    {headings.FINAL_SQL} AS heading
             FROM photo p JOIN sequence s ON s.id = p.sequence_id WHERE p.sequence_id=?""",
         (sid,),
     ).fetchall()
     out = {}
     for r in rows:
-        h = headings.written(r["heading"], r["yaw_offset"], r["is_360"], source)
+        h = headings.written(r["heading"], r["yaw_offset"], r["is_360"], source, r["heading_exif"] is not None and r["heading_manual"] is None)
         out[r["id"]] = {
             "lat": r["lat"],
             "lon": r["lon"],

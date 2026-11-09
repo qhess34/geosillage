@@ -247,7 +247,7 @@ chaque photo : caméra à l'envers = 180°), sur des photos, une plage, une séq
 pour une séquence, tout le projet et la plage de l'onglet Photo.
 
 **Photos plates** (`photo.is_360 = 0`) : `yaw_offset` = direction de la caméra par rapport au sens de déplacement.
-`headings.written` donne le `GPSImgDirection` écrit : cap + lacet si la source est `track`, cap seul en `device`
+`headings.written` donne le `GPSImgDirection` écrit : cap + lacet si la source est `track` (ou photo sans boussole), cap seul en `device`
 (la boussole donne déjà la direction de la caméra) ; 360° : cap seul. Utilisé par l'export (`exporter.plan`, aucune
 balise XMP-GPano : `_pose_heading` / `_pose_pitch_roll` renvoient `None`) et par la comparaison Panoramax
 (`_expected` : `yaw = None`, `_changes` n'envoie alors que position et cap, jamais `yaw` / `pitch` / `roll` ;

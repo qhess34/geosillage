@@ -143,6 +143,7 @@ def test_device_heading_detection_and_written_value():
     assert headings.written(90.0, 180.0, 0, headings.TRACK) == 270.0
     assert headings.written(300.0, 90.0, 0, headings.TRACK) == 30.0
     assert headings.written(90.0, 180.0, 0, headings.DEVICE) == 90.0
+    assert headings.written(90.0, 180.0, 0, headings.DEVICE, compass=False) == 270.0  # no compass: computed + yaw
     assert headings.written(None, 180.0, 0, headings.TRACK) is None
 
 

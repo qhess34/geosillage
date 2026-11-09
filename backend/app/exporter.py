@@ -89,14 +89,14 @@ def plan(conn, sequence_ids: list[int] | None) -> list[dict]:
         photos = conn.execute(
             f"""SELECT p.id, p.rank, p.ts, p.path, p.filename, p.flags, p.lat, p.lon, p.lat_orig, p.lon_orig, p.pos_method,
                        p.heading_auto, p.heading_auto_state, p.heading_manual, p.orig_tags, p.moved_from, p.yaw_offset,
-                       p.is_360, {headings.FINAL_SQL} AS heading
+                       p.is_360, p.heading_exif, {headings.FINAL_SQL} AS heading
                 FROM photo p JOIN sequence s ON s.id = p.sequence_id
                 WHERE p.sequence_id=? ORDER BY p.rank""",
             (s["id"],),
         ).fetchall()
         photos = [dict(p) for p in photos]
         for p in photos:  # flat picture: GPSImgDirection = direction of the camera (heading + yaw)
-            p["heading"] = headings.written(p["heading"], p["yaw_offset"], p["is_360"], source)
+            p["heading"] = headings.written(p["heading"], p["yaw_offset"], p["is_360"], source, p["heading_exif"] is not None and p["heading_manual"] is None)
         # folder: <project name>_<n>, n = 1, 2, 3… in the order of the ride
         out.append({"id": s["id"], "name": s["name"], "dir": f"{project}_{numbered[s['id']]}", "photos": photos})
     return out

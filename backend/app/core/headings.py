@@ -119,11 +119,11 @@ def detect_source(conn) -> str:
     return DEVICE if device_usable([r[0] for r in conn.execute("SELECT heading_exif FROM photo")]) else TRACK
 
 
-def written(heading: float | None, yaw: float | None, is_360, source: str) -> float | None:
+def written(heading: float | None, yaw: float | None, is_360, source: str, compass: bool = True) -> float | None:
     """GPSImgDirection to write. 360°: the direction of travel (the yaw goes to XMP-GPano). Flat picture: the
     direction of the camera = heading + yaw (camera turned backwards / sideways), except with the camera's
-    own compass, which already gives it."""
-    if heading is None or is_360 or source == DEVICE or not yaw:
+    own compass (`compass`: this photo has one and no manual heading), which already gives it."""
+    if heading is None or is_360 or (source == DEVICE and compass) or not yaw:
         return heading
     return round(norm(heading + yaw), 2) % 360.0
 
