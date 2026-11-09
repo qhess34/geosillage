@@ -10,7 +10,7 @@ séquence avec EXIF corrigés (ExifTool), publication sur une instance Panoramax
 dernier export). Deux types de projet : **sortie** (photos du disque) et **Panoramax** (séquences déjà publiées,
 photos laissées sur l'instance : corrections renvoyées, pas de découpe ni d'export ; `routes_edit.ride_only`).
 
-Docs (`doc/`) : `GUIDE_UTILISATEUR.md` (usage, écran par écran) · `DEVELOPPEMENT.md` (installation, vérifications,
+Docs (`doc/`) : `GUIDE_UTILISATEUR.md` + `USER_GUIDE.md` (anglais ; usage, écran par écran) · `DEVELOPPEMENT.md` (installation, vérifications,
 recettes, conventions) · `GUIDE_CODE.md` (modules, données, algorithmes, pièges ; sommaire en tête) ·
 `ETUDE_PHASE1.md` (GoPro MAX, API Panoramax) · `ORGANISATION_IA.md` (organisation IA : rôles, choix du modèle, cycle d'une demande, environnements).
 
