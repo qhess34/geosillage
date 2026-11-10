@@ -19,6 +19,7 @@ folder) and `photos.csv` (source path, position, heading and their origin).
 
 import csv
 import json
+import math
 import os
 import re
 import shutil
@@ -28,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import config, db, jobs
-from .core import geo, headings
+from .core import clock, geo, headings
 from .exif import reader, writer
 
 MARKER = ".pss-export.json"
@@ -124,16 +125,31 @@ def speeds_kmh(items: list[dict], max_dt: float = 10.0, max_kmh: float = 150.0) 
     return out
 
 
-def _save_orig_tags(pid: str, items: list[dict]) -> None:
-    """Before modifying source photos: save the current values of the tags we write (first time only)."""
-    todo = [it for it in items if it["orig_tags"] is None]
+def _lacks_clock(it: dict) -> bool:
+    cap = json.loads(it["orig_tags"]).get("_captured", writer.LEGACY_CAPTURED)
+    return any(t not in cap for t in writer.CLOCK_TAGS)
+
+
+def _save_orig_tags(pid: str, items: list[dict], clock: bool = False) -> None:
+    """Before modifying source photos: save the current values of the tags we write (first time only; the capture
+    time is added to an older save when the clock is about to be corrected: the tag was never written before)."""
+    todo = [it for it in items if it["orig_tags"] is None or (clock and _lacks_clock(it))]
     for i in range(0, len(todo), BATCH):
         part = todo[i : i + BATCH]
         tags = writer.read_tags([it["path"] for it in part])
         with db.open_project(pid) as conn, db.transaction(conn):
             for it in part:
-                it["orig_tags"] = json.dumps(tags[it["path"]])
-                conn.execute("UPDATE photo SET orig_tags=? WHERE id=? AND orig_tags IS NULL", (it["orig_tags"], it["id"]))
+                fresh = tags[it["path"]]
+                if it["orig_tags"] is not None:
+                    old = json.loads(it["orig_tags"])
+                    cap = old.get("_captured", writer.LEGACY_CAPTURED)
+                    for t in writer.CLOCK_TAGS:
+                        if t not in cap and t.split(":", 1)[1] in fresh:
+                            old[t.split(":", 1)[1]] = fresh[t.split(":", 1)[1]]
+                    old["_captured"] = cap + [t for t in writer.CLOCK_TAGS if t not in cap]
+                    fresh = old
+                it["orig_tags"] = json.dumps(fresh)
+                conn.execute("UPDATE photo SET orig_tags=? WHERE id=?", (it["orig_tags"], it["id"]))
 
 
 def _move_files(pid: str, items: list[dict]) -> None:
@@ -166,8 +182,10 @@ def run(
     panoramax_compat: bool,
     exclude_jumps: bool = True,
     mode: str = "copy",
+    fix_clock: bool = False,
 ) -> None:
-    """exclude_jumps: photos flagged as GPS jumps are left out (their position is wrong until corrected)."""
+    """exclude_jumps: photos flagged as GPS jumps are left out (their position is wrong until corrected).
+    fix_clock: write the capture time with the camera clock's shift removed (core/clock.py; needs a stable shift)."""
     if mode not in MODES:
         raise ExportError(f"Mode inconnu : {mode}")
     pid = ctx.project_id
@@ -178,9 +196,12 @@ def run(
     with db.open_project(pid) as conn:
         headings.recompute(conn)
         work = plan(conn, sequence_ids)
+        clk = clock.detect(conn)
         protected = _project_paths(conn)
     if not work:
         raise ExportError("Aucune séquence à exporter")
+    if fix_clock and clk["state"] != "shifted":
+        raise ExportError("Écart d'horloge non net : l'heure de prise de vue ne peut pas être corrigée")
     for s in work:
         # A GPS jump whose position has been corrected is exported normally
         drop = {p["id"] for p in s["photos"] if exclude_jumps and p["flags"] & db.GPS_JUMP and p["lat"] is None}
@@ -213,6 +234,7 @@ def run(
                     "name": name if d is not None else os.path.basename(p["path"]),
                     "write_lat": p["lat"] if corrected else None,
                     "write_lon": p["lon"] if corrected else None,
+                    "write_dt": clock.corrected(p["ts"], clk) if fix_clock and p["ts"] is not None else None,
                 }
             )
 
@@ -220,7 +242,7 @@ def run(
             it["speed"] = v
         if on_source:
             ctx.progress(done, total, f"Sauvegarde des métadonnées d'origine (« {s['name']} »)", force=True)
-            _save_orig_tags(pid, items)
+            _save_orig_tags(pid, items, fix_clock)
         if mode == "move":
             ctx.progress(done, total, f"Déplacement des photos de « {s['name']} »", force=True)
             _move_files(pid, items)
@@ -241,8 +263,9 @@ def run(
             edits = []
             for it in batch:
                 pitch, roll = _pose_pitch_roll(it, poses[it["dest"]], current.get(it["dest"]))
+                dt, off = it["write_dt"] or (None, None)
                 edits.append(
-                    writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"], it["speed"], poses[it["dest"]], pitch, roll)
+                    writer.Edit(it["dest"], it["heading"], it["write_lat"], it["write_lon"], it["speed"], poses[it["dest"]], pitch, roll, dt, off)
                 )
             errors = writer.write_batch(edits, panoramax_compat, on_source=on_source)
             check = {m.path: m for m in reader.read_batch([it["dest"] for it in batch])}
@@ -260,6 +283,8 @@ def run(
                     m.lat is None or abs(m.lat - it["write_lat"]) > 1e-7 or abs(m.lon - it["write_lon"]) > 1e-7
                 ):
                     problems[it["dest"]] = "position relue différente"
+                if it["write_dt"] is not None and (m.ts is None or math.floor(m.ts) != math.floor(reader.parse_datetime(it["write_dt"][0])[0])):
+                    problems[it["dest"]] = "heure de prise de vue relue différente"
             if on_source:
                 with db.open_project(pid) as conn:
                     conn.executemany(
@@ -293,6 +318,9 @@ def run(
             "exclude_gps_jumps": exclude_jumps,
             "out_dir": str(out) if out is not None else None,
             "mode": mode,
+            "fix_clock": fix_clock,
+            "clock_fixed": sum(1 for it in items if it["write_dt"] is not None),
+            "clock_shift_s": clk["shift_s"] if fix_clock else None,
             # exported file of each photo (publication on Panoramax)
             "items": [{"photo_id": it["id"], "file": it["dest"]} for it in items],
         }
@@ -482,6 +510,7 @@ def last_exports(conn) -> dict[int, dict]:
             "out_dir": rep_.get("out_dir") or (str(Path(r["path"]).parent) if r["mode"] != "in_place" else None),
             "panoramax_compat": rep_.get("panoramax_compat", True),
             "exclude_gps_jumps": rep_.get("exclude_gps_jumps", True),
+            "fix_clock": rep_.get("fix_clock", False),
             "problems": len(rep_.get("problems", {})),
         }
     return out

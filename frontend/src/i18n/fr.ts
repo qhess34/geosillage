@@ -198,6 +198,12 @@ export const fr = {
   'sum.mediaFlat': 'Plates (non 360°)',
   'sum.interval': 'Intervalle médian entre photos',
   'sum.intervalWarn': 'Les seuils des points à vérifier sont réglés pour environ 1 photo toutes les 2 s ; ici les photos sont plus espacées (interruption à plus de {gap} s) ou les arrêts sont très nombreux.',
+  'sum.clock': "Horloge de l'appareil",
+  'sum.clockOk': "Cohérente avec l'heure GPS",
+  'sum.clockShifted':
+    "Décalée de {shift} par rapport à l'heure locale (fuseau {tz} déduit de la position ; écart constant à {spread} s près). Corrigeable à l'export.",
+  'sum.clockVariable': "L'écart avec l'heure GPS varie pendant la sortie : l'horloge ne peut pas être corrigée d'un bloc.",
+  'sum.clockStuck': "{n} photo(s) dont l'heure GPS est bloquée : leur position est périmée.",
   'sum.openSettings': 'Réglages',
   'sum.yawHelpFlat': "L'angle s'ajoute à la direction de la caméra de chaque photo (180 : caméra vers l'arrière).",
   'photo.orient.titleFlat': 'Direction de la caméra',
@@ -782,6 +788,8 @@ export const fr = {
   'exp.compat':
     'Compatibilité Panoramax : un cap arrondi à 0° est écrit 0,6° (Panoramax considère 0 comme « absent » et le recalculerait)',
   'exp.excludeJumps': 'Exclure les photos en saut GPS non corrigées{count} : leur position est fausse',
+  'exp.fixClock':
+    "Corriger l'heure de prise de vue : écrire DateTimeOriginal sans le décalage de {shift} (fuseau {tz}) ; valeur d'origine sauvegardée et restaurable",
   'exp.noHeading':
     "{n} photo(s) sans cap fiable (arrêt, GPS manquant) : elles seront exportées sans cap. Corrigez-les dans l'onglet Photo si besoin.",
   'exp.running': 'Tâche en cours…',

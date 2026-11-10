@@ -752,6 +752,7 @@ class ExportIn(BaseModel):
     sequence_ids: list[int] | None = None
     panoramax_compat: bool = True
     exclude_gps_jumps: bool = True
+    fix_clock: bool = False  # write the capture time without the camera clock's shift (core/clock.py)
     # copy: copies (originals untouched); move / in_place: the source photos themselves are modified
     mode: str = Field(default="copy", pattern="^(copy|move|in_place)$")
 
@@ -784,7 +785,7 @@ def export_start(pid: str, body: ExportIn):
         raise HTTPException(409, "Une autre tâche sur les fichiers est en cours")
 
     def task(ctx):
-        exporter.run(ctx, str(out) if out else None, body.sequence_ids, body.panoramax_compat, body.exclude_gps_jumps, body.mode)
+        exporter.run(ctx, str(out) if out else None, body.sequence_ids, body.panoramax_compat, body.exclude_gps_jumps, body.mode, body.fix_clock)
 
     return {"job_id": jobs.start(pid, "export", task, unique=False), "out_dir": str(out) if out else None}
 
@@ -804,6 +805,7 @@ def sequence_reexport(pid: str, sid: int):
         sequence_ids=[sid],
         panoramax_compat=last["panoramax_compat"],
         exclude_gps_jumps=last["exclude_gps_jumps"],
+        fix_clock=last["fix_clock"],
         mode=last["mode"],
     )
     return {**export_start(pid, body), "mode": last["mode"]}

@@ -200,6 +200,12 @@ export const en: Record<Key, string> = {
   'sum.mediaFlat': 'Flat (not 360°)',
   'sum.interval': 'Median interval between pictures',
   'sum.intervalWarn': 'The thresholds of the points to check are tuned for about 1 picture every 2 s; here pictures are further apart (interruption above {gap} s) or stops are very numerous.',
+  'sum.clock': 'Camera clock',
+  'sum.clockOk': 'Consistent with GPS time',
+  'sum.clockShifted':
+    'Off by {shift} from local time (time zone {tz} deduced from the position; difference constant within {spread} s). Can be corrected at export.',
+  'sum.clockVariable': 'The difference with GPS time changes during the ride: the clock cannot be corrected as a whole.',
+  'sum.clockStuck': '{n} picture(s) whose GPS time is stuck: their position is out of date.',
   'sum.openSettings': 'Settings',
   'sum.yawHelpFlat': 'The angle is added to the camera direction of each picture (180: camera facing backwards).',
   'photo.orient.titleFlat': 'Camera direction',
@@ -782,6 +788,8 @@ export const en: Record<Key, string> = {
   'exp.view': 'View ↗',
   'exp.compat': 'Panoramax compatibility: a heading rounded to 0° is written 0.6° (Panoramax treats 0 as "missing" and would recompute it)',
   'exp.excludeJumps': 'Exclude photos in an uncorrected GPS jump{count}: their position is wrong',
+  'exp.fixClock':
+    'Correct the capture time: write DateTimeOriginal without the {shift} shift (time zone {tz}); original value saved and restorable',
   'exp.noHeading':
     '{n} photo(s) without a reliable heading (stop, missing GPS): they will be exported without a heading. Fix them in the Photo tab if needed.',
   'exp.running': 'Task in progress…',

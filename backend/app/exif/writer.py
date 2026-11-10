@@ -30,9 +30,12 @@ WRITTEN_TAGS = [
     "XMP-GPano:PoseHeadingDegrees",
     "XMP-GPano:PosePitchDegrees",
     "XMP-GPano:PoseRollDegrees",
+    "EXIF:DateTimeOriginal",  # corrected only when the camera clock is off (core/clock.py)
+    "EXIF:OffsetTimeOriginal",
 ]
-# Tags saved by versions that did not save pitch/roll yet (orig_tags without "_captured")
-LEGACY_CAPTURED = [t for t in WRITTEN_TAGS if not t.endswith(("PosePitchDegrees", "PoseRollDegrees"))]
+CLOCK_TAGS = ["EXIF:DateTimeOriginal", "EXIF:OffsetTimeOriginal"]
+# Tags saved by versions that did not save pitch/roll (or the capture time) yet (orig_tags without "_captured")
+LEGACY_CAPTURED = [t for t in WRITTEN_TAGS if not t.endswith(("PosePitchDegrees", "PoseRollDegrees", "TimeOriginal", "DateTimeOriginal"))]
 
 # The Panoramax viewer applies a 360° photo's orientation (yaw) only when pitch AND roll are both non-zero
 # (getSphereCorrection of @panoramax/web-viewer; see the pan360-fixexif project): a 0 is replaced by this
@@ -50,6 +53,8 @@ class Edit:
     pose_heading: float | None = None  # XMP-GPano:PoseHeadingDegrees to write (None = untouched)
     pose_pitch: float | None = None  # XMP-GPano:PosePitchDegrees to write (None = untouched)
     pose_roll: float | None = None
+    datetime_original: str | None = None  # corrected capture time "YYYY:MM:DD HH:MM:SS" (None = untouched)
+    offset_time: str | None = None  # matching OffsetTimeOriginal "+01:00"
 
 
 def heading_value(h: float, panoramax_compat: bool) -> float:
@@ -85,6 +90,10 @@ def tag_args(e: Edit, panoramax_compat: bool) -> list[str]:
         ]
     if args:
         args.append("-GPSVersionID=2 3 0 0")  # (numeric form, -n) absent from GoPro MAX photos, expected in a GPS IFD
+    if e.datetime_original is not None:
+        args.append(f"-EXIF:DateTimeOriginal={e.datetime_original}")
+        if e.offset_time is not None:
+            args.append(f"-EXIF:OffsetTimeOriginal={e.offset_time}")
     return args
 
 
