@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { locale, t, useLang } from './i18n'
+import { locale, seqName, t, useLang } from './i18n'
 import { api, PhotoRow, Proposal, seqColor, SeqState, Sequence } from './api'
 import { fmtDistance, fmtDuration, fmtTime } from './format'
 import { publicationStates, viewerUrl } from './Publication'
@@ -65,7 +65,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
           </form>
         ) : (
           <button className="link grow ellipsis seq-name" onClick={() => onGo(s.start_idx)} onDoubleClick={() => setEditing(true)} title={t('seq.goStart')}>
-            {s.name}
+            {seqName(s.name)}
           </button>
         )}
         {!editing && (
@@ -126,7 +126,7 @@ function SeqItem({ s, sequences, props }: { s: Sequence; sequences: Sequence[]; 
             </button>
           )}
           {next && (
-            <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))} title={t('seq.mergeTitle', { name: next.name })}>
+            <button className="small" onClick={() => run(api.mergeSequences(projectId, [s.id, next.id]))} title={t('seq.mergeTitle', { name: seqName(next.name) })}>
               {t('seq.merge')}
             </button>
           )}

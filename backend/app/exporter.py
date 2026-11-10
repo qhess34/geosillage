@@ -337,8 +337,8 @@ def run(
         results.append((s["name"], len(problems)))
 
     bad = sum(n for _, n in results)
-    where = f" dans {out}" if out is not None else " (sur place)"
-    ctx.progress(total, total, f"{len(results)} séquence(s) exportée(s){where}" + (f" — {bad} problème(s)" if bad else ""), force=True)
+    msg = f"{len(results)} séquence(s) exportée(s) dans {out}" if out is not None else f"{len(results)} séquence(s) exportée(s) (sur place)"
+    ctx.progress(total, total, msg + (f" — {bad} problème(s)" if bad else ""), force=True)
     if bad:
         raise ExportError(f"{bad} fichier(s) en échec de vérification (voir l'historique des exports)")
 

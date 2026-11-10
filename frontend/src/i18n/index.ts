@@ -28,6 +28,13 @@ const listeners = new Set<() => void>()
 if (typeof document !== 'undefined') document.documentElement.lang = current
 
 export const getLang = (): Lang => current
+
+// Default sequence names are stored in French ("Séquence 3"): shown as "Sequence 3" in English only.
+// Used for display only; inputs keep the stored name.
+export function seqName(name: string): string {
+  const m = /^Séquence (\d+)$/.exec(name)
+  return m && current === 'en' ? `Sequence ${m[1]}` : name
+}
 export function setLang(l: Lang) {
   if (l === current) return
   current = l

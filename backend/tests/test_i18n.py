@@ -39,3 +39,15 @@ def test_tr_templates_and_default():
     assert i18n.tr("Texte inconnu : x") == "Texte inconnu : x"
     i18n.set_lang(None)
     assert i18n.tr("Annulé") == "Annulé"
+
+
+def test_export_summary_and_default_names_in_english():
+    # messages built by exporter.py and core/sequences.py are stored in French, translated when read
+    i18n.set_lang("en-GB")
+    try:
+        assert i18n.tr("2 séquence(s) exportée(s) dans /exports") == "2 sequence(s) exported to /exports"
+        assert i18n.tr("1 séquence(s) exportée(s) (sur place) — 2 problème(s)") == "1 sequence(s) exported (in place) — 2 problem(s)"
+        assert i18n.tr("Séquence créée et coupée") == "Sequence created and cut"
+    finally:
+        i18n.set_lang("fr")
+    assert i18n.tr("2 séquence(s) exportée(s) dans /exports") == "2 séquence(s) exportée(s) dans /exports"
