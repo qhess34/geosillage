@@ -18,6 +18,16 @@ export function fmtDuration(s: number | null | undefined): string {
   return h ? `${h} h ${String(m).padStart(2, '0')} min` : m ? `${m} min ${sec} s` : `${sec} s`
 }
 
+// Signed duration with seconds: +1 h 15 min 07 s
+export function fmtShift(s: number): string {
+  const a = Math.abs(Math.round(s))
+  const h = Math.floor(a / 3600)
+  const m = Math.floor((a % 3600) / 60)
+  const sec = a % 60
+  const parts = [h ? `${h} h` : '', h || m ? `${String(m).padStart(h ? 2 : 1, '0')} min` : '', `${String(sec).padStart(h || m ? 2 : 1, '0')} s`]
+  return `${s < 0 ? '−' : '+'}${parts.filter(Boolean).join(' ')}`
+}
+
 export function fmtDistance(m: number | null | undefined): string {
   if (m == null) return '—'
   return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`

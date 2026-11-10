@@ -92,6 +92,8 @@ def main():
     ap.add_argument("--width", type=int, default=2048)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--flat", action="store_true", help="flat 4:3 smartphone pictures instead of 360° ones")
+    ap.add_argument("--clock-shift", type=int, default=0, help="seconds the camera clock (DateTimeOriginal) is ahead of GPS time")
+    ap.add_argument("--stuck-gps-time", action="store_true", help="GPSTimeStamp stays frozen on the pictures 40-60")
     ap.add_argument("--compass", action="store_true", help="with --flat: write GPSImgDirection")
     a = ap.parse_args()
     rng = random.Random(a.seed)
@@ -115,6 +117,7 @@ def main():
     t = 5.0
     delay = 1.5
     pause_at = a.count // 2
+    stuck_t = 0.0
     split = a.count * 2 // 3
     for i in range(a.count):
         if i == pause_at:
@@ -143,8 +146,13 @@ def main():
             zeroth = {piexif.ImageIFD.Make: b"GoPro", piexif.ImageIFD.Model: b"GoPro Max", piexif.ImageIFD.Software: b"H19.03.02.06.00"}
         exif = {}
         if i != a.count - 5:  # one picture without date
-            exif[piexif.ExifIFD.DateTimeOriginal] = when.strftime("%Y:%m:%d %H:%M:%S").encode()
+            exif[piexif.ExifIFD.DateTimeOriginal] = (when + timedelta(seconds=a.clock_shift)).strftime("%Y:%m:%d %H:%M:%S").encode()
         gps = {}
+        gps_when = when
+        if a.stuck_gps_time and 40 <= i < 60:
+            gps_when = t0 + timedelta(seconds=stuck_t)
+        elif a.stuck_gps_time:
+            stuck_t = t
         if not no_fix:
             gps = {
                 piexif.GPSIFD.GPSLatitudeRef: b"N" if rec_lat >= 0 else b"S",
@@ -153,8 +161,8 @@ def main():
                 piexif.GPSIFD.GPSLongitude: dms(rec_lon),
                 piexif.GPSIFD.GPSAltitudeRef: 0,
                 piexif.GPSIFD.GPSAltitude: rational(42 + rng.uniform(-2, 2), 100),
-                piexif.GPSIFD.GPSTimeStamp: ((when.hour, 1), (when.minute, 1), (when.second, 1)),
-                piexif.GPSIFD.GPSDateStamp: when.strftime("%Y:%m:%d").encode(),
+                piexif.GPSIFD.GPSTimeStamp: ((gps_when.hour, 1), (gps_when.minute, 1), (gps_when.second, 1)),
+                piexif.GPSIFD.GPSDateStamp: gps_when.strftime("%Y:%m:%d").encode(),
                 piexif.GPSIFD.GPSDOP: rational(rng.uniform(0.8, 3.0), 100),
             }
             if a.flat and a.compass:

@@ -65,3 +65,15 @@ test('langue : passer en anglais dans les réglages, vérifier des libellés, re
   await page.getByRole('button', { name: 'Fermer' }).click()
   await expect(page.locator('.steps .step', { hasText: 'Doublons et arrêts' })).toBeVisible()
 })
+
+test('horloge décalée : le Bilan signale l\'écart et l\'export propose de corriger l\'heure', async ({ page, request }) => {
+  // the simulated ride has capture times equal to UTC while the place is in UTC+2: a stable −2 h shift
+  await newProject(request, 'Horloge')
+  await openProject(page, 'Horloge')
+  await page.getByRole('tab', { name: 'Bilan' }).click()
+  const row = page.locator('.summary tr', { hasText: "Horloge de l'appareil" })
+  await expect(row).toContainText('−2 h 00 min 00 s')
+  await expect(row).toContainText('+02:00')
+  await page.getByRole('tab', { name: /^Export/ }).click()
+  await expect(page.getByLabel(/Corriger l'heure de prise de vue/)).toBeChecked()
+})

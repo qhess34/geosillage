@@ -72,6 +72,10 @@ sphère) et l'orientation devient la **direction de la caméra** (0° = avant, 1
 et le roulis lus dans la photo sont affichés (lecture seule). Un projet Panoramax suit la même règle (type d'après le
 champ de vision des photos publiées). Le **Bilan** indique l'intervalle médian entre photos et vous avertit, avec un
 lien vers *⚙ Réglages*, s'il est trop grand pour les seuils (réglés pour environ 1 photo toutes les 2 s).
+Il compare aussi l'heure de prise de vue à l'heure GPS des photos : si l'écart est constant, la ligne *Horloge de
+l'appareil* donne le décalage (ex. « +1 h 15 min 07 s ») et le fuseau déduit de la position (c'est l'horloge de
+l'appareil qui est fausse, pas les positions) ; si l'écart varie, ou si l'heure GPS de certaines photos est
+bloquée (position périmée), la ligne le signale.
 
 Un **projet** = une sortie (ou plusieurs). Page d'accueil : saisir un nom puis *Créer le projet* ; ouvrir un projet en cliquant son nom ; *Supprimer*
 (avec confirmation).
@@ -489,7 +493,9 @@ Onglet **Export et envoi** :
    export. *Tout cocher* pour tout réexporter.
 4. Options : *Compatibilité Panoramax* (cochée : un cap arrondi à 0° est écrit 0,6°, car Panoramax prend 0 pour
    « absent » et le recalculerait), *Exclure les photos en saut GPS non corrigées* (cochée : leur position est
-   fausse).
+   fausse), *Corriger l'heure de prise de vue* (proposée et cochée si l'horloge de l'appareil est décalée de façon
+   constante : l'export écrit `DateTimeOriginal` et `OffsetTimeOriginal` sans le décalage ; la valeur d'origine est
+   sauvegardée et rétablie par la restauration des sources).
 5. *Exporter*. La tâche s'affiche en bas de l'écran.
 
 

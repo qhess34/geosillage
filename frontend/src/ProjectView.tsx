@@ -906,6 +906,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 jobs={project.jobs}
                 sources={project.sources}
                 excludedPhotos={project.summary.excluded}
+                clock={project.summary.clock}
                 onStarted={refresh}
                 onError={fail}
               />

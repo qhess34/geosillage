@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api, Project, UndoState } from './api'
-import { fmtDistance, fmtDuration, fmtTime } from './format'
+import { fmtDistance, fmtDuration, fmtShift, fmtTime } from './format'
 import YawRotate from './YawRotate'
 import HeadingSource from './HeadingSource'
 import { capHelp, orientationHelp } from './CapOrientation'
@@ -78,6 +78,17 @@ function Summary({ p, onSettings }: { p: Project; onSettings?: () => void }) {
               )}
             </>,
             s.interval_warning,
+          )}
+        {s.clock.state !== 'none' &&
+          row(
+            t('sum.clock'),
+            <>
+              {s.clock.state === 'ok' && t('sum.clockOk')}
+              {s.clock.state === 'shifted' && t('sum.clockShifted', { shift: fmtShift(s.clock.shift_s ?? 0), tz: s.clock.tz ?? '', spread: s.clock.spread_s ?? 0 })}
+              {s.clock.state === 'variable' && t('sum.clockVariable')}
+              {s.clock.stuck > 0 && <div className="small-text">{t('sum.clockStuck', { n: s.clock.stuck })}</div>}
+            </>,
+            s.clock.state === 'shifted' || s.clock.state === 'variable' || s.clock.stuck > 0,
           )}
         {row(t('sum.start'), fmtTime(s.start))}
         {row(t('sum.end'), fmtTime(s.end))}

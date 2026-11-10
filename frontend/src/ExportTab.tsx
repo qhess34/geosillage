@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { locale, t, useLang } from './i18n'
-import { api, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
+import { fmtShift } from './format'
+import { api, ClockCheck, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
 import { publicationStates, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './Publication'
 
@@ -10,6 +11,7 @@ interface Props {
   jobs: Job[]
   sources: SourcesState
   excludedPhotos: number // photos excluded by the user
+  clock: ClockCheck // camera clock against GPS time (Bilan)
   onStarted: () => void
   onError: (msg: string) => void
 }
@@ -22,7 +24,7 @@ const modes = (): { id: ExportMode; label: string; help: string }[] => [
   { id: 'in_place', label: t('exp.mode.inPlace'), help: t('exp.mode.inPlaceHelp') },
 ]
 
-export default function ExportTab({ projectId, sequences, jobs, sources, excludedPhotos, onStarted, onError }: Props) {
+export default function ExportTab({ projectId, sequences, jobs, sources, excludedPhotos, clock, onStarted, onError }: Props) {
   useLang()
   // Destination: the folder of this project's last export, else the last folder typed in this browser
   const lastProjectDir = () =>
@@ -50,6 +52,10 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
   const tickAll = (v: boolean | null) => setOverrides(v == null ? new Map() : new Map(sequences.map((s) => [s.id, v])))
   const [compat, setCompat] = useState(true)
   const [excludeJumps, setExcludeJumps] = useState(true)
+  // Camera clock off by a stable amount: correcting the capture time is ticked by default
+  const clockOff = clock.state === 'shifted'
+  const [fixClock, setFixClock] = useState(clockOff)
+  useEffect(() => setFixClock(clockOff), [clockOff])
   const [mode, setMode] = useState<ExportMode>('copy')
   const [confirm, setConfirm] = useState<null | 'export' | 'restore' | 'trash'>(null)
   const [history, setHistory] = useState<ExportRecord[]>([])
@@ -74,7 +80,7 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
       /* ignore */
     }
     api
-      .exportSequences(projectId, mode === 'in_place' ? null : dir, chosen.map((s) => s.id), compat, excludeJumps, mode)
+      .exportSequences(projectId, mode === 'in_place' ? null : dir, chosen.map((s) => s.id), compat, excludeJumps, mode, clockOff && fixClock)
       .then(onStarted, (e) => onError(e.message))
   }
   const trash = () => {
@@ -172,6 +178,12 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
       <label className="small-text option-line">
         <input type="checkbox" checked={excludeJumps} onChange={(e) => setExcludeJumps(e.target.checked)} /> {t('exp.excludeJumps', { count: jumps > 0 ? ` (${jumps})` : '' })}
       </label>
+      {clockOff && (
+        <label className="small-text option-line">
+          <input type="checkbox" checked={fixClock} onChange={(e) => setFixClock(e.target.checked)} />{' '}
+          {t('exp.fixClock', { shift: fmtShift(clock.shift_s ?? 0), tz: clock.tz ?? '' })}
+        </label>
+      )}
       {noHeading > 0 && (
         <p className="warn-text small-text">
           {t('exp.noHeading', { n: noHeading })}

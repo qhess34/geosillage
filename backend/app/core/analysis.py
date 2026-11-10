@@ -104,7 +104,7 @@ def summary(conn) -> dict:
     cams = conn.execute(
         "SELECT make, model, COUNT(*) n FROM photo GROUP BY make, model ORDER BY n DESC"
     ).fetchall()
-    from . import quality
+    from . import clock, quality
 
     steps = sorted(
         b["ts"] - a["ts"]
@@ -119,6 +119,7 @@ def summary(conn) -> dict:
         "interval_warning": bool(
             (median is not None and median > gap / 2) or (total and stop_photos > 0.2 * total)
         ),  # photos too sparse for the thresholds (tuned for ~1 photo / 2 s) or very many stops
+        "clock": clock.detect(conn),
         "total": total,
         "geolocated": c("SELECT COUNT(*) FROM photo WHERE flags & ? = 0", db.NO_GPS | db.INVALID_COORD),
         "no_gps": flag(db.NO_GPS),

@@ -338,6 +338,7 @@ def test_panoramax_project_import_and_corrections(account):
         wait_jobs(client, pid)
         proj = client.get(f"/api/projects/{pid}").json()
         assert proj["kind"] == "panoramax" and proj["pnx_instance"] == "https://pnx.test" and proj["summary"]["total"] == 30
+        assert proj["summary"]["clock"]["state"] == "none"  # Panoramax time is UTC: no camera clock
         assert next(p for p in client.get("/api/projects").json() if p["id"] == pid)["kind"] == "panoramax"
         (seq,) = client.get(f"/api/projects/{pid}/sequences").json()["sequences"]
         assert seq["name"] == f"Sortie {cid[:4]}" and seq["count"] == 30 and seq["last_publication"]["collection_id"] == cid

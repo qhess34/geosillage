@@ -70,6 +70,7 @@ EN: dict[str, str] = {
     "Le chemin d'export n'est pas un dossier": "The export path is not a folder",
     "Le dossier d'export ne doit pas être dans un dossier source ({src})": "The export folder must not be inside a source folder ({src})",
     "Aucune séquence à exporter": "No sequence to export",
+    "Écart d'horloge non net : l'heure de prise de vue ne peut pas être corrigée": "Camera clock shift not clear-cut: the capture time cannot be corrected",
     "Une autre tâche sur les fichiers est en cours": "Another file task is running",
     "Séquence introuvable": "Sequence not found",
     "Cette séquence n'a jamais été exportée : utilisez l'onglet Export": "This sequence has never been exported: use the Export tab",

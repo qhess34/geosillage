@@ -32,6 +32,18 @@ export interface Job {
   updated_at: number
 }
 
+// Camera clock against GPS time (shift_s = camera clock - local time; tz = UTC offset deduced from the position)
+export interface ClockCheck {
+  state: 'none' | 'ok' | 'shifted' | 'variable'
+  n: number
+  offset_s: number | null
+  tz_s: number | null
+  tz: string | null
+  shift_s: number | null
+  spread_s: number | null
+  stuck: number // photos whose GPS time did not move
+}
+
 export interface Summary {
   total: number
   geolocated: number
@@ -49,6 +61,7 @@ export interface Summary {
   is_360: number
   median_interval_s: number | null // median interval between photos (s)
   interval_warning: boolean // photos too sparse for the thresholds, or very many stops
+  clock: ClockCheck
   start: number | null
   end: number | null
   duration_s: number | null
@@ -425,6 +438,7 @@ export const api = {
     panoramax_compat: boolean,
     exclude_gps_jumps: boolean,
     mode: ExportMode,
+    fix_clock = false,
   ) =>
     req<{ job_id: string; out_dir: string | null }>('POST', `/api/projects/${id}/export`, {
       out_dir,
@@ -432,6 +446,7 @@ export const api = {
       panoramax_compat,
       exclude_gps_jumps,
       mode,
+      fix_clock,
     }),
   track: (id: string) => req<{ runs: [number, number, number][][]; max_extrapolation_s: number; source: 'camera' | 'gpx' }>('GET', `/api/projects/${id}/track`),
   syncOffset: (id: string, photo: number, lat: number, lon: number) =>

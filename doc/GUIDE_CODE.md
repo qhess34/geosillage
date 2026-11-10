@@ -424,6 +424,16 @@ un dossier source (les copies seraient ré-importées). Puis par lots de 200 en 
 relecture et comparaison des valeurs. Le test `test_export.py` vérifie aussi que les données image (après le
 marqueur SOS) sont identiques à l'original : pas de recompression.
 
+Horloge de l'appareil (`core/clock.py`, `summary.clock`, option `fix_clock` de l'export) : écart `ts − gps_ts` (heure
+de prise de vue − GPSDateTime UTC) sur les photos à position valide ; état `shifted` si ≥ 90 % des photos sont à
+3 s de la médiane et que le décalage dépasse 60 s, `variable` sinon, `ok` si l'horloge est juste, `none` s'il y a
+moins de 3 photos ou pour un projet Panoramax (photos `pnx:`, heure déjà UTC). Fuseau = zone de `zone1970.tab` la plus proche de la position (repli : fuseau solaire), décalage =
+écart − fuseau. `fix_clock` (refusé si l'état n'est pas `shifted`) écrit `EXIF:DateTimeOriginal = ts − décalage`
+(calculé depuis `photo.ts`, donc idempotent en ré-export) et `OffsetTimeOriginal` ; les deux balises sont dans
+`writer.WRITTEN_TAGS` (sauvegarde puis restauration ; une sauvegarde plus ancienne est complétée, `CLOCK_TAGS`).
+`photo.ts` en base reste l'heure de l'appareil. `clock.stuck` compte les photos dont l'heure GPS n'avance pas.
+Échantillons : `make_samples.py --clock-shift S --stuck-gps-time` (`test_clock.py`).
+
 Dossiers : `<nom du projet>_<n>` (`exporter.plan`), n = 1, 2, 3… dans l'ordre des séquences dans la sortie.
 
 ExifTool en lot (`writer.run_batch`) : avec `-execute`, les options ne valent que pour une commande ; elles sont donc

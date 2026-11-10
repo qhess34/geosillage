@@ -69,6 +69,10 @@ flat? In a flat-picture project the viewer shows the plain image (no sphere view
 shown (read only). A Panoramax project follows the same rule (type from the field of view of the published pictures).
 The **Summary** shows the median interval between pictures and warns you, with a link to *⚙ Settings*, when it is too
 large for the thresholds (tuned for about 1 picture every 2 s).
+It also compares the capture time with the pictures' GPS time: when the difference is constant, the *Camera clock*
+row gives the shift (e.g. « +1 h 15 min 07 s ») and the time zone deduced from the position (the camera clock is
+wrong, not the positions); when the difference changes, or when the GPS time of some pictures is stuck (out-of-date
+position), the row says so.
 
 A **project** = one ride (or several). Home page: type a name then *Create project*; open a project by clicking its name; *Delete*
 (with confirmation).
@@ -464,7 +468,9 @@ listed in the same window (*GPS correction* step), unclassified photos with the 
 3. **Sequences**: ticked by default are those never exported or modified since their last export. *Tick all* to
    re-export everything.
 4. Options: *Panoramax compatibility* (ticked: a heading rounded to 0° is written 0.6°, because Panoramax treats 0 as
-   « missing » and would recompute it), *Exclude photos in an uncorrected GPS jump* (ticked: their position is wrong).
+   « missing » and would recompute it), *Exclude photos in an uncorrected GPS jump* (ticked: their position is wrong), *Correct the capture time* (offered and ticked when the camera clock is off by a constant amount: the
+   export writes `DateTimeOriginal` and `OffsetTimeOriginal` without the shift; the original value is saved and put
+   back by the restoration of the sources).
 5. *Export*. The task is shown at the bottom of the screen.
 
 ![Export and send tab](images/en/08-export.webp)
