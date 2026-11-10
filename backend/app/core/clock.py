@@ -77,7 +77,9 @@ def offset_label(seconds: float) -> str:
 
 def detect(conn) -> dict:
     rows = conn.execute(
-        "SELECT ts, gps_ts, lat_orig, lon_orig FROM photo WHERE excluded = 0 AND ts IS NOT NULL AND flags & ? = 0 ORDER BY idx",
+        # Panoramax pictures (path "pnx:…") carry one UTC time for both: no camera clock to check
+        "SELECT ts, gps_ts, lat_orig, lon_orig FROM photo WHERE excluded = 0 AND ts IS NOT NULL AND flags & ? = 0"
+        " AND path NOT LIKE 'pnx:%' ORDER BY idx",
         (db.NO_GPS | db.INVALID_COORD | db.DUPLICATE | db.UNREADABLE,),
     ).fetchall()
     rows = [r for r in rows if r["gps_ts"] is not None and geo.valid_coord(r["lat_orig"], r["lon_orig"])]
