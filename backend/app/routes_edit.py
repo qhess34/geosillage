@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from . import db, exporter, jobs, undo
+from . import db, exporter, i18n, jobs, undo
 from .core import gpx, headings, osm, positions, quality, sequences, timesync
 
 router = APIRouter(prefix="/api/projects/{pid}")
@@ -172,7 +172,7 @@ def sequences_cut(pid: str, photo_id: int):
         ride_only(conn)
         with undo.undoable(conn, "Découpe"):
             what = _seq_errors(lambda: sequences.cut_at(conn, photo_id))
-        return {"done": what, **_state(conn)}
+        return {"done": i18n.tr(what), **_state(conn)}
 
 
 # ---- Undo / redo ----
