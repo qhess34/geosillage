@@ -12,6 +12,7 @@ interface Step {
   state: State
   sub: string
   help: string
+  detail?: string // shown on hover only, keeps the visible subtitle short
   go: () => void
 }
 
@@ -69,9 +70,8 @@ export default function StepBar({
     id: 'dups',
     label: t('step.dups'),
     state: !photos.length ? 'todo' : stops.length ? 'warn' : 'ok',
-    sub: stops.length
-      ? t('step.dups.toSort', { stops: tp('step.stops', stops.length) })
-      : `${dups ? `${tp('step.dups.skipped', dups)} · ` : ''}${t('step.dups.noStop')}`,
+    sub: stops.length ? t('step.dups.toSort', { stops: tp('step.stops', stops.length) }) : t('step.dups.noStop'),
+    detail: dups ? t('step.detail.dupsSkipped', { n: dups }) : undefined,
     help: stops.length ? t('step.dups.helpStops') : t('step.dups.help'),
     go: () => (issueCounts.dups ? onIssues('dups') : onTab('summary')),
   })
@@ -91,7 +91,8 @@ export default function StepBar({
     id: 'gps',
     label: t('step.gps'),
     state: !photos.length ? 'todo' : gpsParts.length ? 'warn' : 'ok',
-    sub: gpsParts.length ? gpsParts.join(' · ') : t('step.gps.none'),
+    sub: gpsParts.length ? tp('step.sub.toCheck', missing.length + jumps.length + noHeading.length + gpsPoints.length) : t('step.gps.none'),
+    detail: gpsParts.length ? t('step.detail.gps', { parts: gpsParts.join(' · ') }) : undefined,
     help: t('step.gps.help') + (gpsParts.length ? t('step.gps.helpSome') : t('step.gps.helpNone')),
     go: () => (issueCounts.gps ? onIssues('gps') : onTab('summary')),
   })
@@ -105,7 +106,10 @@ export default function StepBar({
       state: !sequences.length ? 'todo' : unclassified.length ? 'warn' : 'ok',
       sub: !sequences.length
         ? t('step.seq.none')
-        : `${sequences.length}${unclassified.length ? ` · ${tp('step.seq.unclassified', unclassified.length)}` : ''}`,
+        : unclassified.length
+          ? tp('step.sub.toClassify', unclassified.length)
+          : tp('step.sequences', sequences.length),
+      detail: unclassified.length ? t('step.detail.seq', { n: unclassified.length }) : undefined,
       help: unclassified.length ? t('step.seq.helpUnclassified') : t('step.seq.help'),
       go: () => (issueCounts.seq ? onIssues('seq') : onTab('sequences')),
     })
@@ -117,7 +121,8 @@ export default function StepBar({
       id: 'export',
       label: t('step.export'),
       state: !exported.length ? 'todo' : exported.length < sequences.length || again.length ? 'warn' : 'ok',
-      sub: tp('step.export.done', exported.length, { total: sequences.length }) + (again.length ? ` · ${t('step.export.again', { n: again.length })}` : ''),
+      sub: tp('step.export.done', exported.length, { total: sequences.length }),
+      detail: again.length ? t('step.detail.export', { n: again.length }) : undefined,
       help: t('step.export.help'),
       go: () => onTab('export'),
     })
@@ -141,10 +146,8 @@ export default function StepBar({
           id: 'send',
           label: t('step.send'),
           state: !published.length && !failed.length ? 'todo' : published.length < sequences.length || changed.length || failed.length ? 'warn' : 'ok',
-          sub:
-            tp('step.send.published', published.length, { total: sequences.length }) +
-            (changed.length ? ` · ${tp('step.send.changed', changed.length)}` : '') +
-            (failed.length ? ` · ${tp('step.send.failed', failed.length)}` : ''),
+          sub: tp('step.send.published', published.length, { total: sequences.length }),
+          detail: [changed.length && tp('step.send.changed', changed.length), failed.length && tp('step.send.failed', failed.length)].filter(Boolean).join(' · ') || undefined,
           help: t('step.send.help'),
           go: () => onTab('export'),
         },
@@ -157,7 +160,7 @@ export default function StepBar({
         <button
           key={s.id}
           className={`step ${s.state}${current[tab] === s.id ? ' current' : ''}`}
-          title={`${s.label} : ${s.sub}\n${s.help}`}
+          title={`${s.label} : ${s.sub}${s.detail ? `\n${s.detail}` : ''}\n${s.help}`}
           onClick={s.go}
         >
           <span className="ico">{s.state === 'ok' ? '✓' : s.state === 'warn' ? '!' : i + 1}</span>

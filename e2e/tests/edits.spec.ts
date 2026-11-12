@@ -24,12 +24,12 @@ test('exclusion avec X', async ({ page, request }) => {
   await expect.poll(async () => (await rows(request, pid)).find((r) => r.idx === n - 1)?.excluded).toBe(0)
 })
 
-test('timeline : photos exclues masquées tant que la case « Exclues » est décochée', async ({ page, request }) => {
+test('timeline : photos exclues masquées tant que la case « Afficher les exclues » est décochée', async ({ page, request }) => {
   const pid = await newProject(request, 'Timeline exclues')
   // the first half of the ride excluded
   await request.post(`/api/projects/${pid}/photos/exclude`, { data: { start_idx: 0, end_idx: 79 } })
   await openProject(page, 'Timeline exclues')
-  const exc = page.locator('label', { hasText: 'Exclues' }).locator('input')
+  const exc = page.locator('label', { hasText: 'Afficher les exclues' }).locator('input')
   await expect(exc).not.toBeChecked()
   expect(await pickOnTimeline(page, 0.05)).toBeGreaterThan(80) // hidden: the strip starts with the kept photos
   await exc.check()

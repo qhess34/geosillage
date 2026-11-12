@@ -112,7 +112,7 @@ The *Summary* tab also has *Check the files* and, if there are any, *Retry faile
 
 ```
 ┌ toolbar: ← projects · Import │ Undo · Redo │ Cut · Start · End │ Positions … ⚙ Settings · ?
-├ steps: Import · Sync · Duplicates and stops · GPS correction · Sequences · Export · Upload
+├ steps: Import · Sync · Duplicates and stops · Positions and direction · Sequences · Export · Upload
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ map                                          │ tabs:                        │
 │ (Panoramax · background · Centre · Follow …) │ Photo · Sequences · Sync     │
@@ -136,13 +136,24 @@ started); the step of the open tab is framed. On hover, the detail; on click, th
 | Import | — (grey while there is no photo) | *Summary* |
 | Sync | — (grey while no offset is applied; green with the number of photos synchronised, without the offset; offsets, which may differ from one batch of photos to another, are in the tab) | *Sync* |
 | Duplicates and stops | stops remain to sort out (identical files are set aside on import) | *To fix* window: the list of stops |
-| GPS correction | photos without position, uncorrected GPS jumps, points to check (gaps, GPS accuracy, headings) | *To fix* window: problems, cause, fix; a click on a photo goes to it (*Summary* when all is green) |
+| Positions and direction | photos without position, uncorrected GPS jumps, points to check (gaps, GPS accuracy, headings) | *To fix* window: problems, cause, fix; a click on a photo goes to it (*Summary* when all is green) |
 | Sequences | photos neither in a sequence nor excluded | *To fix* window (unclassified photos); *Sequences* tab when all is green |
 | Export | sequences not exported yet, or to re-export | *Export* |
 | Upload | sequences not published yet, changed since, or an interrupted upload | *Export and send* (Panoramax project: *Send*) |
 
-In a Panoramax project: Panoramax import · Sync · Duplicates and stops · GPS correction · Upload (orange when
-sequences have been corrected since their import or their last upload).
+Subtitles are kept short to fit on one line at 1280 px ("5 to check", "2 to classify"); the detail (photos without
+position, GPS jumps, duplicates set aside…) is in the tooltip. In the **Summary**, the orange rows that have a list
+(positions, GPS anomalies, uncertain direction of travel, duplicates, excluded) are links: a click opens the matching
+*To fix* list (for excluded photos, *Show excluded* gets ticked).
+
+**First-launch tips**: when the first project is opened, a band of a few sentences sums up the workflow, the basic
+gestures (right-click, `Ctrl+Z`, `?`) and what *Start* (begins a selection) and *End* (cuts the selection and puts a
+new start) do. *Got it* closes it for good (remembered in the browser).
+
+In a Panoramax project: Panoramax import · Sync · Duplicates and stops · Positions and direction · Upload (orange when
+sequences have been corrected since their import or their last upload). The **Panoramax project** badge in the toolbar
+(and the Summary) explains why the *Sequences* and *Export* steps and tabs are missing: no cutting or export, the photos
+stay on the instance.
 
 ![Main screen](images/en/02-ecran.webp)
 *Main screen: map (dots coloured by sequence, heading arrows, current photo in yellow), timeline at the bottom (one colour per sequence, grey = unclassified), 360° viewer and heading on the right.*
@@ -151,13 +162,13 @@ sequences have been corrected since their import or their last upload).
   of each photo; the current photo is yellow, and its arrow turns with the direction looked at in the viewer.
   Click on a dot: go to the photo; Shift+click: select a range.
   - *Follow* (ticked by default): the map follows the current photo; unticked, it stays fixed, *◎ Centre* recentres it.
-  - *Excluded*: show the excluded photos on the map and in the timeline (hidden by default).
+  - *Show excluded*: show the excluded photos on the map and in the timeline (hidden by default).
 - The **map display settings** are in its controls, top right: *Panoramax* (coverage already published, below),
-  background map, *Centre*, *Follow*, *Excluded*.
+  background map, *Centre*, *Follow*, *Show excluded*.
 - **Background map** (list in the map controls): OpenStreetMap, Esri (satellite), **IGN Ortho satellite** (France,
   ~20 cm, often the sharpest), *IGN Ortho max zoom* (up to zoom 21 where IGN has very high resolution,
   empty elsewhere at the highest zooms), OpenTopoMap, or an XYZ background added by you (*+ Add an XYZ background…*).
-- **Timeline**: the whole ride, one cell per photo, coloured by sequence; holes = excluded photos, red marks
+- **Timeline** (labelled, with a **?** button to the shortcuts help): the whole ride, one cell per photo, coloured by sequence; holes = excluded photos, red marks
   = anomalies. Click: go to the photo; **drag** (at least a few pixels) or Shift+click: select a range (in yellow).
   A **chip** at the bottom of the map recalls the selection (« Photos a → b (n) · right-click: actions », or the
   sequence start in progress); **deselect**: `Esc` or its ✕ button. **Hover**: tooltip with the thumbnail, the number,
@@ -215,10 +226,10 @@ created around it, then cut: just press `C` at each cut.
 next; pressing several times excludes a series. If the excluded photo was the *Start* in progress, the start moves to
 the next one. With a range selected (and no start in progress), `X` excludes **the whole range, after
 confirmation** (the number of photos is shown). Excluded photos:
-- are hidden on the map and in the timeline, and skipped by `←` `→` (*Excluded* box to see them again; the
+- are hidden on the map and in the timeline, and skipped by `←` `→` (*Show excluded* box to see them again; the
   timeline then shows them as holes);
 - are part of no sequence and are never exported;
-- are not deleted from the disk. To include one again: tick *Excluded*, go to it (or click its hole in the
+- are not deleted from the disk. To include one again: tick *Show excluded*, go to it (or click its hole in the
   timeline), `Shift+X`. To undo a recent exclusion: `Ctrl+Z`.
 
 **Editing a sequence** (*Sequences* tab): click on the name = go to the start; double-click or *Rename*;
@@ -337,7 +348,7 @@ single operation, `Ctrl+Z` undoes it.
 
 ### Photos without position
 
-Photos without GPS (start of the ride, tunnel, signal loss): click on the **GPS correction** step (*To fix* window,
+Photos without GPS (start of the ride, tunnel, signal loss): click on the **Positions and direction** step (*To fix* window,
 *Photos without a position* group), one item per gap.
 - A click on a gap goes to its first photo: the map shows, circled in red and linked by dotted lines, the photo
   before and the one after; in Positions mode (`M`), clicking on the map places the photo.
@@ -383,8 +394,8 @@ No panorama tag (XMP-GPano) is written, and only positions and headings are sent
 
 Arrows on the map (zoom ≥ 15). At a stop (red light, pause), the computed heading is the direction of arrival at the
 stop (otherwise that of departure): the photo kept from a stop therefore always has a heading. *Photo* tab: dial, `[` / `]` (±1°, Shift: ±5°), entering a manual heading, *Back to the computed heading*.
-**Heading offset** (added to the computed headings): on the **whole ride** (*Summary* tab, *Heading and orientation of
-the whole ride*) or on **a series of photos** (selected on the timeline, then right-click *Heading offset (direction of travel) of these N photos…*, or
+**Direction-of-travel offset** (added to the computed headings): on the **whole ride** (*Summary* tab, *Direction of travel and orientation of
+the whole ride*) or on **a series of photos** (selected on the timeline, then right-click *Direction-of-travel offset of these N photos…*, or
 *Shift* in the range tools of the *Photo* tab). The value replaces the offset already set on these photos; 0
 removes it. This setting does not depend on sequences, which are only a split. On a range, also *Set* (same manual
 heading for all) and *Computed headings*. Manual headings are never overwritten; a manual heading next to a corrected position is marked
@@ -396,14 +407,14 @@ heading for all) and *Computed headings*. Manual headings are never overwritten;
 ### Camera on a helmet
 
 The image centre follows the head, not the direction of travel. In the viewer, turn the view to the front (the
-road or path ahead), then *🧭 Set the direction of travel* (on the photo, or on the whole selected range). The head
+road or path ahead), then *🧭 Front is here* (on the photo, or on the whole selected range). The head
 angle is saved as the orientation of the photo; the heading stays the direction of travel, and the photo opens facing
 the road (in the application as on Panoramax).
 
 ### Camera badly aligned on the helmet, or upside down
 
 Angle field and **↻ Fix the mounting** button:
-- on all the photos of the ride (*Summary* tab, *Heading and orientation of the whole ride*);
+- on all the photos of the ride (*Summary* tab, *Direction of travel and orientation of the whole ride*);
 - on a selected series of photos: right-click *Camera orientation of these N photos…*, or the range tools of the *Photo* tab.
 
 Like the heading offset, the orientation does not depend on sequences.
@@ -414,7 +425,7 @@ JPEG file is never rotated: only the orientation tag changes.
 
 ### Points to check before publishing
 
-Click on an orange step of the steps bar (*Duplicates and stops*, *GPS correction*, *Sequences*): a **« To fix »
+Click on an orange step of the steps bar (*Duplicates and stops*, *Positions and direction*, *Sequences*): a **« To fix »
 window** opens over the map (movable by its title bar, closed by `Esc` or ✕). It lists the problems of the step,
 grouped by type with their **cause** and the **fix** to apply; a click on a photo in the list centres the map on it
 and loads it in the *Photo* tab, the window staying open so you can go on.
@@ -428,7 +439,7 @@ The problems are also marked **in orange at the top of the timeline**:
 - **Headings to check**: heading entered by hand more than 90° from the computed heading (typing error?). If it is
   the computed heading that is wrong (GPS loss: the track no longer gives the right direction), **Ignore** (in the *To
   fix* window or the box of the *Photo* tab): the entered heading is kept and no longer reported, as long as it does not change (`Ctrl+Z` undoes);
-- **Photos without heading** (*GPS correction* step): positioned photo with no final heading, neither computed nor
+- **Photos without heading** (*Positions and direction* step): positioned photo with no final heading, neither computed nor
   entered — no usable position around (neighbours without position or in a GPS jump), or camera motionless over the
   whole stretch. Without a heading, Panoramax cannot orient the photo: fix the neighbouring positions (the heading is
   recomputed), enter the heading by hand (*Heading* section of the *Photo* tab), or exclude.
@@ -447,7 +458,7 @@ photo. **Compare these n photos** then shows its photos side by side; a click on
 viewer (the direction looked at is kept from one photo to another, to compare the same detail): tick those to keep
 (*Deselect all* to start from zero, *Keep all* to tick everything again; none ticked: all are excluded), then *Exclude n photos*
 (a single operation, `Ctrl+Z` undoes it); the list updates after each fix. GPS jumps and photos without position are
-listed in the same window (*GPS correction* step), unclassified photos with the *Sequences* step.
+listed in the same window (*Positions and direction* step), unclassified photos with the *Sequences* step.
 
 ---
 
@@ -557,7 +568,7 @@ A separate project, without photos on the disk: the photos stay on Panoramax and
    and horizon levelling (pitch, roll) included.
 2. Correct with the usual tools: positions (drag, carry →, sync, OSM snapping, photos without position), headings
    (the starting heading is Panoramax's, marked *Panoramax*; *Back to the computed heading* recomputes it from the
-   track), orientation (*Set the direction of travel*, *Fix the mounting*), exclusion (`X`).
+   track), orientation (*Front is here*, *Fix the mounting*), exclusion (`X`).
 3. **Send** tab (no *Export* tab): for each sequence, *Compare with Panoramax*, *Send the corrections* (only the
    modified photos), *Put back the previous values*. Excluded photos can be deleted from Panoramax (on request).
 

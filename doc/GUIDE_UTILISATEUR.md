@@ -117,7 +117,7 @@ L'onglet *Bilan* contient aussi *Vérifier les fichiers* et, s'il y en a, *Relan
 
 ```
 ┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Couper · Début · Fin │ Positions … ⚙ Réglages · ?
-├ étapes : Import · Synchro · Doublons et arrêts · Correction GPS · Séquences · Export · Envoi
+├ étapes : Import · Synchro · Doublons et arrêts · Positions et sens · Séquences · Export · Envoi
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
 │ (Panoramax · fond · Centrer · Suivre · …)    │ Photo · Séquences · Synchro  │
@@ -141,13 +141,24 @@ commencée) ; l'étape de l'onglet ouvert est encadrée. Au survol, le détail ;
 | Import | — (gris tant qu'aucune photo) | *Bilan* |
 | Synchro | — (grise tant qu'aucun décalage n'est appliqué ; verte avec le nombre de photos synchronisées, sans le décalage ; les décalages, qui peuvent varier d'un lot de photos à l'autre, sont dans l'onglet) | *Synchro* |
 | Doublons et arrêts | des arrêts restent à trier (les fichiers identiques sont écartés à l'import) | fenêtre *À corriger* : la liste des arrêts |
-| Correction GPS | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | fenêtre *À corriger* : problèmes, cause, correction ; un clic sur une photo y va (*Bilan* quand tout est vert) |
+| Positions et sens | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | fenêtre *À corriger* : problèmes, cause, correction ; un clic sur une photo y va (*Bilan* quand tout est vert) |
 | Séquences | photos ni dans une séquence, ni exclues | fenêtre *À corriger* (photos non classées) ; onglet *Séquences* quand tout est vert |
 | Export | séquences pas encore exportées, ou à réexporter | *Export* |
 | Envoi | séquences pas encore publiées, modifiées depuis, ou envoi interrompu | *Export et envoi* (projet Panoramax : *Envoi*) |
 
-Dans un projet Panoramax : Import Panoramax · Synchro · Doublons et arrêts · Correction GPS · Envoi (orange quand des
-séquences ont été corrigées depuis leur import ou leur dernier envoi).
+Les sous-titres restent courts pour tenir sur une ligne à 1280 px (« 5 à vérifier », « 2 à classer ») ; le détail
+(par exemple les photos sans position, les sauts GPS, les doublons écartés) est dans l'infobulle. Dans le **Bilan**, les
+lignes orange qui ont une liste (positions, anomalies GPS, sens de déplacement incertain, doublons, exclues) sont des
+liens : un clic ouvre la liste *À corriger* correspondante (pour les exclues : *Afficher les exclues* est coché).
+
+**Astuces du premier lancement** : au premier projet ouvert, un bandeau de quelques phrases résume le parcours, les
+gestes de base (clic droit, `Ctrl+Z`, `?`) et le sens de *Début* (commence une sélection) et de *Fin* (coupe la
+sélection et pose un nouveau début). *Compris* le ferme pour de bon (mémorisé dans le navigateur).
+
+Dans un projet Panoramax : Import Panoramax · Synchro · Doublons et arrêts · Positions et sens · Envoi (orange quand des
+séquences ont été corrigées depuis leur import ou leur dernier envoi). Le badge **Projet Panoramax** de la barre
+d'outils (et le Bilan) explique pourquoi les étapes et onglets *Séquences* et *Export* sont absents : pas de découpe ni
+d'export, les photos restent sur l'instance.
 
 
 ![Écran principal](images/02-ecran.webp)
@@ -157,13 +168,13 @@ séquences ont été corrigées depuis leur import ou leur dernier envoi).
   flèche montre le cap de chaque photo ; la photo courante est en jaune, et sa flèche tourne avec la direction
   regardée dans la visionneuse. Clic sur une pastille : aller à la photo ; Maj+clic : sélectionner une plage.
   - *Suivre* (coché par défaut) : la carte suit la photo courante ; décoché, elle reste fixe, *◎ Centrer* recentre.
-  - *Exclues* : afficher les photos exclues sur la carte et dans la timeline (masquées par défaut).
+  - *Afficher les exclues* : afficher les photos exclues sur la carte et dans la timeline (masquées par défaut).
 - Les **réglages d'affichage de la carte** sont dans ses contrôles, en haut à droite : *Panoramax* (couverture
-  déjà publiée, ci-dessous), fond de carte, *Centrer*, *Suivre*, *Exclues*.
+  déjà publiée, ci-dessous), fond de carte, *Centrer*, *Suivre*, *Afficher les exclues*.
 - **Fond de carte** (liste des contrôles de la carte) : OpenStreetMap, Esri (satellite), **Satellite IGN Ortho** (France,
   ~20 cm, souvent le plus net), *IGN Ortho zoom max* (jusqu'au zoom 21 là où l'IGN a de la très haute résolution,
   vide ailleurs aux plus forts zooms), OpenTopoMap, ou un fond XYZ ajouté par vous (*+ Ajouter un fond XYZ…*).
-- **Timeline** : toute la sortie, une case par photo, colorée par séquence ; trous = photos exclues, marques rouges
+- **Timeline** (libellée, avec un bouton **?** vers l'aide des raccourcis) : toute la sortie, une case par photo, colorée par séquence ; trous = photos exclues, marques rouges
   = anomalies. Clic : aller à la photo ; **glisser** (au moins quelques pixels) ou Maj+clic : sélectionner une
   plage (en jaune). Une **pastille** en bas de la carte rappelle la sélection (« Photos a → b (n) · clic droit :
   actions », ou le début de séquence en cours) ; **désélectionner** : `Échap` ou son bouton ✕. **Survol** : bulle
@@ -228,10 +239,10 @@ séquence est d'abord créée autour d'elle, puis coupée : il suffit d'appuyer 
 suivante ; appuyer plusieurs fois exclut une série. Si la photo exclue était le *Début* en cours, le début passe à
 la suivante. Avec une plage sélectionnée (et pas de début en cours), `X` exclut **toute la plage, après
 confirmation** (le nombre de photos est indiqué). Les photos exclues :
-- sont masquées sur la carte et dans la timeline, et sautées par `←` `→` (case *Exclues* pour les revoir ; la
+- sont masquées sur la carte et dans la timeline, et sautées par `←` `→` (case *Afficher les exclues* pour les revoir ; la
   timeline les montre alors comme des trous) ;
 - n'entrent dans aucune séquence et ne sont jamais exportées ;
-- ne sont pas supprimées du disque. Pour en réintégrer une : cocher *Exclues*, aller dessus (ou cliquer son trou
+- ne sont pas supprimées du disque. Pour en réintégrer une : cocher *Afficher les exclues*, aller dessus (ou cliquer son trou
   dans la timeline), `Maj+X`. Pour annuler une exclusion récente : `Ctrl+Z`.
 
 **Modifier une séquence** (onglet *Séquences*) : clic sur le nom = aller au début ; double-clic ou *Renommer* ;
@@ -357,7 +368,7 @@ le déplacement moyen et maximal, recalculés à chaque réglage. *Recaler N pho
 
 ### Photos sans position
 
-Photos sans GPS (début de sortie, tunnel, perte du signal) : clic sur l'étape **Correction GPS** (fenêtre *À
+Photos sans GPS (début de sortie, tunnel, perte du signal) : clic sur l'étape **Positions et sens** (fenêtre *À
 corriger*, groupe *Photos sans position*), un élément par trou.
 - Un clic sur un trou va à sa première photo : la carte montre, entourées en rouge et reliées en pointillés, la
   photo d'avant et celle d'après ; en mode Positions (`M`), cliquer sur la carte place la photo.
@@ -406,8 +417,8 @@ Panoramax.
 
 Flèches sur la carte (zoom ≥ 15). À un arrêt (feu rouge, pause), le cap calculé est la direction d'arrivée à
 l'arrêt (sinon celle de départ) : la photo gardée d'un arrêt a donc toujours un cap. Onglet *Photo* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
-**Décalage du cap** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Bilan*, *Cap et orientation de
-toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du cap (sens de déplacement)…*, ou
+**Décalage du sens de déplacement** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Bilan*, *Cap et orientation de
+toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du sens de déplacement…*, ou
 *Décaler* dans les outils de la plage de l'onglet *Photo*). La valeur remplace le décalage déjà posé sur ces
 photos ; 0 le retire. Ce réglage ne dépend pas des séquences, qui ne sont qu'un découpage. Sur une plage, aussi
 *Fixer* (même cap manuel pour toutes) et *Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
@@ -419,14 +430,14 @@ photos ; 0 le retire. Ce réglage ne dépend pas des séquences, qui ne sont qu'
 ### Caméra sur casque
 
 Le centre de l'image suit la tête, pas le sens de déplacement. Dans la visionneuse, tourner la vue vers l'avant
-(la route ou le chemin devant soi), puis *🧭 Fixer le sens de déplacement* (sur la photo, ou sur toute la plage
+(la route ou le chemin devant soi), puis *🧭 L'avant est ici* (sur la photo, ou sur toute la plage
 sélectionnée). L'angle de la tête est enregistré comme orientation de la photo ; le cap reste le sens de déplacement, et la photo s'ouvre face à la route (dans
 l'application comme sur Panoramax).
 
 ### Caméra mal orientée sur le casque, ou à l'envers
 
 Champ d'angle et bouton **↻ Corriger le montage** :
-- sur toutes les photos de la sortie (onglet *Bilan*, *Cap et orientation de toute la sortie*) ;
+- sur toutes les photos de la sortie (onglet *Bilan*, *Sens de déplacement et orientation de toute la sortie*) ;
 - sur une série de photos sélectionnée : clic droit *Orientation de la caméra…*, ou outils de la plage de l'onglet *Photo*.
 
 Comme le décalage du cap, l'orientation ne dépend pas des séquences.
@@ -437,7 +448,7 @@ correction. Le fichier JPEG n'est jamais tourné : seule la balise d'orientation
 
 ### Points à vérifier avant de publier
 
-Clic sur une étape orange de la barre d'étapes (*Doublons et arrêts*, *Correction GPS*, *Séquences*) : une **fenêtre
+Clic sur une étape orange de la barre d'étapes (*Doublons et arrêts*, *Positions et sens*, *Séquences*) : une **fenêtre
 *À corriger*** s'ouvre sur la carte (déplaçable par sa barre de titre, `Échap` ou ✕ la ferme). Elle liste les
 problèmes de l'étape, groupés par type avec leur **cause** et la **correction** à apporter ; un clic sur une photo
 de la liste centre la carte dessus et la charge dans l'onglet *Photo*, la fenêtre restant ouverte pour enchaîner.
@@ -451,7 +462,7 @@ Les problèmes sont aussi marqués **en orange en haut de la timeline** :
 - **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?). Si c'est le cap
   calculé qui est faux (perte du GPS : la trace ne donne plus la bonne direction), **Ignorer** (dans la fenêtre *À
   corriger* ou l'encadré de l'onglet *Photo*) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas (`Ctrl+Z` annule).
-- **Photos sans cap** (étape *Correction GPS*) : photo positionnée sans cap final, ni calculé ni saisi — pas de
+- **Photos sans cap** (étape *Positions et sens*) : photo positionnée sans cap final, ni calculé ni saisi — pas de
   position utilisable autour (voisines sans position ou en saut GPS), ou caméra immobile sur tout le tronçon. Sans
   cap, Panoramax ne peut pas orienter la photo : corriger les positions voisines (le cap est recalculé), saisir le cap
   à la main (section *Cap* de l'onglet *Photo*), ou exclure.
@@ -470,7 +481,7 @@ sélectionnées sur la carte et la timeline ; un clic sur une ligne montre la ph
 affiche ensuite ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
 regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder (*Tout désélectionner* pour partir de zéro, *Tout garder* pour tout recocher ; aucune cochée : toutes sont exclues), puis *Exclure n photos*
 (une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
-listés dans la même fenêtre (étape *Correction GPS*), les photos non classées avec l'étape *Séquences*.
+listés dans la même fenêtre (étape *Positions et sens*), les photos non classées avec l'étape *Séquences*.
 
 ---
 
@@ -583,7 +594,7 @@ Un projet à part, sans photo sur le disque : les photos restent sur Panoramax e
    photos comme Panoramax : orientation (lacet) et redressement de l'horizon (tangage, roulis) compris.
 2. Corriger avec les outils habituels : positions (glisser, report →, synchro, recalage OSM, photos sans
    position), caps (le cap de départ est celui de Panoramax, marqué *Panoramax* ; *Revenir au cap calculé* le
-   recalcule depuis la trace), orientation (*Fixer le sens de déplacement*, *Corriger le montage*), exclusion (`X`).
+   recalcule depuis la trace), orientation (*L'avant est ici*, *Corriger le montage*), exclusion (`X`).
 3. Onglet **Envoi** (pas d'onglet *Export*) : pour chaque séquence, *Comparer avec Panoramax*, *Envoyer les
    corrections* (seules les photos modifiées), *Remettre les valeurs d'avant*. Les photos exclues peuvent être
    supprimées de Panoramax (sur demande).
