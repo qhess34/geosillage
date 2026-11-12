@@ -1,42 +1,6 @@
-import { useState } from 'react'
-import { api, Project, UndoState } from './api'
+import { api, Project } from './api'
 import { fmtDistance, fmtDuration, fmtShift, fmtTime } from './format'
-import YawRotate from './YawRotate'
-import HeadingSource from './HeadingSource'
-import { capHelp, orientationHelp } from './CapOrientation'
 import { t, useLang } from './i18n'
-
-// logical cut); series of photos: context menu or range tools of the Photo tab
-function RideHeadings({ project, flat, onDone, onError }: { flat: boolean; project: Project; onDone: (u?: UndoState) => void; onError: (m: string) => void }) {
-  const projectId = project.id
-  useLang()
-  const [value, setValue] = useState('0')
-  return (
-    <div className="small-text ride-headings">
-      <h3>{t('sum.rideHeadings')}</h3>
-      <p className="muted">
-        {t('sum.rideHelp')}
-      </p>
-      <HeadingSource p={project} onDone={onDone} onError={onError} />
-      <div className="form-row">
-        <span title={`${capHelp()} ${t('sum.headingShiftHelp')}`}>
-          {t('sum.headingShift')}
-        </span>
-        <span>
-          <input className="num" type="number" step="0.5" value={value} onChange={(e) => setValue(e.target.value)} aria-label={t('sum.headingShiftLabel')} />°
-          <button className="small" onClick={() => api.headingOffset(projectId, { all: true }, Number(value) || 0).then((r) => onDone(r.undo), (e) => onError(e.message))}>
-            {t('sum.applyAll')}
-          </button>
-        </span>
-      </div>
-      <div className="form-row">
-        <span title={`${orientationHelp()} ${t(flat ? 'sum.yawHelpFlat' : 'sum.yawHelp')}`}>{flat ? t('photo.orient.titleFlat') : t('photo.orient.title')}</span>
-        <YawRotate projectId={projectId} target={{ all: true }} what={t('sum.yawWhat')} onDone={onDone} onError={onError} />
-      </div>
-    </div>
-  )
-}
-
 
 // Orange rows are links to the matching list (points to check of a step, excluded photos) when there is one
 export interface SummaryLinks {
@@ -117,14 +81,12 @@ function Summary({ p, onSettings, links }: { p: Project; onSettings?: () => void
   )
 }
 
-// Bilan tab: figures of the ride, maintenance buttons, headings of the whole ride, source folders
+// Bilan tab: figures of the ride, maintenance buttons, source folders (ride settings: RideSettings, Photo tab)
 export default function SummaryTab({
   projectId,
   project,
   isPnx,
   onRefresh,
-  onHeadingsChanged,
-  onError,
   onSettings,
   links,
 }: {
@@ -134,8 +96,6 @@ export default function SummaryTab({
   project: Project
   isPnx: boolean
   onRefresh: () => void
-  onHeadingsChanged: (u?: UndoState) => void
-  onError: (m: string) => void
 }) {
   useLang()
   return (
@@ -154,7 +114,6 @@ export default function SummaryTab({
           </button>
         )}
       </div>
-      <RideHeadings project={project} flat={project.media === 'flat'} onDone={(u) => { onHeadingsChanged(u); onRefresh() }} onError={onError} />
       {project.source_dirs.length > 0 && (
         <>
           <h3>{t('sum.sources')}</h3>

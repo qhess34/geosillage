@@ -23,7 +23,8 @@ import Timeline from './Timeline'
 import ContextMenu from './ContextMenu'
 import OsmSnapPanel, { SnapPreview } from './OsmSnapPanel'
 import { GpxSnapDialog } from './Gpx'
-import PhotoTab, { SeqButtons } from './PhotoTab'
+import PhotoTab, { SeqButtons, TravelSection } from './PhotoTab'
+import RideSettings from './RideSettings'
 import SummaryTab from './SummaryTab'
 import JobBar from './JobBar'
 import { ConfirmExclude, ConfirmInterpolate, HelpDialog, RangeValueDialog } from './ProjectDialogs'
@@ -545,6 +546,18 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
 
   if (!project) return <div className="home">{error ? <p className="error">{error}</p> : t('pv.loading')}</div>
 
+  // Whole-ride settings, at the top of « Sens de déplacement et orientation » (Photo tab)
+  const rideSettings = (
+    <RideSettings
+      project={project}
+      onDone={(u) => {
+        afterHeadingChange(u)
+        refresh()
+      }}
+      onError={fail}
+    />
+  )
+
   return (
     <div className="workspace">
       <header className="toolbar">
@@ -847,6 +860,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'photo' &&
               (detail ? (
                 <PhotoTab
+                  ride={rideSettings}
                   projectId={projectId}
                   photo={detail}
                   count={photos.length}
@@ -856,8 +870,13 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   onChanged={afterHeadingChange}
                   onError={fail}
                 />
+              ) : photos.length ? (
+                <>
+                  <p className="muted">{t('pv.pickPhoto')}</p>
+                  <TravelSection ride={rideSettings} />
+                </>
               ) : (
-                <p className="muted">{photos.length ? t('pv.pickPhoto') : t('pv.importFirst')}</p>
+                <p className="muted">{t('pv.importFirst')}</p>
               ))}
             {tab === 'sequences' && (
               <SequencesTab
@@ -935,7 +954,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 }}
                 projectId={projectId}
                 project={project}
-                isPnx={isPnx} onRefresh={refresh} onHeadingsChanged={(u) => afterHeadingChange(u)} onError={fail} onSettings={() => setShowSettings(true)} />
+                isPnx={isPnx} onRefresh={refresh} onSettings={() => setShowSettings(true)} />
             )}
           </div>
         </aside>

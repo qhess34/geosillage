@@ -13,8 +13,9 @@ test('ouvrir un projet, barre d\'étapes, navigation au clavier et par la timeli
   await page.keyboard.press('ArrowLeft')
   await expect.poll(() => photoNumber(page)).toBe(n)
   // the Photo tab shows the heading and the camera orientation, explained
-  await expect(page.locator('summary', { hasText: /^Sens de déplacement$/ })).toBeVisible()
-  await expect(page.locator('summary', { hasText: /Orientation de la caméra/ })).toBeVisible()
+  await expect(page.locator('summary', { hasText: /^Sens de déplacement et orientation$/ })).toBeVisible()
+  await expect(page.locator('h4', { hasText: 'Cette photo : sens de déplacement' })).toBeVisible()
+  await expect(page.locator('h4', { hasText: 'Cette photo : orientation de la caméra' })).toBeVisible()
 })
 
 test('aide des raccourcis : ? ouvre, Échap et ? ferment', async ({ page, request }) => {
@@ -44,8 +45,9 @@ test('langue : passer en anglais dans les réglages, vérifier des libellés, re
   // project screen: tabs, empty sequences list, import dialog
   await page.getByRole('tab', { name: /^Sequences/ }).click()
   await expect(page.getByText('No sequence. Create some from a range or the suggested cut.')).toBeVisible()
-  await page.getByRole('tab', { name: 'Summary' }).click()
-  await expect(page.getByRole('heading', { name: 'Direction of travel and orientation of the whole ride' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Photo' }).click()
+  await expect(page.locator('summary', { hasText: 'Direction of travel and orientation' })).toBeVisible()
+  await expect(page.locator('summary', { hasText: 'Whole ride' })).toBeVisible()
   // export tab, map legend and status bar (lot 3)
   await page.getByRole('tab', { name: /^Export/ }).click()
   await expect(page.getByRole('heading', { name: 'Publish on Panoramax' })).toBeVisible()
@@ -145,4 +147,29 @@ test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo rep
   await page.getByRole('tab', { name: 'Photo' }).click()
   await expect(page.locator('details[data-section="position"]')).not.toHaveAttribute('open', '')
   void pid
+})
+
+test('Lot 3 : un seul endroit « Sens de déplacement et orientation » (toute la sortie en tête, photo dessous)', async ({ page, request }) => {
+  await newProject(request, 'Lot 3')
+  await openProject(page, 'Lot 3')
+  // without a current photo: the whole-ride settings are reachable
+  const travel = page.locator('details[data-section="travel"]')
+  await expect(travel).toHaveAttribute('open', '')
+  await expect(travel).toContainText('Sélectionnez une photo')
+  const ride = page.locator('details[data-section="ride"]')
+  await expect(ride).not.toHaveAttribute('open', '')
+  await ride.locator('summary').click()
+  await ride.getByLabel('Angle de rotation (°)').fill('180')
+  await ride.getByRole('button', { name: /Corriger le montage/ }).click()
+  // current photo below, same section
+  await pickOnTimeline(page, 0.3)
+  await expect(travel.locator('h4', { hasText: 'Cette photo : sens de déplacement' })).toBeVisible()
+  await expect(travel.locator('h4', { hasText: 'Cette photo : orientation de la caméra' })).toBeVisible()
+  await expect(travel).toContainText("caméra à l'envers")
+  // no longer in the Bilan nor in Séquences
+  await page.getByRole('tab', { name: 'Bilan' }).click()
+  await expect(page.locator('.tab-body')).not.toContainText('Corriger le montage')
+  await expect(page.getByRole('combobox', { name: 'Source du cap' })).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Séquences' }).click()
+  await expect(page.locator('.tab-body')).not.toContainText('Corriger le montage')
 })

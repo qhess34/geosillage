@@ -879,7 +879,7 @@ input.coord {
   align-items: center;
   gap: 8px;
   padding: 4px 0;
-  border-bottom: 1px solid var(--border, #e5e7eb);
+  border-bottom: 1px solid var(--border);
 }
 .missing-list li .row {
   flex: none;
@@ -1725,4 +1725,21 @@ a.button-link:hover {
   cursor: pointer;
   font-weight: 600;
   margin-bottom: 6px;
+}
+.photo-section .photo-section {
+  margin: 4px 0 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.photo-section .photo-section > summary {
+  font-weight: 500;
+  margin-bottom: 0;
+}
+.photo-section .photo-section[open] > summary {
+  margin-bottom: 6px;
+}
+.travel-sub {
+  margin: 10px 0 4px;
+  font-size: 0.92em;
 }

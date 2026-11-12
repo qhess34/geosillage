@@ -101,7 +101,7 @@ reads the EXIF then creates the thumbnails in the background: the map is usable 
 | unreadable / missing | damaged file, or moved since the import (*Check the files*) |
 
 ![Summary tab](images/en/09-bilan.webp)
-*Summary tab: anomalies of the ride (highlighted), file check, and heading and orientation settings for the whole ride.*
+*Summary tab: figures and anomalies of the ride (highlighted), file check. The whole-ride settings are in the *Photo* tab (*Direction of travel and orientation*).*
 
 Photos without GPS, without date, duplicated, unreadable or missing cannot be part of a sequence.
 The *Summary* tab also has *Check the files* and, if there are any, *Retry failed thumbnails*.
@@ -376,12 +376,16 @@ Two distinct notions:
 - the **orientation** = the angle between the **image centre** and the direction of travel (XMP
   `PoseHeadingDegrees`). It is 0 when the camera looks forward; Panoramax uses it to turn the 360° photo.
 
-Changing one never changes the other. The *Photo* tab presents them in two sections: **Heading — direction of
-travel** (dial, computed and final heading) and **Camera orientation**, with a small top-view diagram: the heading in
+Changing one never changes the other. The *Photo* tab gathers them in **a single section**, *Direction of travel
+and orientation*:
+- on top, **Whole ride** (collapsed by default, available even with no photo selected): *Heading source*,
+  *Direction-of-travel offset*, *Camera mount*;
+- below, **this photo**: *direction of travel* (dial, computed and final heading) and *camera orientation*, with a
+  small top-view diagram: the heading in
 blue (from north), the image centre as an orange dotted line (shifted by the orientation), and a sentence such as
 « Image centre at −35° from the direction of travel (to the left) ». *Reset to 0°* cancels the orientation of the photo.
 
-**Heading source** (*Summary* tab or *⚙ Settings*, for the whole ride): *Computed from the track*, or *Camera's
+**Heading source** (*Photo* tab, *Whole ride*, or *⚙ Settings*): *Computed from the track*, or *Camera's
 heading* (compass, `GPSImgDirection` recorded by the camera or smartphone). At the first import the camera's heading
 is chosen when it is present, non-zero and varying along the ride; otherwise it is computed. Photos without a camera
 heading keep the computed one. `Ctrl+Z` undoes the change.
@@ -395,8 +399,8 @@ No panorama tag (XMP-GPano) is written, and only positions and headings are sent
 
 Arrows on the map (zoom ≥ 15). At a stop (red light, pause), the computed heading is the direction of arrival at the
 stop (otherwise that of departure): the photo kept from a stop therefore always has a heading. *Photo* tab: dial, `[` / `]` (±1°, Shift: ±5°), entering a manual heading, *Back to the computed heading*.
-**Direction-of-travel offset** (added to the computed headings): on the **whole ride** (*Summary* tab, *Direction of travel and orientation of
-the whole ride*) or on **a series of photos** (selected on the timeline, then right-click *Direction-of-travel offset of these N photos…*, or
+**Direction-of-travel offset** (added to the computed headings): on the **whole ride** (*Photo* tab, *Direction of travel and
+orientation* › *Whole ride*) or on **a series of photos** (selected on the timeline, then right-click *Direction-of-travel offset of these N photos…*, or
 *Shift* in the range tools of the *Photo* tab). The value replaces the offset already set on these photos; 0
 removes it. This setting does not depend on sequences, which are only a split. On a range, also *Set* (same manual
 heading for all) and *Computed headings*. Manual headings are never overwritten; a manual heading next to a corrected position is marked
@@ -415,7 +419,7 @@ the road (in the application as on Panoramax).
 ### Camera badly aligned on the helmet, or upside down
 
 Angle field and **↻ Fix the mounting** button:
-- on all the photos of the ride (*Summary* tab, *Direction of travel and orientation of the whole ride*);
+- on all the photos of the ride (*Photo* tab, *Direction of travel and orientation* › *Whole ride*, *Camera mount*);
 - on a selected series of photos: right-click *Camera orientation of these N photos…*, or the range tools of the *Photo* tab.
 
 Like the heading offset, the orientation does not depend on sequences.

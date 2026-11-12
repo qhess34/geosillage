@@ -11,7 +11,7 @@ test('projet plat : visionneuse sans 360°, direction de la caméra, autre type 
   await openProject(page, 'Sortie plate')
   const body = page.locator('.tab-body')
   await pickOnTimeline(page, 0.5)
-  await expect(body.locator('summary', { hasText: 'Direction de la caméra' })).toBeVisible()
+  await expect(body.locator('h4', { hasText: 'Cette photo : direction de la caméra' })).toBeVisible()
   await expect(body.getByRole('button', { name: 'Vue 360°' })).toHaveCount(0)
   await expect(body.getByRole('button', { name: 'À plat' })).toHaveCount(0)
 
@@ -19,7 +19,9 @@ test('projet plat : visionneuse sans 360°, direction de la caméra, autre type 
   await expect(page.locator('table.summary')).toContainText('Plates')
   await expect(page.locator('table.summary')).toContainText('Intervalle médian')
 
-  // heading source: the camera's compass is detected; back to the track, then Ctrl+Z
+  // heading source (Photo tab, « Toute la sortie »): the camera's compass is detected; back to the track, then Ctrl+Z
+  await page.getByRole('tab', { name: 'Photo' }).click()
+  await page.locator('details[data-section="ride"] > summary').click()
   const source = page.getByRole('combobox', { name: 'Source du cap' })
   await expect(source).toHaveValue('device')
   await source.selectOption('track')
