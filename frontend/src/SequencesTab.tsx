@@ -15,6 +15,7 @@ interface Props {
   onRefresh: () => void // reload photos and sequences after an edit that does not return them
   onExported: () => void // an export job was started
   onError: (msg: string) => void
+  onCut?: () => void // cut the ride before the current photo (C)
   pnx?: boolean // Panoramax project: published sequences, their cut and export do not change
   onSeqContext?: (s: Sequence, x: number, y: number) => void // right click on a sequence: context menu
 }
@@ -189,6 +190,9 @@ export default function SequencesTab(props: Props) {
             </button>
             <button className="small" onClick={() => api.seqFromUnclassified(projectId).then(onState, (e) => onError(e.message))} title={t('seq.allTitle')}>
               {t('seq.all')}
+            </button>
+            <button className="small" disabled={!props.current} onClick={props.onCut} title={t('pv.cutTitle')}>
+              {t('pv.cut')}
             </button>
           </div>
         )}

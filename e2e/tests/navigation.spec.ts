@@ -13,8 +13,8 @@ test('ouvrir un projet, barre d\'étapes, navigation au clavier et par la timeli
   await page.keyboard.press('ArrowLeft')
   await expect.poll(() => photoNumber(page)).toBe(n)
   // the Photo tab shows the heading and the camera orientation, explained
-  await expect(page.getByRole('heading', { name: /^Sens de déplacement$/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Orientation de la caméra/i })).toBeVisible()
+  await expect(page.locator('summary', { hasText: /^Sens de déplacement$/ })).toBeVisible()
+  await expect(page.locator('summary', { hasText: /Orientation de la caméra/ })).toBeVisible()
 })
 
 test('aide des raccourcis : ? ouvre, Échap et ? ferment', async ({ page, request }) => {
@@ -116,4 +116,33 @@ test('Début / Fin : infobulles explicites ; Bilan : ligne orange des exclues = 
   await expect(exc).not.toBeChecked()
   await page.locator('.summary tr.warn', { hasText: 'Exclues' }).getByRole('button').click()
   await expect(exc).toBeChecked()
+})
+
+test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo repliables, Couper dans Séquences', async ({ page, request }) => {
+  const pid = await newProject(request, 'Lot 2')
+  await openProject(page, 'Lot 2')
+  for (const g of ['Projet', 'Édition', 'Mode']) await expect(page.getByRole('group', { name: g, exact: true })).toBeVisible()
+  // Couper n'est plus dans la barre d'outils
+  await expect(page.locator('.toolbar').getByRole('button', { name: /Couper/ })).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Séquences' }).click()
+  await expect(page.getByRole('button', { name: /✂ Couper/ })).toBeVisible()
+  // Mode Positions : bascule + bandeau, Échap quitte
+  const pos = page.locator('.toolbar').getByRole('button', { name: /Positions/ })
+  await pos.click()
+  await expect(pos).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.mode-banner')).toContainText('Mode Positions actif')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.mode-banner')).toHaveCount(0)
+  // Onglet Photo : sections repliables, état gardé, plus de Début/Fin dans l'onglet
+  await page.getByRole('tab', { name: 'Photo' }).click()
+  await pickOnTimeline(page, 0.3)
+  await expect(page.locator('.photo-panel').getByRole('button', { name: /⏵ Début/ })).toHaveCount(0)
+  const sec = page.locator('details[data-section="position"]')
+  await expect(sec).toHaveAttribute('open', '')
+  await sec.locator('summary').click()
+  await expect(sec).not.toHaveAttribute('open', '')
+  await page.reload()
+  await page.getByRole('tab', { name: 'Photo' }).click()
+  await expect(page.locator('details[data-section="position"]')).not.toHaveAttribute('open', '')
+  void pid
 })

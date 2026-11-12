@@ -54,19 +54,49 @@ export function SeqButtons({
   return big ? <div className="seq-buttons big">{buttons}</div> : buttons
 }
 
+// Collapsible section whose open/closed state is remembered between photos and sessions
+function Section({ id, title, help, children }: { id: string; title: string; help?: string; children: React.ReactNode }) {
+  const key = `geosillage.photoSection.${id}`
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== '0'
+    } catch {
+      return true
+    }
+  })
+  return (
+    <details
+      className="photo-section"
+      data-section={id}
+      open={open}
+      onToggle={(e) => {
+        const o = (e.currentTarget as HTMLDetailsElement).open
+        setOpen(o)
+        try {
+          localStorage.setItem(key, o ? '1' : '0')
+        } catch {
+          /* storage unavailable */
+        }
+      }}
+    >
+      <summary title={help}>{title}</summary>
+      {children}
+    </details>
+  )
+}
+
 interface PhotoTabProps {
   projectId: string
   photo: PhotoDetail
   count: number
   sequences: Sequence[]
   range: [number, number] | null
-  seqButtons: React.ReactNode
   onView: (yawDeg: number) => void
   onChanged: (u?: UndoState) => void
   onError: (m: string) => void
 }
 
-export default function PhotoTab({ projectId, photo, count, sequences, range, seqButtons, onView, onChanged, onError }: PhotoTabProps) {
+export default function PhotoTab({ projectId, photo, count, sequences, range, onView, onChanged, onError }: PhotoTabProps) {
   useLang()
   const flat = !photo.is_360 // flat picture: the yaw is the direction of the camera
   const [draft, setDraft] = useState<number | null>(null)
@@ -140,7 +170,6 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
           {photo.idx + 1} / {count}
         </span>
       </div>
-      {seqButtons}
       {photo.excluded ? (
         <div className="excluded-box small-text">
           {t('photo.excluded')}{' '}
@@ -157,7 +186,7 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
         )}
       </div>
 
-      <h3 title={capHelp()}>{t('photo.heading.title')}</h3>
+      <Section id="heading" title={t('photo.heading.title')} help={capHelp()}>
       <p className="small-text muted section-help">{t('photo.heading.help')}</p>
       <div className="heading-box">
         <HeadingDial value={shown} computed={computedWithOffset} onChange={setDraft} onCommit={(v) => set(v)} />
@@ -210,7 +239,8 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
           )}
         </div>
       </div>
-      <h3 title={orientationHelp()}>{flat ? t('photo.orient.titleFlat') : t('photo.orient.title')}</h3>
+      </Section>
+      <Section id="orientation" title={flat ? t('photo.orient.titleFlat') : t('photo.orient.title')} help={orientationHelp()}>
       <p className="small-text muted section-help">{flat ? t('photo.orient.helpFlat') : t('photo.orient.help')}</p>
       <div className="orientation-box small-text">
         <CapOrientationDiagram heading={shown} yaw={photo.yaw_offset} />
@@ -271,7 +301,8 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
         </section>
       )}
 
-      <h3>{t('photo.position')}</h3>
+      </Section>
+      <Section id="position" title={t('photo.position')}>
       <div className="small-text position-box">
         {photo.lat == null && (photo.lat_orig == null || (photo.flags & FLAGS.INVALID_COORD) !== 0) && (
           <div className="warn-text">
@@ -365,6 +396,7 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, se
         </section>
       )}
 
+      </Section>
       <h3>{t('photo.info')}</h3>
       <table className="summary">
         <tbody>

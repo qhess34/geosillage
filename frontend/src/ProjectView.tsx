@@ -548,6 +548,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
   return (
     <div className="workspace">
       <header className="toolbar">
+        <div className="tool-group" role="group" aria-label={t('pv.grpProject')}>
+          <span className="tool-group-label">{t('pv.grpProject')}</span>
         <button className="brand-back" onClick={onBack} title={t('pv.backTitle')} aria-label={t('pv.back')}>
           ← <img src="/logo.svg" alt="" width="20" height="20" />
         </button>
@@ -563,39 +565,36 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {t('pv.import')}
           </button>
         )}
-        <span className="tool-sep" />
-        <div className="btn-group">
-          <button disabled={!undoState.undo} onClick={() => undoRedo('undo')} title={undoState.undo ? t('pv.undoTitle', { name: undoState.undo }) : t('pv.nothingUndo')}>
-            {t('pv.undo')}
-          </button>
-          <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? t('pv.redoTitle', { name: undoState.redo }) : t('pv.nothingRedo')}>
-            {t('pv.redo')}
-          </button>
         </div>
-        {!isPnx && (
-          <>
-            <span className="tool-sep" />
+        <span className="tool-sep" />
+        <div className="tool-group" role="group" aria-label={t('pv.grpEdit')}>
+          <span className="tool-group-label">{t('pv.grpEdit')}</span>
+          <div className="btn-group">
+            <button disabled={!undoState.undo} onClick={() => undoRedo('undo')} title={undoState.undo ? t('pv.undoTitle', { name: undoState.undo }) : t('pv.nothingUndo')}>
+              {t('pv.undo')}
+            </button>
+            <button disabled={!undoState.redo} onClick={() => undoRedo('redo')} title={undoState.redo ? t('pv.redoTitle', { name: undoState.redo }) : t('pv.nothingRedo')}>
+              {t('pv.redo')}
+            </button>
+          </div>
+          {!isPnx && (
             <div className="btn-group" role="group" aria-label={t('pv.cutGroup')}>
-              <button
-                disabled={!current}
-                onClick={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
-                title={t('pv.cutTitle')}
-              >
-                {t('pv.cut')}
-              </button>
               <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} />
             </div>
-          </>
-        )}
+          )}
+        </div>
         <span className="tool-sep" />
-        <button
-          className={editMode ? 'primary' : ''}
-          aria-pressed={editMode}
-          onClick={() => setEditMode(!editMode)}
-          title={t('pv.positionsTitle')}
-        >
-          {t('pv.positions')}
-        </button>
+        <div className="tool-group" role="group" aria-label={t('pv.grpMode')}>
+          <span className="tool-group-label">{t('pv.grpMode')}</span>
+          <button
+            className={editMode ? 'primary mode-on' : ''}
+            aria-pressed={editMode}
+            onClick={() => setEditMode(!editMode)}
+            title={t('pv.positionsTitle')}
+          >
+            {t('pv.positions')}
+          </button>
+        </div>
         <span className="spacer" />
         {notice && <div className="toast small-text">✓ {notice}</div>}
         <button onClick={() => setShowSettings(true)} title={t('settings.buttonTitle')}>
@@ -605,6 +604,14 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           ?
         </button>
       </header>
+      {editMode && (
+        <div className="mode-banner small-text" role="status">
+          <strong>{t('pv.modeBanner')}</strong>
+          <button className="small" onClick={() => setEditMode(false)}>
+            {t('pv.modeExit')}
+          </button>
+        </div>
+      )}
       <Tips onHelp={() => setShowHelp(true)} />
       <StepBar
         project={project}
@@ -845,7 +852,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                   count={photos.length}
                   sequences={sequences}
                   range={range}
-                  seqButtons={isPnx ? null : <SeqButtons current={current} seqStart={seqStart} range={range} onStart={markStart} onFinish={finishSequence} big />}
                   onView={setViewYaw}
                   onChanged={afterHeadingChange}
                   onError={fail}
@@ -856,6 +862,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'sequences' && (
               <SequencesTab
                 pnx={isPnx}
+                onCut={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
                 onSeqContext={(sq, x, y) => setCtx({ x, y, kind: 'sequence', sequenceId: sq.id })}
                 projectId={projectId}
                 sequences={sequences}
