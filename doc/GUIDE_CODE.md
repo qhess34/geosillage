@@ -117,7 +117,7 @@ caméra ne bouge jamais reste `uncertain`.
 Source du cap automatique : `meta.heading_source` (`headings.get_source`, défaut `track`). `device` : `heading_auto`
 = `heading_exif` (boussole de l'appareil) quand il existe, sinon le cap calculé. Choisi au premier import
 (`importer`, `headings.detect_source` : `GPSImgDirection` sur au moins la moitié des photos, pas tout à 0, au moins
-deux valeurs entières différentes), puis par `PUT …/headings/source` (Bilan, ⚙ Réglages : `HeadingSource.tsx`).
+deux valeurs entières différentes), puis par `PUT …/headings/source` (onglet Photo › *Toute la sortie*, ⚙ Réglages : `HeadingSource.tsx`).
 Annulable : `undo.META_KEYS` journalise ces clés de `meta` (`meta_before` / `meta_after`, toutes les séquences
 marquées modifiées).
 
@@ -244,7 +244,7 @@ ce cap à la direction vers la photo précédente). `POST …/headings/yaw` : `y
 chaque photo : caméra à l'envers = 180°), sur des photos, une plage, une séquence (`sequence_id`) ou tout le projet
 (`all`). Interface : `YawRotate.tsx` (correction du montage de la caméra sur le casque : angle libre,
 `localStorage['pss-yaw-angle']`, « ↻ Corriger le montage » = `add`, jamais `yaw` qui effacerait les angles de tête)
-pour une séquence, tout le projet et la plage de l'onglet Photo.
+pour tout le projet (*Toute la sortie*) et la plage de l'onglet Photo.
 
 **Photos plates** (`photo.is_360 = 0`) : `yaw_offset` = direction de la caméra par rapport au sens de déplacement.
 `headings.written` donne le `GPSImgDirection` écrit : cap + lacet si la source est `track` (ou photo sans boussole), cap seul en `device`
@@ -509,8 +509,11 @@ Mécanisme maison, sans dépendance, dans `frontend/src/i18n/` : `fr.ts` (réfé
   pas changé ; photo et onglet gardés sous `pss-view-<projet>`.
 - `SettingsDialog.tsx` (bouton ⚙ Réglages, avec `OverlayUrl` et `HeadingSettings`) : surcouche Panoramax, fonds XYZ
   ajoutés (hook `useCustomBasemaps` : ajout / retrait, retrait confirmé),
-  calcul du cap du projet (`HeadingSettings`) ; le *Bilan* ne garde que le bilan, la maintenance et les corrections
-  sur toute la sortie.
+  calcul du cap du projet (`HeadingSettings`) ; le *Bilan* ne garde que les statistiques et la maintenance.
+- Sens de déplacement et orientation : un seul endroit, `TravelSection` (`PhotoTab.tsx`, section repliable `travel`) ;
+  en tête `RideSettings.tsx` (source du cap, décalage, montage de la caméra : `all: true`), sous-section `ride`
+  repliée par défaut et affichée même sans photo courante ; dessous, la photo courante et les outils de plage.
+  Interface seulement (lot 4 : le bloc ira tel quel dans l'onglet-étape « Positions et sens »).
 - `Dialogs.tsx` : `Confirm` (Entrée / Échap) et `AddBasemap` ; plus aucun `window.confirm` / `prompt`.
 - `JobBar` : temps restant d'après la vitesse observée depuis l'ouverture ; notification (`Notification`) à la fin
   d'une tâche de plus de 10 s si la fenêtre est cachée et l'autorisation donnée.

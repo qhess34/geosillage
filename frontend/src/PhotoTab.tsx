@@ -55,13 +55,14 @@ export function SeqButtons({
 }
 
 // Collapsible section whose open/closed state is remembered between photos and sessions
-function Section({ id, title, help, children }: { id: string; title: string; help?: string; children: React.ReactNode }) {
+function Section({ id, title, help, defaultOpen = true, children }: { id: string; title: string; help?: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const key = `geosillage.photoSection.${id}`
   const [open, setOpen] = useState(() => {
     try {
-      return localStorage.getItem(key) !== '0'
+      const v = localStorage.getItem(key)
+      return v == null ? defaultOpen : v === '1'
     } catch {
-      return true
+      return defaultOpen
     }
   })
   return (
@@ -85,18 +86,33 @@ function Section({ id, title, help, children }: { id: string; title: string; hel
   )
 }
 
+// Single place for direction of travel and camera orientation: settings of the whole ride on top
+// (collapsed by default), values of the current photo below. Also shown without a current photo.
+export function TravelSection({ ride, children }: { ride: React.ReactNode; children?: React.ReactNode }) {
+  useLang()
+  return (
+    <Section id="travel" title={t('travel.title')} help={`${capHelp()} ${orientationHelp()}`}>
+      <Section id="ride" title={t('travel.ride')} defaultOpen={false}>
+        {ride}
+      </Section>
+      {children ?? <p className="small-text muted">{t('travel.noPhoto')}</p>}
+    </Section>
+  )
+}
+
 interface PhotoTabProps {
   projectId: string
   photo: PhotoDetail
   count: number
   sequences: Sequence[]
   range: [number, number] | null
+  ride: React.ReactNode // settings of the whole ride (RideSettings)
   onView: (yawDeg: number) => void
   onChanged: (u?: UndoState) => void
   onError: (m: string) => void
 }
 
-export default function PhotoTab({ projectId, photo, count, sequences, range, onView, onChanged, onError }: PhotoTabProps) {
+export default function PhotoTab({ projectId, photo, count, sequences, range, ride, onView, onChanged, onError }: PhotoTabProps) {
   useLang()
   const flat = !photo.is_360 // flat picture: the yaw is the direction of the camera
   const [draft, setDraft] = useState<number | null>(null)
@@ -186,7 +202,8 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, on
         )}
       </div>
 
-      <Section id="heading" title={t('photo.heading.title')} help={capHelp()}>
+      <TravelSection ride={ride}>
+      <h4 className="travel-sub" title={capHelp()}>{t('travel.photoHeading')}</h4>
       <p className="small-text muted section-help">{t('photo.heading.help')}</p>
       <div className="heading-box">
         <HeadingDial value={shown} computed={computedWithOffset} onChange={setDraft} onCommit={(v) => set(v)} />
@@ -239,8 +256,7 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, on
           )}
         </div>
       </div>
-      </Section>
-      <Section id="orientation" title={flat ? t('photo.orient.titleFlat') : t('photo.orient.title')} help={orientationHelp()}>
+      <h4 className="travel-sub" title={orientationHelp()}>{flat ? t('travel.photoOrientFlat') : t('travel.photoOrient')}</h4>
       <p className="small-text muted section-help">{flat ? t('photo.orient.helpFlat') : t('photo.orient.help')}</p>
       <div className="orientation-box small-text">
         <CapOrientationDiagram heading={shown} yaw={photo.yaw_offset} />
@@ -301,7 +317,7 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, on
         </section>
       )}
 
-      </Section>
+      </TravelSection>
       <Section id="position" title={t('photo.position')}>
       <div className="small-text position-box">
         {photo.lat == null && (photo.lat_orig == null || (photo.flags & FLAGS.INVALID_COORD) !== 0) && (

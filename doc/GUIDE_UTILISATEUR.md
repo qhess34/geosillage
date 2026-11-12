@@ -106,7 +106,7 @@ Onglet **Bilan** : nombre de photos, période, anomalies détectées :
 
 
 ![Onglet Bilan](images/09-bilan.webp)
-*Onglet *Bilan* : anomalies de la sortie (surlignées), vérification des fichiers, et réglages de cap et d'orientation de toute la sortie.*
+*Onglet *Bilan* : statistiques et anomalies de la sortie (surlignées), vérification des fichiers. Les réglages de toute la sortie sont dans l'onglet *Photo* (*Sens de déplacement et orientation*).*
 
 Les photos sans GPS, sans date, en doublon, illisibles ou introuvables ne peuvent pas entrer dans une séquence.
 L'onglet *Bilan* contient aussi *Vérifier les fichiers* et, s'il y en a, *Relancer les miniatures en échec*.
@@ -253,7 +253,7 @@ de la sortie.
 
 
 ![Onglet Séquences](images/04-sequences.webp)
-*Onglet *Séquences* : création, correction du montage de la caméra, découpage proposé, et pour chaque séquence son état d'export (*exportée*, *à réexporter*), sa durée, sa longueur, ses caps et ses actions.*
+*Onglet *Séquences* : création, découpage proposé, et pour chaque séquence son état d'export (*exportée*, *à réexporter*), sa durée, sa longueur, ses caps et ses actions.*
 
 `Page ↑` / `Page ↓` passent d'une séquence à l'autre. **Tout est annulable** : `Ctrl+Z` / `Ctrl+Y`.
 
@@ -397,13 +397,17 @@ Deux notions distinctes :
 - l'**orientation** = l'angle entre le **centre de l'image** et le sens de déplacement (XMP `PoseHeadingDegrees`).
   Elle vaut 0 quand la caméra regarde vers l'avant ; Panoramax s'en sert pour tourner la photo 360°.
 
-Changer l'un ne change jamais l'autre. L'onglet *Photo* les présente en deux sections : **Cap — sens de
-déplacement** (cadran, cap calculé et final) et **Orientation de la caméra**, avec un petit schéma vu de dessus :
+Changer l'un ne change jamais l'autre. L'onglet *Photo* les réunit dans **une seule section**, *Sens de déplacement
+et orientation* :
+- en tête, **Toute la sortie** (repliée par défaut, accessible même sans photo sélectionnée) : *Source du cap*,
+  *Décalage du sens de déplacement*, *Montage de la caméra* ;
+- dessous, **cette photo** : *sens de déplacement* (cadran, cap calculé et final) et *orientation de la caméra*, avec
+  un petit schéma vu de dessus :
 le cap en bleu (depuis le nord), le centre de l'image en orange pointillé (décalé de l'orientation), et une phrase
 comme « Centre de l'image à −35° du sens de déplacement (vers la gauche) ». *Remettre à 0°* annule l'orientation de
 la photo.
 
-**Source du cap** (onglet *Bilan* ou *⚙ Réglages*, pour toute la sortie) : *Calculé depuis la trace*, ou *Cap de
+**Source du cap** (onglet *Photo*, *Toute la sortie*, ou *⚙ Réglages*) : *Calculé depuis la trace*, ou *Cap de
 l'appareil* (boussole, `GPSImgDirection` enregistré par la caméra ou le smartphone). Au premier import, le cap de
 l'appareil est choisi s'il est présent, non nul et variable le long de la sortie ; sinon il est calculé. Les photos
 sans cap de l'appareil gardent le cap calculé. `Ctrl+Z` annule le changement.
@@ -418,8 +422,8 @@ Panoramax.
 
 Flèches sur la carte (zoom ≥ 15). À un arrêt (feu rouge, pause), le cap calculé est la direction d'arrivée à
 l'arrêt (sinon celle de départ) : la photo gardée d'un arrêt a donc toujours un cap. Onglet *Photo* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
-**Décalage du sens de déplacement** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Bilan*, *Cap et orientation de
-toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du sens de déplacement…*, ou
+**Décalage du sens de déplacement** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Photo*, *Sens de déplacement et
+orientation* › *Toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du sens de déplacement…*, ou
 *Décaler* dans les outils de la plage de l'onglet *Photo*). La valeur remplace le décalage déjà posé sur ces
 photos ; 0 le retire. Ce réglage ne dépend pas des séquences, qui ne sont qu'un découpage. Sur une plage, aussi
 *Fixer* (même cap manuel pour toutes) et *Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
@@ -438,7 +442,7 @@ l'application comme sur Panoramax).
 ### Caméra mal orientée sur le casque, ou à l'envers
 
 Champ d'angle et bouton **↻ Corriger le montage** :
-- sur toutes les photos de la sortie (onglet *Bilan*, *Sens de déplacement et orientation de toute la sortie*) ;
+- sur toutes les photos de la sortie (onglet *Photo*, *Sens de déplacement et orientation* › *Toute la sortie*, *Montage de la caméra*) ;
 - sur une série de photos sélectionnée : clic droit *Orientation de la caméra…*, ou outils de la plage de l'onglet *Photo*.
 
 Comme le décalage du cap, l'orientation ne dépend pas des séquences.

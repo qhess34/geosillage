@@ -30,7 +30,7 @@ Interface : `frontend/src/ProjectView.tsx` (écran principal) + `shortcuts.ts`, 
 | Raccourcis, menu contextuel | — | `shortcuts.ts`, `contextMenuItems.ts`, `HelpDialog` (e2e `navigation`) |
 | Synchro (retard GPS), GPX | `core/timesync.py`, `core/gpx.py` | `SyncTab`, `Gpx.tsx` (`test_timesync`, `test_gpx`) |
 | Positions, recalage OSM | `core/positions.py`, `core/osm.py` | `PhotoTab`, `OsmSnapPanel` (`test_positions_sources`, `test_osm`) |
-| Caps et orientation | `core/headings.py` | `PhotoTab`, `SummaryTab`, `HeadingDial`, `YawRotate` (`test_headings`) |
+| Caps et orientation | `core/headings.py` | `PhotoTab` (`TravelSection`), `RideSettings`, `HeadingDial`, `YawRotate` (`test_headings`) |
 | Points à vérifier, arrêts | `core/quality.py`, `core/analysis.py` | `issues.ts`, `IssuesPanel`, `StopRangeEditor` (`test_quality`, e2e `issues`) |
 | Réglages | `config.DEFAULT_SETTINGS`, `main.SettingsIn` | `SettingsDialog` |
 | Export, EXIF | `exporter.py`, `exif/` | `ExportTab` (`test_export`) |
