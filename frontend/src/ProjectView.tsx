@@ -8,6 +8,7 @@ import ImportDialog from './ImportDialog'
 import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
 import StepBar from './StepBar'
+import Tips from './Tips'
 import IssuesPanel from './IssuesPanel'
 import CheckCard from './CheckCard'
 import { canInterpolate } from './issues'
@@ -555,7 +556,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </strong>
         {isPnx ? (
           <span className="badge" title={t('pv.pnxBadge', { instance: project.pnx_instance ?? 'Panoramax' })}>
-            Panoramax
+            {t('pv.pnxBadgeLabel')}
           </span>
         ) : (
           <button className="primary" onClick={() => setShowImport(true)}>
@@ -604,6 +605,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           ?
         </button>
       </header>
+      <Tips onHelp={() => setShowHelp(true)} />
       <StepBar
         project={project}
         photos={photos}
@@ -756,6 +758,12 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 onError={fail}
               />
             )}
+          <div className="tl-head">
+            <span title={t('tl.labelTitle')}>{t('tl.label')}</span>
+            <button className="small" onClick={() => setShowHelp(true)} title={t('tl.helpBtn')} aria-label={t('tl.helpBtn')}>
+              ?
+            </button>
+          </div>
           <Timeline
             photos={photos}
             sequences={sequences}
@@ -912,7 +920,15 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               />
             )}
             {tab === 'summary' && (
-              <SummaryTab projectId={projectId} project={project} isPnx={isPnx} onRefresh={refresh} onHeadingsChanged={(u) => afterHeadingChange(u)} onError={fail} onSettings={() => setShowSettings(true)} />
+              <SummaryTab
+                links={{
+                  gps: issuesByStep.gps.length ? () => setIssuesStep('gps') : null,
+                  dups: issuesByStep.dups.length ? () => setIssuesStep('dups') : null,
+                  excluded: showExcluded ? null : () => setShowExcluded(true),
+                }}
+                projectId={projectId}
+                project={project}
+                isPnx={isPnx} onRefresh={refresh} onHeadingsChanged={(u) => afterHeadingChange(u)} onError={fail} onSettings={() => setShowSettings(true)} />
             )}
           </div>
         </aside>

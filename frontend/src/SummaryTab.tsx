@@ -38,13 +38,28 @@ function RideHeadings({ project, flat, onDone, onError }: { flat: boolean; proje
 }
 
 
-function Summary({ p, onSettings }: { p: Project; onSettings?: () => void }) {
+// Orange rows are links to the matching list (points to check of a step, excluded photos) when there is one
+export interface SummaryLinks {
+  gps: (() => void) | null
+  dups: (() => void) | null
+  excluded: (() => void) | null
+}
+
+function Summary({ p, onSettings, links }: { p: Project; onSettings?: () => void; links?: SummaryLinks }) {
   useLang()
   const s = p.summary
-  const row = (label: string, value: React.ReactNode, warn = false) => (
+  const row = (label: string, value: React.ReactNode, warn = false, go?: (() => void) | null, goTitle = t('sum.goList')) => (
     <tr className={warn ? 'warn' : ''}>
       <th>{label}</th>
-      <td>{value}</td>
+      <td>
+        {warn && go ? (
+          <button className="link-btn" onClick={go} title={goTitle}>
+            {value} ›
+          </button>
+        ) : (
+          value
+        )}
+      </td>
     </tr>
   )
   return (
@@ -52,13 +67,13 @@ function Summary({ p, onSettings }: { p: Project; onSettings?: () => void }) {
       <tbody>
         {row(t('sum.photos'), s.total)}
         {row(t('sum.geolocated'), s.geolocated)}
-        {row(t('sum.noGps'), s.no_gps, s.no_gps > 0)}
+        {row(t('sum.noGps'), s.no_gps, s.no_gps > 0, links?.gps)}
         {row(t('sum.noDate'), s.no_date, s.no_date > 0)}
-        {row(t('sum.duplicates'), s.duplicates, s.duplicates > 0)}
-        {row(t('sum.gpsAnomalies'), t('sum.gpsAnomaliesVal', { n: s.gps_anomalies, jumps: s.gps_jumps }), s.gps_anomalies > 0)}
+        {row(t('sum.duplicates'), s.duplicates, s.duplicates > 0, links?.dups)}
+        {row(t('sum.gpsAnomalies'), t('sum.gpsAnomaliesVal', { n: s.gps_anomalies, jumps: s.gps_jumps }), s.gps_anomalies > 0, links?.gps)}
         {row(t('sum.interruptions'), s.interruptions, s.interruptions > 0)}
         {row(t('sum.unreadable'), s.unreadable, s.unreadable > 0)}
-        {row(t('sum.excluded'), s.excluded, s.excluded > 0)}
+        {row(t('sum.excluded'), s.excluded, s.excluded > 0, links?.excluded, t('sum.showExcluded'))}
         {s.missing_files > 0 && row(t('sum.missing'), s.missing_files, true)}
         {row(t('sum.media'), p.media === 'flat' ? t('sum.mediaFlat') : p.media === '360' ? t('sum.media360') : '—')}
         {s.median_interval_s != null &&
@@ -95,7 +110,7 @@ function Summary({ p, onSettings }: { p: Project; onSettings?: () => void }) {
         {row(t('sum.duration'), fmtDuration(s.duration_s))}
         {row(t('sum.distance'), `≈ ${fmtDistance(s.distance_m)}`)}
         {row(t('sum.thumbs'), `${s.thumbs_done} / ${s.total}${s.thumbs_failed ? t('sum.thumbsFailed', { n: s.thumbs_failed }) : ''}`)}
-        {row(t('sum.headings'), t('sum.headingsVal', { c: p.headings.computed, m: p.headings.manual, u: p.headings.uncertain }), p.headings.uncertain > 0)}
+        {row(t('sum.headings'), t('sum.headingsVal', { c: p.headings.computed, m: p.headings.manual, u: p.headings.uncertain }), p.headings.uncertain > 0, links?.gps)}
         {s.cameras.length > 0 && row(t('sum.cameras'), s.cameras.map((c) => `${c.make ?? '?'} ${c.model ?? ''} (${c.count})`).join(', '))}
       </tbody>
     </table>
@@ -111,7 +126,9 @@ export default function SummaryTab({
   onHeadingsChanged,
   onError,
   onSettings,
+  links,
 }: {
+  links?: SummaryLinks
   onSettings?: () => void
   projectId: string
   project: Project
@@ -123,7 +140,8 @@ export default function SummaryTab({
   useLang()
   return (
     <>
-      <Summary p={project} onSettings={onSettings} />
+      {isPnx && <p className="muted small-text">{t('sum.pnxHidden')}</p>}
+      <Summary p={project} onSettings={onSettings} links={links} />
       <div className="row wrap">
         {!isPnx && (
           <button className="small" onClick={() => api.checkFiles(projectId).then(onRefresh)} title={t('sum.checkFiles')}>

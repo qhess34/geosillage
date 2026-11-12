@@ -1657,3 +1657,39 @@ a.button-link:hover {
 
 .warn-box { border: 1px solid #d97706; background: rgba(217, 119, 6, 0.1); border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0.5rem 0; }
 .warn-box p { margin: 0 0 0.5rem; }
+
+/* Orange rows of the Bilan that lead to a list */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* First-launch tips (closable band under the toolbar) */
+.tips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  background: rgba(37, 99, 235, 0.08);
+  border-bottom: 1px solid var(--border);
+}
+.tips span {
+  flex: 1 1 400px;
+}
+
+/* Label of the timeline and its help button */
+.tl-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+}
