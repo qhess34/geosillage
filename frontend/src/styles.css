@@ -1110,7 +1110,8 @@ input.coord {
   font-size: 12px;
 }
 .steps .step {
-  flex: 1 1 0;
+  /* width from the content: long labels (« Doublons et arrêts ») get the room they need */
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
