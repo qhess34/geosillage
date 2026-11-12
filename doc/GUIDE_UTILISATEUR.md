@@ -116,7 +116,7 @@ L'onglet *Bilan* contient aussi *Vérifier les fichiers* et, s'il y en a, *Relan
 ## 3. L'écran
 
 ```
-┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Couper · Début · Fin │ Positions … ⚙ Réglages · ?
+┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Début · Fin │ Mode Positions … ⚙ Réglages · ?
 ├ étapes : Import · Synchro · Doublons et arrêts · Positions et sens · Séquences · Export · Envoi
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ onglets :                    │
@@ -184,7 +184,8 @@ d'export, les photos restent sur l'instance.
   visible quand on navigue.
 - **Légende** (bas gauche de la carte, repliable) : signification des couleurs et marques de la carte et de la
   timeline.
-- **Onglet Photo** : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,
+- **Barre d'outils** : trois groupes nommés — *Projet* (retour, nom, import), *Édition* (annuler/rétablir, *Début*/*Fin*), *Mode* (*✥ Positions*, bascule : un bandeau violet « Mode Positions actif – Échap » reste affiché tant qu'il est actif).
+- **Onglet Photo** (sections *Sens de déplacement*, *Orientation de la caméra* et *Position* repliables, l'état est mémorisé ; *Début*/*Fin* ne sont que dans la barre d'outils) : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,
   *⟲ Recentrer* pour revenir face à l'avant), boutons *⏵ Début* / *⏹ Fin*, cap, position, et outils de la plage
   sélectionnée.
 
@@ -225,7 +226,7 @@ Une séquence = un passage continu que l'on publiera d'un bloc. On parcourt la s
 ![Début et Fin en cours](images/03-debut-fin.webp)
 *Début* posé sur la photo 341 : la plage suit la navigation (en jaune sur la timeline), le bouton *Fin* indique le nombre de photos de la future séquence.*
 
-**Couper** : `C` (*✂ Couper*) sur la première photo de chaque nouvelle séquence. Sur une photo non classée, la
+**Couper** : `C` (bouton *✂ Couper* de l'onglet *Séquences*) sur la première photo de chaque nouvelle séquence. Sur une photo non classée, la
 séquence est d'abord créée autour d'elle, puis coupée : il suffit d'appuyer sur `C` à chaque coupure.
 
 **Automatique** (onglet *Séquences*) :

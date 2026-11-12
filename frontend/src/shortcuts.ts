@@ -139,6 +139,7 @@ export function useShortcuts(params: ShortcutsParams) {
       } else if (e.key === 'm' || e.key === 'M') {
         setEditMode((v) => !v)
       } else if (e.key === 'Escape') {
+        setEditMode(false)
         setSeqStart(null)
         setRange(null)
       } else if (e.key === '[' || e.key === ']' || e.key === '{' || e.key === '}') {

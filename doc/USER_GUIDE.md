@@ -111,7 +111,7 @@ The *Summary* tab also has *Check the files* and, if there are any, *Retry faile
 ## 3. The screen
 
 ```
-┌ toolbar: ← projects · Import │ Undo · Redo │ Cut · Start · End │ Positions … ⚙ Settings · ?
+┌ toolbar: ← projects · Import │ Undo · Redo │ Start · End │ Positions mode … ⚙ Settings · ?
 ├ steps: Import · Sync · Duplicates and stops · Positions and direction · Sequences · Export · Upload
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ map                                          │ tabs:                        │
@@ -176,7 +176,8 @@ stay on the instance.
   *All* buttons right of the timeline; the bar under the timeline (or Shift+wheel, or a horizontal touchpad swipe)
   scrolls; the current photo stays visible when you navigate.
 - **Legend** (bottom left of the map, collapsible): meaning of the colours and marks of the map and the timeline.
-- **Photo tab**: 360° viewer (drag to look around, wheel to zoom, *Flat* for the raw image, *⟲ Recentre* to face
+- **Toolbar**: three named groups — *Project* (back, name, import), *Edit* (undo/redo, *Start*/*End*), *Mode* (*✥ Positions* toggle: a purple banner "Positions mode on – Esc to exit" stays visible while it is on).
+- **Photo tab** (*Direction of travel*, *Camera orientation* and *Position* are collapsible sections whose state is remembered; *Start*/*End* are in the toolbar only): 360° viewer (drag to look around, wheel to zoom, *Flat* for the raw image, *⟲ Recentre* to face
   the front again), *⏵ Start* / *⏹ End* buttons, heading, position, and the tools of the selected range.
 
 ### Panoramax overlay
@@ -213,7 +214,7 @@ A sequence = one continuous pass that you will publish as a block. You go throug
 ![Start and End in progress](images/en/03-debut-fin.webp)
 *Start* set on photo 341: the range follows the navigation (in yellow on the timeline), the *End* button shows the number of photos of the future sequence.*
 
-**Cut**: `C` (*✂ Cut*) on the first photo of each new sequence. On an unclassified photo, the sequence is first
+**Cut**: `C` (*✂ Cut* button in the *Sequences* tab) on the first photo of each new sequence. On an unclassified photo, the sequence is first
 created around it, then cut: just press `C` at each cut.
 
 **Automatic** (*Sequences* tab):
