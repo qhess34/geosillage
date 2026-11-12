@@ -52,6 +52,13 @@ export async function openProject(page: Page, name: string) {
   await expect(page.locator('.steps .step').first()).toBeVisible()
 }
 
+// Tab of the project screen: a step (by its label) or the current photo ('Photo')
+export function tab(page: Page, label: string) {
+  return label === 'Photo'
+    ? page.getByRole('tab', { name: 'Photo', exact: true })
+    : page.getByRole('tab').filter({ has: page.locator('.lab', { hasText: label }) })
+}
+
 // Number of the photo shown in the side panel (« 81 / 162 »), once it is loaded
 export function photoNumber(page: Page) {
   return page.locator('.tab-body').innerText().then((t) => Number(t.match(/(\d+) \/ \d+/)?.[1] ?? NaN))

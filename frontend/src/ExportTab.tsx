@@ -3,7 +3,7 @@ import { locale, t, useLang } from './i18n'
 import { fmtShift } from './format'
 import { api, ClockCheck, ExportMode, ExportRecord, Job, seqColor, Sequence, SourcesState } from './api'
 import FolderPicker from './FolderPicker'
-import { publicationStates, PublishButton, PublishOptionsPanel, usePublishOptions, viewerUrl } from './Publication'
+import { publicationStates } from './Publication'
 
 interface Props {
   projectId: string
@@ -60,8 +60,6 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
   const [confirm, setConfirm] = useState<null | 'export' | 'restore' | 'trash'>(null)
   const [history, setHistory] = useState<ExportRecord[]>([])
   const running = jobs.some((j) => ['export', 'restore_sources', 'trash'].includes(j.kind) && j.state === 'running')
-  const publishing = jobs.some((j) => j.kind === 'publish' && j.state === 'running')
-  const pub = usePublishOptions() // options of the « Publier » buttons of the exported sequences
 
   useEffect(() => {
     api.exports(projectId).then(setHistory, () => undefined)
@@ -157,16 +155,6 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
                     </span>
                   )}
                 </label>
-                {s.last_export && (
-                  <span className="row export-row-actions">
-                    {p?.first_picture_id && (
-                      <a className="button-link small" href={viewerUrl(p.instance, p.first_picture_id)} target="_blank" rel="noreferrer">
-                        {t('exp.view')}
-                      </a>
-                    )}
-                    <PublishButton projectId={projectId} s={s} o={pub} running={publishing} onStarted={onStarted} onError={onError} />
-                  </span>
-                )}
               </li>
             )
           })}
@@ -276,8 +264,6 @@ export default function ExportTab({ projectId, sequences, jobs, sources, exclude
           </div>
         </div>
       )}
-
-      <PublishOptionsPanel o={pub} projectId={projectId} sequences={sequences} running={publishing} onStarted={onStarted} onError={onError} />
 
       {history.length > 0 && (
         <>

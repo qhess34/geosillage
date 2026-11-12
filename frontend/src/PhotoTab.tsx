@@ -101,6 +101,9 @@ export function TravelSection({ ride, children }: { ride: React.ReactNode; child
 }
 
 interface PhotoTabProps {
+  // 'photo': the current photo (viewer, details), a tab apart; 'travel': step « Positions et sens » (viewer, then
+  // direction of travel and orientation, then position)
+  part: 'photo' | 'travel'
   projectId: string
   photo: PhotoDetail
   count: number
@@ -112,7 +115,7 @@ interface PhotoTabProps {
   onError: (m: string) => void
 }
 
-export default function PhotoTab({ projectId, photo, count, sequences, range, ride, onView, onChanged, onError }: PhotoTabProps) {
+export default function PhotoTab({ part, projectId, photo, count, sequences, range, ride, onView, onChanged, onError }: PhotoTabProps) {
   useLang()
   const flat = !photo.is_360 // flat picture: the yaw is the direction of the camera
   const [draft, setDraft] = useState<number | null>(null)
@@ -165,7 +168,7 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, ri
           thumbUrl={photo.thumb === 1 ? api.thumbUrl(projectId, photo.id) : api.imageUrl(projectId, photo.id)}
           imageUrl={api.imageUrl(projectId, photo.id)}
           alt={photo.filename}
-          height={280}
+          height={part === 'photo' ? 280 : 200}
           yaw={photo.yaw_offset}
           pitch={photo.pitch_orig}
           roll={photo.roll_orig}
@@ -202,6 +205,8 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, ri
         )}
       </div>
 
+      {part === 'travel' && (
+      <>
       <TravelSection ride={ride}>
       <h4 className="travel-sub" title={capHelp()}>{t('travel.photoHeading')}</h4>
       <p className="small-text muted section-help">{t('photo.heading.help')}</p>
@@ -413,6 +418,10 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, ri
       )}
 
       </Section>
+      </>
+      )}
+      {part === 'photo' && (
+      <>
       <h3>{t('photo.info')}</h3>
       <table className="summary">
         <tbody>
@@ -460,6 +469,8 @@ export default function PhotoTab({ projectId, photo, count, sequences, range, ri
             <li key={f}>{flagLabel(f)}</li>
           ))}
         </ul>
+      )}
+      </>
       )}
     </div>
   )

@@ -1,13 +1,10 @@
-import { useEffect } from 'react'
 import { t, useLang } from './i18n'
 import { Issue, issueDetail, IssueStep, issueText, sameIssue, STEP_KINDS } from './issues'
-import { useDraggable } from './useDraggable'
 
 const stepTitle = (s: IssueStep) => t(`step.${s}`)
 
-// Floating window (moved by its title bar) listing what is left to fix for a step, grouped by kind with the cause
-// and the fix. A click on an item goes to its photo: map centred on it, photo loaded in the Photo tab with the card
-// explaining it. The window stays open while correcting.
+// What is left to fix for a step, at the top of its tab, grouped by kind with the cause and the fix. A click on an
+// item goes to its photo: map centred on it, card explaining it above this list (same tab).
 export default function IssuesPanel({
   step,
   issues,
@@ -16,7 +13,6 @@ export default function IssuesPanel({
   onPick,
   onIgnore,
   onInterpolateAll,
-  onClose,
 }: {
   step: IssueStep
   issues: Issue[]
@@ -25,32 +21,13 @@ export default function IssuesPanel({
   onPick: (i: Issue) => void
   onIgnore: (i: Issue) => void // headings to check: the manual heading is right
   onInterpolateAll?: () => void
-  onClose: () => void
 }) {
   useLang()
-  const { box, style, handlers } = useDraggable<HTMLDivElement>()
-  // Escape closes the window (and only that: the selection is kept), unless a dialog is open above it
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || (e.target as HTMLElement)?.closest('input, textarea, select') || document.querySelector('.modal-backdrop')) return
-      e.stopImmediatePropagation()
-      onClose()
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [onClose])
   const kinds = STEP_KINDS[step].filter((k) => issues.some((i) => i.kind === k))
   const where = (i: Issue) => (i.end > i.start ? t('issues.panel.photos', { a: i.start + 1, b: i.end + 1 }) : t('issues.panel.photo', { a: i.start + 1 }))
   return (
-    <div className="snap-panel snap-modal issues-modal small-text" ref={box} role="dialog" aria-label={t('issues.panel.label', { step: stepTitle(step) })} style={style}>
-      <div className="row between snap-title" title={t('gpx.snap.drag')} {...handlers}>
-        <h3>
-          {t('issues.panel.title', { step: stepTitle(step), n: issues.length })}
-        </h3>
-        <button className="small" onClick={onClose} aria-label={t('common.close')}>
-          ✕
-        </button>
-      </div>
+    <section className="issues-list small-text" role="region" aria-label={t('issues.panel.label', { step: stepTitle(step) })}>
+      <h3>{t('issues.panel.title', { n: issues.length })}</h3>
       {step === 'dups' && duplicates > 0 && (
         <p className="muted">
           {t('issues.panel.dups', { n: duplicates })}
@@ -93,6 +70,6 @@ export default function IssuesPanel({
           </section>
         )
       })}
-    </div>
+    </section>
   )
 }

@@ -427,40 +427,6 @@ select {
   display: flex;
   flex-direction: column;
 }
-.tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--panel);
-  z-index: 2;
-}
-.tab {
-  flex: 1 1 auto;
-  border: none;
-  border-radius: 0;
-  border-bottom: 2px solid transparent;
-  background: none;
-  padding: 9px 6px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.tab .count {
-  display: inline-block;
-  margin-left: 5px;
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--border);
-  color: var(--text);
-  font-size: 11px;
-  line-height: 17px;
-}
-.tab.active {
-  color: var(--text);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-}
 .tab-body {
   padding: 10px 14px 48px;
 }
@@ -1037,13 +1003,14 @@ input.coord {
   border-bottom: 1px solid var(--border);
 }
 
-/* List of things to fix of a step (floating window over the map, moved by its title bar) */
-.issues-modal {
-  /* on the right, under the map controls: the photo reached stays visible at the centre of the map */
-  left: auto;
-  right: 10px;
-  top: 52px;
-  width: min(380px, calc(50% - 20px));
+/* What is left to fix for a step, at the top of its tab */
+.issues-list {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.issues-list > h3 {
+  margin: 0 0 4px;
 }
 .issues-group h4 {
   margin: 10px 0 2px;
@@ -1205,6 +1172,24 @@ input.coord {
 }
 .steps .warn .sub {
   color: #b45309;
+}
+/* the current photo: a tab apart, not a step */
+.steps .steps-spacer {
+  flex: 0 0 6px;
+  border-left: 1px solid var(--border);
+}
+.steps .step.photo-step {
+  flex: none;
+  font-weight: 600;
+  padding: 3px 12px;
+}
+.steps .steps-note {
+  flex: 0 1 auto;
+  align-self: center;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Photos of a stop side by side */
@@ -1742,4 +1727,24 @@ a.button-link:hover {
 .travel-sub {
   margin: 10px 0 4px;
   font-size: 0.92em;
+}
+/* narrow window: the step tabs drop their round icon (state kept by the colour of the subtitle) */
+@media (max-width: 1150px) {
+  .steps {
+    gap: 3px;
+    padding: 5px 6px;
+  }
+  .steps .ico {
+    display: none;
+  }
+  .steps .step {
+    padding: 3px 5px;
+  }
+  .steps .step.photo-step {
+    padding: 3px 8px;
+  }
+  .steps .ok .lab::before {
+    content: '✓ ';
+    color: #059669;
+  }
 }

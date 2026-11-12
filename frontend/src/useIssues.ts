@@ -2,7 +2,8 @@ import { Dispatch, MutableRefObject, SetStateAction, useCallback, useEffect, use
 import { api, PhotoRow, QualityIssue, SeqState, UndoState } from './api'
 import { CheckAction } from './CheckCard'
 import { t } from './i18n'
-import { computeIssues, Issue, IssueStep, sameIssue, STEP_KINDS } from './issues'
+import { computeIssues, Issue, IssueStep, sameIssue, STEP_KINDS, stepOf } from './issues'
+import type { StepTab } from './StepBar'
 
 interface IssuesParams {
   projectId: string
@@ -12,7 +13,7 @@ interface IssuesParams {
   goIdxRef: MutableRefObject<(idx: number) => void>
   setSeqStart: (v: number | null) => void
   setRange: (r: [number, number] | null) => void
-  setTab: (t: 'photo') => void
+  setTab: (t: StepTab) => void
   setCenterTick: Dispatch<SetStateAction<number>>
   setConfirmExclude: (v: { range: [number, number]; n: number }) => void
   afterHeadingChange: (u?: UndoState) => unknown
@@ -21,7 +22,7 @@ interface IssuesParams {
   setNotice: (m: string) => void
 }
 
-// Points to check and the one being corrected (card of the Photo tab, list of a step, N / Shift+N)
+// Points to check and the one being corrected (card and list at the top of the tab of their step, N / Shift+N)
 export function useIssues({
   projectId,
   photos,
@@ -39,8 +40,6 @@ export function useIssues({
   setNotice,
 }: IssuesParams) {
   const [quality, setQuality] = useState<QualityIssue[]>([])
-  const [issuesStep, setIssuesStep] = useState<IssueStep | null>(null) // list of things to fix of a step (floating window)
-  const closeIssues = useCallback(() => setIssuesStep(null), [])
   const [confirmInterp, setConfirmInterp] = useState<number[] | null>(null) // photos to place between their neighbours
 
   // points to check, recomputed whenever the photos change (positions, exclusions, headings)
@@ -48,14 +47,14 @@ export function useIssues({
     if (photos.length) api.quality(projectId).then(setQuality, () => undefined)
     else setQuality([])
   }, [projectId, photos])
-  // Everything to check, in the order of the ride (N / Shift+N, step bar, Bilan, card of the Photo tab)
+  // Everything to check, in the order of the ride (N / Shift+N, step tabs, Bilan)
   const checkPoints = useMemo(() => computeIssues(quality, photos, isPnx), [quality, photos, isPnx])
-  // the same, per step of the step bar (list of things to fix of a step)
+  // the same, per step (list at the top of the step's tab)
   const issuesByStep = useMemo(() => {
     const by = (st: IssueStep) => checkPoints.filter((c) => STEP_KINDS[st].includes(c.kind))
     return { dups: by('dups'), gps: by('gps'), seq: by('seq') }
   }, [checkPoints])
-  // The issue being corrected (card on top of the Photo tab), as reached; looked up again in the list at each
+  // The issue being corrected (card on top of its step's tab), as reached; looked up again in the list at each
   // render: gone = fixed
   const [focusPoint, setFocusPoint] = useState<Issue | null>(null)
   // stop being corrected: its photos, widened or narrowed by hand before comparing them
@@ -68,7 +67,8 @@ export function useIssues({
       setRange(c.end > c.start ? [c.start, c.end] : null)
       setFocusPoint(c)
       setStopAdj(c.kind === 'stop' ? [c.start, c.end] : null)
-      setTab('photo')
+      const st = stepOf(c.kind)
+      setTab(st === 'seq' ? 'sequences' : st)
       setCenterTick((t) => t + 1) // the map shows the photo, even when it does not follow the navigation
     },
     [],
@@ -87,7 +87,7 @@ export function useIssues({
       }, (er) => setError(er.message)),
     [projectId, afterHeadingChange],
   )
-  // Actions of the card of the Photo tab on the photos of the issue being corrected (exclusion: confirmed first)
+  // Actions of the card on the photos of the issue being corrected (exclusion: confirmed first)
   const fixIssue = useCallback(
     (what: CheckAction) => {
       if (!focusPoint) return
@@ -143,9 +143,6 @@ export function useIssues({
     setQuality,
     checkPoints,
     issuesByStep,
-    issuesStep,
-    setIssuesStep,
-    closeIssues,
     focusPoint,
     setFocusPoint,
     focusLive,

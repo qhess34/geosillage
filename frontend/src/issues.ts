@@ -1,4 +1,4 @@
-// Things to check or fix on a ride: one list (N / Shift+N, step bar, Bilan, card of the Photo tab), one table of
+// Things to check or fix on a ride: one list (N / Shift+N, step tabs, Bilan, card on top of a step's tab), one table of
 // texts per kind, and the photo predicates they share.
 import { FLAGS, PhotoRow, QualityIssue } from './api'
 import { Key, t, tp } from './i18n'
@@ -22,6 +22,8 @@ export const STEP_KINDS: Record<IssueStep, IssueKind[]> = {
   gps: ['missing', 'jump', 'spacing', 'gps_dop', 'heading', 'no_heading'],
   seq: ['unclassified'],
 }
+// Step (tab) where an issue is listed and corrected
+export const stepOf = (k: IssueKind): IssueStep => (Object.keys(STEP_KINDS) as IssueStep[]).find((s) => STEP_KINDS[s].includes(k)) ?? 'gps'
 
 // Title of a group, name of one item, cause and fix: the only place these texts are keyed (i18n)
 export const issueText = (k: IssueKind) => ({

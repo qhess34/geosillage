@@ -1,4 +1,4 @@
-import { expect, openProject, pickOnTimeline, ridePath, test, waitJobs } from './helpers'
+import { expect, openProject, pickOnTimeline, ridePath, tab, test, waitJobs } from './helpers'
 
 // Smartphone ride (flat pictures): the project type comes from the XMP tags of the pictures
 test('projet plat : visionneuse sans 360°, direction de la caméra, autre type refusé', async ({ page, request }) => {
@@ -10,17 +10,18 @@ test('projet plat : visionneuse sans 360°, direction de la caméra, autre type 
 
   await openProject(page, 'Sortie plate')
   const body = page.locator('.tab-body')
+  await tab(page, 'Positions et sens').click()
   await pickOnTimeline(page, 0.5)
   await expect(body.locator('h4', { hasText: 'Cette photo : direction de la caméra' })).toBeVisible()
   await expect(body.getByRole('button', { name: 'Vue 360°' })).toHaveCount(0)
   await expect(body.getByRole('button', { name: 'À plat' })).toHaveCount(0)
 
-  await page.getByRole('tab', { name: 'Bilan' }).click()
+  await tab(page, 'Import').click()
   await expect(page.locator('table.summary')).toContainText('Plates')
   await expect(page.locator('table.summary')).toContainText('Intervalle médian')
 
-  // heading source (Photo tab, « Toute la sortie »): the camera's compass is detected; back to the track, then Ctrl+Z
-  await page.getByRole('tab', { name: 'Photo' }).click()
+  // heading source (step « Positions et sens », « Toute la sortie »): the camera's compass is detected; back to the track, then Ctrl+Z
+  await tab(page, 'Positions et sens').click()
   await page.locator('details[data-section="ride"] > summary').click()
   const source = page.getByRole('combobox', { name: 'Source du cap' })
   await expect(source).toHaveValue('device')

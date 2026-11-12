@@ -2,6 +2,7 @@ import { Dispatch, SetStateAction, useEffect, useRef } from 'react'
 import { api, PhotoDetail, PhotoRow, SeqState, Sequence, UndoState } from './api'
 import { t } from './i18n'
 import { Issue, issueText, issueDetail } from './issues'
+import type { StepTab } from './StepBar'
 
 // Shown in the help window (?): [key label, description]
 export const shortcutList = (): [string, string][] => [
@@ -17,6 +18,7 @@ export const shortcutList = (): [string, string][] => [
   ['[ / ]', t('sc.heading')],
   [t('key.nextIssue'), t('sc.nextIssue')],
   ['M', t('sc.positions')],
+  [t('key.tabs'), t('sc.tabs')],
   ['Ctrl+Z / Ctrl+Y', t('sc.undoRedo')],
   ['?', t('sc.help')],
 ]
@@ -54,6 +56,8 @@ export interface ShortcutsParams {
   carryCorrection: (from: PhotoRow, to: PhotoRow | undefined) => void
   focusOn: (c: Issue) => void
   excludeRange: (r: [number, number], n: number) => unknown
+  tabs: StepTab[] // tabs as shown: keys 1…n
+  setTab: (t: StepTab) => void
 }
 
 // Keyboard shortcuts of the project screen; one listener, reading the values of the last render
@@ -82,6 +86,10 @@ export function useShortcuts(params: ShortcutsParams) {
         setShowHelp((v) => !v)
       } else if (e.key === 'Escape' && showHelp) {
         setShowHelp(false)
+      } else if (/^[1-9]$/.test(e.key) && !e.altKey) {
+        const tab = latest.current.tabs[Number(e.key) - 1]
+        if (!tab) return
+        latest.current.setTab(tab)
       } else if (!photos.length) {
         return
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {

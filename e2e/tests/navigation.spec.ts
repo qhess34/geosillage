@@ -1,9 +1,10 @@
-import { expect, newProject, openProject, photoNumber, pickOnTimeline, test } from './helpers'
+import { expect, newProject, openProject, photoNumber, pickOnTimeline, tab, test } from './helpers'
 
 test('ouvrir un projet, barre d\'étapes, navigation au clavier et par la timeline', async ({ page, request }) => {
   await newProject(request, 'Navigation')
   await openProject(page, 'Navigation')
-  await expect(page.locator('.steps .step')).toHaveCount(7)
+  // the steps are the tabs (7), then the current photo, apart
+  await expect(page.getByRole('tab')).toHaveCount(8)
   await expect(page.locator('.step', { hasText: 'Import' })).toContainText('photos')
 
   const n = await pickOnTimeline(page, 0.5)
@@ -12,7 +13,8 @@ test('ouvrir un projet, barre d\'étapes, navigation au clavier et par la timeli
   await expect.poll(() => photoNumber(page)).toBe(n + 1)
   await page.keyboard.press('ArrowLeft')
   await expect.poll(() => photoNumber(page)).toBe(n)
-  // the Photo tab shows the heading and the camera orientation, explained
+  // the step « Positions et sens » shows the heading and the camera orientation, explained
+  await tab(page, 'Positions et sens').click()
   await expect(page.locator('summary', { hasText: /^Sens de déplacement et orientation$/ })).toBeVisible()
   await expect(page.locator('h4', { hasText: 'Cette photo : sens de déplacement' })).toBeVisible()
   await expect(page.locator('h4', { hasText: 'Cette photo : orientation de la caméra' })).toBeVisible()
@@ -43,15 +45,16 @@ test('langue : passer en anglais dans les réglages, vérifier des libellés, re
   await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toContainText('Previous / next photo')
   await page.keyboard.press('Escape')
   // project screen: tabs, empty sequences list, import dialog
-  await page.getByRole('tab', { name: /^Sequences/ }).click()
+  await tab(page, 'Sequences').click()
   await expect(page.getByText('No sequence. Create some from a range or the suggested cut.')).toBeVisible()
-  await page.getByRole('tab', { name: 'Photo' }).click()
+  await tab(page, 'Positions and direction').click()
   await expect(page.locator('summary', { hasText: 'Direction of travel and orientation' })).toBeVisible()
   await expect(page.locator('summary', { hasText: 'Whole ride' })).toBeVisible()
   // export tab, map legend and status bar (lot 3)
-  await page.getByRole('tab', { name: /^Export/ }).click()
-  await expect(page.getByRole('heading', { name: 'Publish on Panoramax' })).toBeVisible()
+  await tab(page, 'Export').click()
   await expect(page.getByRole('button', { name: 'Browse…' })).toBeVisible()
+  await tab(page, 'Upload').click()
+  await expect(page.getByRole('heading', { name: 'Publish on Panoramax' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Legend/ })).toBeVisible()
   await expect(page.locator('.statusbar')).toContainText('Last task: Thumbnails')
   await page.getByRole('button', { name: 'Import', exact: true }).click()
@@ -72,11 +75,11 @@ test('horloge décalée : le Bilan signale l\'écart et l\'export propose de cor
   // the simulated ride has capture times equal to UTC while the place is in UTC+2: a stable −2 h shift
   await newProject(request, 'Horloge')
   await openProject(page, 'Horloge')
-  await page.getByRole('tab', { name: 'Bilan' }).click()
+  await tab(page, 'Import').click()
   const row = page.locator('.summary tr', { hasText: "Horloge de l'appareil" })
   await expect(row).toContainText('−2 h 00 min 00 s')
   await expect(row).toContainText('+02:00')
-  await page.getByRole('tab', { name: /^Export/ }).click()
+  await tab(page, 'Export').click()
   await expect(page.getByLabel(/Corriger l'heure de prise de vue/)).toBeChecked()
 })
 
@@ -113,7 +116,7 @@ test('Début / Fin : infobulles explicites ; Bilan : ligne orange des exclues = 
   await pickOnTimeline(page, 0.5)
   await bar.getByRole('button', { name: /⏵ Début/ }).click()
   await expect(bar.getByRole('button', { name: /⏹ Fin/ })).toHaveAttribute('title', /coupe la sélection.*nouveau début/)
-  await page.getByRole('tab', { name: 'Bilan' }).click()
+  await tab(page, 'Import').click()
   const exc = page.locator('label', { hasText: 'Afficher les exclues' }).locator('input')
   await expect(exc).not.toBeChecked()
   await page.locator('.summary tr.warn', { hasText: 'Exclues' }).getByRole('button').click()
@@ -126,7 +129,7 @@ test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo rep
   for (const g of ['Projet', 'Édition', 'Mode']) await expect(page.getByRole('group', { name: g, exact: true })).toBeVisible()
   // Couper n'est plus dans la barre d'outils
   await expect(page.locator('.toolbar').getByRole('button', { name: /Couper/ })).toHaveCount(0)
-  await page.getByRole('tab', { name: 'Séquences' }).click()
+  await tab(page, 'Séquences').click()
   await expect(page.getByRole('button', { name: /✂ Couper/ })).toBeVisible()
   // Mode Positions : bascule + bandeau, Échap quitte
   const pos = page.locator('.toolbar').getByRole('button', { name: /Positions/ })
@@ -135,16 +138,17 @@ test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo rep
   await expect(page.locator('.mode-banner')).toContainText('Mode Positions actif')
   await page.keyboard.press('Escape')
   await expect(page.locator('.mode-banner')).toHaveCount(0)
-  // Onglet Photo : sections repliables, état gardé, plus de Début/Fin dans l'onglet
-  await page.getByRole('tab', { name: 'Photo' }).click()
+  // Onglet Photo : plus de Début/Fin ; sections repliables (étape Positions et sens), état gardé
+  await page.getByRole('tab', { name: 'Photo', exact: true }).click()
   await pickOnTimeline(page, 0.3)
   await expect(page.locator('.photo-panel').getByRole('button', { name: /⏵ Début/ })).toHaveCount(0)
+  await tab(page, 'Positions et sens').click()
   const sec = page.locator('details[data-section="position"]')
   await expect(sec).toHaveAttribute('open', '')
   await sec.locator('summary').click()
   await expect(sec).not.toHaveAttribute('open', '')
   await page.reload()
-  await page.getByRole('tab', { name: 'Photo' }).click()
+  await tab(page, 'Positions et sens').click()
   await expect(page.locator('details[data-section="position"]')).not.toHaveAttribute('open', '')
   void pid
 })
@@ -152,6 +156,7 @@ test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo rep
 test('Lot 3 : un seul endroit « Sens de déplacement et orientation » (toute la sortie en tête, photo dessous)', async ({ page, request }) => {
   await newProject(request, 'Lot 3')
   await openProject(page, 'Lot 3')
+  await tab(page, 'Positions et sens').click()
   // without a current photo: the whole-ride settings are reachable
   const travel = page.locator('details[data-section="travel"]')
   await expect(travel).toHaveAttribute('open', '')
@@ -167,9 +172,38 @@ test('Lot 3 : un seul endroit « Sens de déplacement et orientation » (toute l
   await expect(travel.locator('h4', { hasText: 'Cette photo : orientation de la caméra' })).toBeVisible()
   await expect(travel).toContainText("caméra à l'envers")
   // no longer in the Bilan nor in Séquences
-  await page.getByRole('tab', { name: 'Bilan' }).click()
+  await tab(page, 'Import').click()
   await expect(page.locator('.tab-body')).not.toContainText('Corriger le montage')
   await expect(page.getByRole('combobox', { name: 'Source du cap' })).toHaveCount(0)
-  await page.getByRole('tab', { name: 'Séquences' }).click()
+  await tab(page, 'Séquences').click()
   await expect(page.locator('.tab-body')).not.toContainText('Corriger le montage')
+})
+
+test('Lot 4 : les onglets sont les étapes ; listes « À corriger » dans l’onglet ; Photo à part ; touches 1…8', async ({ page, request }) => {
+  await newProject(request, 'Lot 4', { stop_m: 15, stop_min: 3 })
+  await openProject(page, 'Lot 4')
+  const labels = await page.locator('.steps .step .lab').allInnerTexts()
+  expect(labels).toEqual(['Import', 'Synchro', 'Doublons et arrêts', 'Positions et sens', 'Séquences', 'Export', 'Envoi'])
+  // state of the step on its tab; no other tab bar in the side panel
+  await expect(tab(page, 'Doublons et arrêts')).toContainText('arrêts à trier')
+  await expect(page.locator('.side [role="tablist"]')).toHaveCount(0)
+  // keys: 3 = Doublons et arrêts (its list), 8 = Photo, 1 = Import (statistics)
+  await page.keyboard.press('3')
+  await expect(tab(page, 'Doublons et arrêts')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('.tab-body .issues-list')).toContainText('Arrêts')
+  await page.keyboard.press('8')
+  await expect(page.getByRole('tab', { name: 'Photo', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await page.keyboard.press('1')
+  await expect(page.locator('table.summary')).toBeVisible()
+  // N: the card goes to the tab of the step of the point to check
+  await page.keyboard.press('n')
+  await expect(page.locator('.tab-body .check-card')).toBeVisible()
+  // Export and Envoi are two steps: publication in Envoi
+  await tab(page, 'Export').click()
+  await expect(page.getByRole('heading', { name: 'Publier sur Panoramax' })).toHaveCount(0)
+  await tab(page, 'Envoi').click()
+  await expect(page.getByRole('heading', { name: 'Publier sur Panoramax' })).toBeVisible()
+  // help lists the tab keys
+  await page.keyboard.press('?')
+  await expect(page.getByRole('dialog', { name: 'Raccourcis clavier' })).toContainText('Onglets')
 })

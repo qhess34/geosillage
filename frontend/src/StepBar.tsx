@@ -2,18 +2,19 @@ import { FLAGS, PhotoRow, Project, QualityIssue, Sequence } from './api'
 import { hasNoHeading, isPlaced, isUsable } from './issues'
 import { t, tp, useLang } from './i18n'
 
-// Progress of the ride, step by step: import → GPS delay (sync) → duplicates and stops → GPS correction → sequences → export → upload.
-// Computed from what the interface already has (photos, sequences, points to check); a click opens the right place.
-export type StepTab = 'photo' | 'sequences' | 'sync' | 'export' | 'send' | 'summary'
+// The only navigation of the project screen: the steps ARE the tabs of the side panel, in the order of the work
+// (import → GPS delay → duplicates and stops → positions and direction → sequences → export → upload), each with its
+// state (short subtitle, detail on hover); the current photo (viewer, details) is a tab apart, not a step.
+// A Panoramax project hides Sequences and Export (no cut, no export: the photos stay on the instance).
+export type StepTab = 'summary' | 'sync' | 'dups' | 'gps' | 'sequences' | 'export' | 'send' | 'photo'
 type State = 'ok' | 'warn' | 'todo'
 interface Step {
-  id: string
+  id: StepTab
   label: string
   state: State
   sub: string
   help: string
   detail?: string // shown on hover only, keeps the visible subtitle short
-  go: () => void
 }
 
 export default function StepBar({
@@ -23,8 +24,6 @@ export default function StepBar({
   quality,
   tab,
   onTab,
-  onIssues,
-  issueCounts,
 }: {
   project: Project
   photos: PhotoRow[]
@@ -32,9 +31,6 @@ export default function StepBar({
   quality: QualityIssue[]
   tab: StepTab
   onTab: (t: StepTab) => void
-  // steps with things to fix open their list (floating window over the map)
-  onIssues: (step: 'dups' | 'gps' | 'seq') => void
-  issueCounts: { dups: number; gps: number; seq: number }
 }) {
   useLang()
   const pnx = project.kind === 'panoramax'
@@ -43,12 +39,11 @@ export default function StepBar({
 
   // 1. Import
   steps.push({
-    id: 'import',
+    id: 'summary',
     label: pnx ? t('step.importPnx') : t('step.import'),
     state: photos.length ? 'ok' : 'todo',
     sub: photos.length ? (pnx ? `${tp('step.sequences', sequences.length)} · ${tp('step.photos', photos.length)}` : tp('step.photos', photos.length)) : t('step.import.none'),
     help: photos.length ? t('step.import.help') : t('step.import.helpNone'),
-    go: () => onTab('summary'),
   })
 
   // 2. GPS delay: photos placed on the track by the time synchronisation
@@ -60,7 +55,6 @@ export default function StepBar({
     // the offset is not shown: it can differ from one batch of photos to another (see the Synchro tab)
     sub: synced ? tp('step.photos', synced) : t('step.sync.none'),
     help: (synced ? tp('step.sync.done', synced) + t('step.sync.helpDone') : '') + t('step.sync.help'),
-    go: () => onTab('sync'),
   })
 
   // 3. Duplicates and stops: identical files are set aside on import; stops are sorted by hand
@@ -73,7 +67,6 @@ export default function StepBar({
     sub: stops.length ? t('step.dups.toSort', { stops: tp('step.stops', stops.length) }) : t('step.dups.noStop'),
     detail: dups ? t('step.detail.dupsSkipped', { n: dups }) : undefined,
     help: stops.length ? t('step.dups.helpStops') : t('step.dups.help'),
-    go: () => (issueCounts.dups ? onIssues('dups') : onTab('summary')),
   })
 
   // 4. GPS correction: positions, GPS jumps, points to check about positions and headings
@@ -94,14 +87,13 @@ export default function StepBar({
     sub: gpsParts.length ? tp('step.sub.toCheck', missing.length + jumps.length + noHeading.length + gpsPoints.length) : t('step.gps.none'),
     detail: gpsParts.length ? t('step.detail.gps', { parts: gpsParts.join(' · ') }) : undefined,
     help: t('step.gps.help') + (gpsParts.length ? t('step.gps.helpSome') : t('step.gps.helpNone')),
-    go: () => (issueCounts.gps ? onIssues('gps') : onTab('summary')),
   })
 
   if (!pnx) {
     // 5. Sequences
     const unclassified = usable.filter((p) => p.sequence_id == null)
     steps.push({
-      id: 'seq',
+      id: 'sequences',
       label: t('step.seq'),
       state: !sequences.length ? 'todo' : unclassified.length ? 'warn' : 'ok',
       sub: !sequences.length
@@ -111,7 +103,6 @@ export default function StepBar({
           : tp('step.sequences', sequences.length),
       detail: unclassified.length ? t('step.detail.seq', { n: unclassified.length }) : undefined,
       help: unclassified.length ? t('step.seq.helpUnclassified') : t('step.seq.help'),
-      go: () => (issueCounts.seq ? onIssues('seq') : onTab('sequences')),
     })
 
     // 6. Export
@@ -124,7 +115,6 @@ export default function StepBar({
       sub: tp('step.export.done', exported.length, { total: sequences.length }),
       detail: again.length ? t('step.detail.export', { n: again.length }) : undefined,
       help: t('step.export.help'),
-      go: () => onTab('export'),
     })
   }
 
@@ -140,7 +130,6 @@ export default function StepBar({
           state: changed.length ? 'warn' : 'ok',
           sub: changed.length ? tp('step.send.toSend', changed.length) : t('step.send.upToDate'),
           help: t('step.send.helpPnx'),
-          go: () => onTab('send'),
         }
       : {
           id: 'send',
@@ -149,19 +138,19 @@ export default function StepBar({
           sub: tp('step.send.published', published.length, { total: sequences.length }),
           detail: [changed.length && tp('step.send.changed', changed.length), failed.length && tp('step.send.failed', failed.length)].filter(Boolean).join(' · ') || undefined,
           help: t('step.send.help'),
-          go: () => onTab('export'),
         },
   )
 
-  const current: Record<string, string> = { sync: 'sync', sequences: 'seq', export: 'export', send: 'send' }
   return (
-    <nav className="steps" aria-label={t('steps.nav')}>
+    <nav className="steps" role="tablist" aria-label={t('steps.nav')}>
       {steps.map((s, i) => (
         <button
           key={s.id}
-          className={`step ${s.state}${current[tab] === s.id ? ' current' : ''}`}
+          role="tab"
+          aria-selected={tab === s.id}
+          className={`step ${s.state}${tab === s.id ? ' current' : ''}`}
           title={`${s.label} : ${s.sub}${s.detail ? `\n${s.detail}` : ''}\n${s.help}`}
-          onClick={s.go}
+          onClick={() => onTab(s.id)}
         >
           <span className="ico">{s.state === 'ok' ? '✓' : s.state === 'warn' ? '!' : i + 1}</span>
           <span className="txt">
@@ -170,6 +159,25 @@ export default function StepBar({
           </span>
         </button>
       ))}
+      {pnx && (
+        <span className="steps-note small-text muted" title={t('sum.pnxHidden')}>
+          {t('steps.pnxHidden')}
+        </span>
+      )}
+      <span className="steps-spacer" />
+      <button
+        role="tab"
+        aria-selected={tab === 'photo'}
+        className={`step photo-step${tab === 'photo' ? ' current' : ''}`}
+        title={t('steps.photoHelp')}
+        onClick={() => onTab('photo')}
+      >
+        {t('tab.photo')}
+      </button>
     </nav>
   )
 }
+
+// Tab order (keys 1…n) as shown for this project
+export const stepTabs = (pnx: boolean): StepTab[] =>
+  pnx ? ['summary', 'sync', 'dups', 'gps', 'send'] : ['summary', 'sync', 'dups', 'gps', 'sequences', 'export', 'send']
