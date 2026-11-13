@@ -221,6 +221,8 @@ par inertie : « L'avant est ici » appelle `stopAnimation()` avant de lire la d
 Positions ou Synchro, le zoom au double-clic de la carte est désactivé (sélectionner une photo puis saisir son
 marqueur faisait un double-clic) ; la carte ne se recentre que lorsque la photo sélectionnée change.
 
+**Carte** : le cadrage initial est un saut sans animation (`PhotoMap.tsx`, `opening`) ; ensuite, les déplacements de la sélection sont animés.
+
 ## Orientation (caméra sur casque, caméra à l'envers)
 
 `photo.yaw_offset` = lacet Panoramax, écrit dans `XMP-GPano:PoseHeadingDegrees` (modulo 360). Convention du viewer

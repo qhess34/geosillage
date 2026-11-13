@@ -176,6 +176,7 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
   const dragging = useRef(false)
   const ready = useRef(false)
   const fitted = useRef(false)
+  const opening = useRef(true) // until the first centring on the selected photo: jump, no animation
   const latest = useRef({ photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview, onContextMenu })
   latest.current = { photos, sequences, selectedId, range, editMode, sync, overlay, onSelect, onMove, onSyncOffset, snapPreview, onContextMenu }
 
@@ -579,7 +580,9 @@ export default function PhotoMap({ photos, sequences, basemap, selectedId, range
     if (follow && p && p.lat != null && p.lon != null) {
       // Follow: the selected photo stays in the centre; a short animation, interrupted by the next key press
       m.stop()
-      m.easeTo({ center: [p.lon, p.lat], duration: 180, easing: (t) => t })
+      if (opening.current) m.jumpTo({ center: [p.lon, p.lat] })
+      else m.easeTo({ center: [p.lon, p.lat], duration: 180, easing: (t) => t })
+      opening.current = false
     } else if (p && p.lat == null) {
       // Photo without a position (invisible on the map): frame the photos taken just before and after it
       const n = gapNeighbours(photos, selectedId)
