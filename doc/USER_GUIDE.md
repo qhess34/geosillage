@@ -407,7 +407,7 @@ removes it. This setting does not depend on sequences, which are only a split. O
 heading for all) and *Computed headings*. Manual headings are never overwritten; a manual heading next to a corrected position is marked
 « to review ».
 
-![Heading and position of a photo](images/en/07-cap.webp)
+![Direction of travel and orientation of a photo](images/en/07-cap.webp)
 *Positions and direction* tab: computed heading (with its offset if any), orientation of the photo relative to the direction of travel, final heading; original position and corrected position (here by the sync, 8 m).*
 
 ### Camera on a helmet

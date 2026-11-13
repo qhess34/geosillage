@@ -430,7 +430,7 @@ photos ; 0 le retire. Ce réglage ne dépend pas des séquences, qui ne sont qu'
 *Fixer* (même cap manuel pour toutes) et *Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
 « à revoir ».
 
-![Cap et position d'une photo](images/07-cap.webp)
+![Sens de déplacement et orientation d'une photo](images/07-cap.webp)
 *Onglet *Positions et sens* : cap calculé (avec son décalage éventuel), orientation de la photo par rapport au sens de déplacement, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
 
 ### Caméra sur casque

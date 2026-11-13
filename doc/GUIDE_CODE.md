@@ -217,7 +217,7 @@ exclues) et `stepIdx` fait sauter les exclues à ← →, Début/Fin et après `
 creux et permet d'y aller). La visionneuse signale sa
 direction (`onView`, événement `position-updated` de Photo Sphere Viewer) : la flèche de la photo sélectionnée sur
 la carte prend l'orientation cap + direction de vue (`viewAzimuth`). Après un glisser, Photo Sphere Viewer continue
-par inertie : « Fixer le sens de déplacement » appelle `stopAnimation()` avant de lire la direction. En mode
+par inertie : « L'avant est ici » appelle `stopAnimation()` avant de lire la direction. En mode
 Positions ou Synchro, le zoom au double-clic de la carte est désactivé (sélectionner une photo puis saisir son
 marqueur faisait un double-clic) ; la carte ne se recentre que lorsque la photo sélectionnée change.
 
@@ -237,7 +237,7 @@ ces balises ne sont pas touchées (ou reprennent leur valeur d'origine sur une s
 contient `_captured`, la liste des balises sauvegardées, pour ne pas effacer celles que les anciennes versions ne
 sauvegardaient pas).
 
-Visionneuse : `sphereCorrection` = orientation de la photo, pose XMP forcée à 0. « Fixer le sens de déplacement » :
+Visionneuse : `sphereCorrection` = orientation de la photo, pose XMP forcée à 0. « L'avant est ici » :
 la vue est dans le repère corrigé ; si l'on regarde la route à l'angle `y`, la nouvelle orientation vaut
 `orientation + y`. `GPSImgDirection` reste le sens de déplacement (le viewer Panoramax ouvre la photo en comparant
 ce cap à la direction vers la photo précédente). `POST …/headings/yaw` : `yaw` (valeur fixée) ou `add` (ajoutée à
