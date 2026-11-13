@@ -146,6 +146,7 @@ test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo rep
   await expect(sec).toHaveAttribute('open', '')
   await sec.locator('summary').click()
   await expect(sec).not.toHaveAttribute('open', '')
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('geosillage.photoSection.position'))).toBe('0')
   await page.reload()
   await tab(page, 'Positions et sens').click()
   await expect(page.locator('details[data-section="position"]')).not.toHaveAttribute('open', '')

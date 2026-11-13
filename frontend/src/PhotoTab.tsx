@@ -72,6 +72,7 @@ function Section({ id, title, help, defaultOpen = true, children }: { id: string
       open={open}
       onToggle={(e) => {
         const o = (e.currentTarget as HTMLDetailsElement).open
+        if (o === open) return // initial toggle event of a section rendered open: nothing changed, keep the stored state
         setOpen(o)
         try {
           localStorage.setItem(key, o ? '1' : '0')
