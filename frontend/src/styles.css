@@ -1174,16 +1174,6 @@ input.coord {
 .steps .warn .sub {
   color: #b45309;
 }
-/* the current photo: a tab apart, not a step */
-.steps .steps-spacer {
-  flex: 0 0 6px;
-  border-left: 1px solid var(--border);
-}
-.steps .step.photo-step {
-  flex: none;
-  font-weight: 600;
-  padding: 3px 12px;
-}
 .steps .steps-note {
   flex: 0 1 auto;
   align-self: center;
@@ -1740,9 +1730,6 @@ a.button-link:hover {
   }
   .steps .step {
     padding: 3px 5px;
-  }
-  .steps .step.photo-step {
-    padding: 3px 8px;
   }
   .steps .ok .lab::before {
     content: '✓ ';

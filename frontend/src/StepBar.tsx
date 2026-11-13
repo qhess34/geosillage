@@ -4,9 +4,9 @@ import { t, tp, useLang } from './i18n'
 
 // The only navigation of the project screen: the steps ARE the tabs of the side panel, in the order of the work
 // (import → GPS delay → duplicates and stops → positions and direction → sequences → export → upload), each with its
-// state (short subtitle, detail on hover); the current photo (viewer, details) is a tab apart, not a step.
+// state (short subtitle, detail on hover).
 // A Panoramax project hides Sequences and Export (no cut, no export: the photos stay on the instance).
-export type StepTab = 'summary' | 'sync' | 'dups' | 'gps' | 'sequences' | 'export' | 'send' | 'photo'
+export type StepTab = 'summary' | 'sync' | 'dups' | 'gps' | 'sequences' | 'export' | 'send'
 type State = 'ok' | 'warn' | 'todo'
 interface Step {
   id: StepTab
@@ -164,16 +164,6 @@ export default function StepBar({
           {t('steps.pnxHidden')}
         </span>
       )}
-      <span className="steps-spacer" />
-      <button
-        role="tab"
-        aria-selected={tab === 'photo'}
-        className={`step photo-step${tab === 'photo' ? ' current' : ''}`}
-        title={t('steps.photoHelp')}
-        onClick={() => onTab('photo')}
-      >
-        {t('tab.photo')}
-      </button>
     </nav>
   )
 }

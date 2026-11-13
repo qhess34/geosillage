@@ -3,8 +3,8 @@ import { expect, newProject, openProject, photoNumber, pickOnTimeline, tab, test
 test('ouvrir un projet, barre d\'étapes, navigation au clavier et par la timeline', async ({ page, request }) => {
   await newProject(request, 'Navigation')
   await openProject(page, 'Navigation')
-  // the steps are the tabs (7), then the current photo, apart
-  await expect(page.getByRole('tab')).toHaveCount(8)
+  // the steps are the only tabs (7)
+  await expect(page.getByRole('tab')).toHaveCount(7)
   await expect(page.locator('.step', { hasText: 'Import' })).toContainText('photos')
 
   const n = await pickOnTimeline(page, 0.5)
@@ -138,11 +138,10 @@ test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo rep
   await expect(page.locator('.mode-banner')).toContainText('Mode Positions actif')
   await page.keyboard.press('Escape')
   await expect(page.locator('.mode-banner')).toHaveCount(0)
-  // Onglet Photo : plus de Début/Fin ; sections repliables (étape Positions et sens), état gardé
-  await page.getByRole('tab', { name: 'Photo', exact: true }).click()
+  // Onglet Positions et sens : plus de Début/Fin ; sections repliables, état gardé
+  await tab(page, 'Positions et sens').click()
   await pickOnTimeline(page, 0.3)
   await expect(page.locator('.photo-panel').getByRole('button', { name: /⏵ Début/ })).toHaveCount(0)
-  await tab(page, 'Positions et sens').click()
   const sec = page.locator('details[data-section="position"]')
   await expect(sec).toHaveAttribute('open', '')
   await sec.locator('summary').click()
@@ -179,7 +178,7 @@ test('Lot 3 : un seul endroit « Sens de déplacement et orientation » (toute l
   await expect(page.locator('.tab-body')).not.toContainText('Corriger le montage')
 })
 
-test('Lot 4 : les onglets sont les étapes ; listes « À corriger » dans l’onglet ; Photo à part ; touches 1…8', async ({ page, request }) => {
+test('Lot 4 : les onglets sont les étapes ; listes « À corriger » dans l’onglet ; touches 1…7', async ({ page, request }) => {
   await newProject(request, 'Lot 4', { stop_m: 15, stop_min: 3 })
   await openProject(page, 'Lot 4')
   const labels = await page.locator('.steps .step .lab').allInnerTexts()
@@ -187,12 +186,12 @@ test('Lot 4 : les onglets sont les étapes ; listes « À corriger » dans l’o
   // state of the step on its tab; no other tab bar in the side panel
   await expect(tab(page, 'Doublons et arrêts')).toContainText('arrêts à trier')
   await expect(page.locator('.side [role="tablist"]')).toHaveCount(0)
-  // keys: 3 = Doublons et arrêts (its list), 8 = Photo, 1 = Import (statistics)
+  // keys: 3 = Doublons et arrêts (its list), 8 = nothing, 1 = Import (statistics)
   await page.keyboard.press('3')
   await expect(tab(page, 'Doublons et arrêts')).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('.tab-body .issues-list')).toContainText('Arrêts')
   await page.keyboard.press('8')
-  await expect(page.getByRole('tab', { name: 'Photo', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await expect(tab(page, 'Doublons et arrêts')).toHaveAttribute('aria-selected', 'true')
   await page.keyboard.press('1')
   await expect(page.locator('table.summary')).toBeVisible()
   // N: the card goes to the tab of the step of the point to check
@@ -206,4 +205,27 @@ test('Lot 4 : les onglets sont les étapes ; listes « À corriger » dans l’o
   // help lists the tab keys
   await page.keyboard.press('?')
   await expect(page.getByRole('dialog', { name: 'Raccourcis clavier' })).toContainText('Onglets')
+})
+
+test('Positions et sens = onglet de la photo courante ; cliquer une photo ne change pas d’étape', async ({ page, request }) => {
+  await newProject(request, 'Fusion photo')
+  await openProject(page, 'Fusion photo')
+  await expect(page.getByRole('tab', { name: 'Photo', exact: true })).toHaveCount(0)
+  await tab(page, 'Positions et sens').click()
+  await pickOnTimeline(page, 0.4)
+  const panel = page.locator('.tab-body')
+  // order: header (n / N, exclude), then the sections of the ride and of this photo
+  await expect(panel.getByRole('button', { name: /^Exclure/ })).toBeVisible()
+  await expect(panel.locator('details[data-section="ride"]')).toBeVisible()
+  await expect(panel.locator('details[data-section="travel"]')).toBeVisible()
+  await expect(panel.locator('details[data-section="position"]')).toBeVisible()
+  const order = await panel.locator('details.photo-section[data-section]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.section))
+  expect(order.indexOf('ride')).toBeLessThan(order.indexOf('travel'))
+  // from another step, picking a photo stays on that step
+  await tab(page, 'Séquences').click()
+  await page.locator('canvas.timeline').click({ position: { x: 300, y: 30 } })
+  await expect(tab(page, 'Séquences')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('details[data-section="travel"]')).toHaveCount(0)
+  await tab(page, 'Positions et sens').click()
+  await expect.poll(() => photoNumber(page)).toBeGreaterThan(0)
 })

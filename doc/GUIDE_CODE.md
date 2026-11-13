@@ -455,9 +455,9 @@ Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`)
 ## Onglets-étapes
 
 `StepBar.tsx`, sous la barre d'outils : **seule navigation** (`role="tablist"`), les étapes sont les onglets du
-panneau droit (`StepTab` : `summary` = Import/statistiques, `sync`, `dups`, `gps`, `sequences`, `export`, `send`) ; `photo`
-(visionneuse, infos : `PhotoTab part="photo"`) est un onglet à part, hors étapes. `stepTabs(pnx)` donne l'ordre (touches
-`1`…`8` de `shortcuts.ts`) ; projet Panoramax : `sequences` et `export` masqués (mention `steps.pnxHidden`). États calculés côté interface à partir de ce qui est déjà chargé (`photos`,
+panneau droit (`StepTab` : `summary` = Import/statistiques, `sync`, `dups`, `gps`, `sequences`, `export`, `send`) ; plus d'onglet
+« Photo ». `stepTabs(pnx)` donne l'ordre (touches
+`1`…`7` de `shortcuts.ts`) ; projet Panoramax : `sequences` et `export` masqués (mention `steps.pnxHidden`). États calculés côté interface à partir de ce qui est déjà chargé (`photos`,
 `sequences`, `project.summary`, points à vérifier `quality`), sans route dédiée. Étapes dans l'ordre de travail :
 import, synchro (photos `pos_method = 'time'`, décalage `sync_offset_s` de `GET /api/projects/{id}`, méta
 `last_time_offset`), doublons et arrêts (`quality` `stop`), « Positions et sens » (`step.gps` ; photos sans position, `GPS_JUMP` sans `pos_method`,
@@ -465,7 +465,7 @@ autres points de `quality`), séquences (photos utilisables non classées), expo
 envoi (`last_publication`, `changed_since_publication`) ; sous-titres courts (nombre seul), détail dans `detail` (infobulle) ; `Tips.tsx` : bandeau du premier lancement (`localStorage` `pss-tips-seen`) ; `SummaryTab` : lignes orange = liens (`links`) vers les listes `À corriger` ; projet Panoramax : sans séquences ni export. États
 `ok` / `warn` / `todo` ; `onTab` ouvre l'onglet ; sous 1150 px, pastilles masquées (CSS). Contenu (`ProjectView`) :
 `dups` / `gps` / `sequences` commencent par `issuesOf(step)` (encadré `CheckCard` du point en cours s'il est de
-l'étape, puis `IssuesPanel`) ; `gps` ajoute `PhotoTab part="travel"` (visionneuse, `TravelSection`, *Position*) ;
+l'étape, puis `IssuesPanel`) ; `gps` est l'onglet de la photo courante : `PhotoTab issues={issuesOf('gps')}` (en-tête : visionneuse, n/N, exclure, infos ; puis `issues`, `TravelSection` = réglages de la sortie + sens/orientation, *Position* ; sans photo : liste + `TravelSection`) ; un clic sur une photo ne change jamais d'onglet ; un ancien onglet enregistré `photo` ouvre `gps` ;
 `send` = `SendTab` (projet Panoramax) ou `PublishTab` (sortie). `.workspace` est
 une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des tâches).
 
