@@ -124,8 +124,10 @@ test('Début / Fin : infobulles explicites ; Bilan : ligne orange des exclues = 
 })
 
 test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo repliables, Couper dans Séquences', async ({ page, request }) => {
-  const pid = await newProject(request, 'Lot 2')
-  await openProject(page, 'Lot 2')
+  // nom unique : un nouvel essai ne retrouve pas le projet de l'essai précédent
+  const name = `Lot 2 ${Date.now()}`
+  const pid = await newProject(request, name)
+  await openProject(page, name)
   for (const g of ['Projet', 'Édition', 'Mode']) await expect(page.getByRole('group', { name: g, exact: true })).toBeVisible()
   // Couper n'est plus dans la barre d'outils
   await expect(page.locator('.toolbar').getByRole('button', { name: /Couper/ })).toHaveCount(0)
@@ -147,6 +149,8 @@ test('Lot 2 : barre d’outils en groupes, bandeau Positions, sections Photo rep
   await expect(sec).toHaveAttribute('open', '')
   await sec.locator('summary').click()
   await expect(sec).not.toHaveAttribute('open', '')
+  // l'événement toggle (écriture de localStorage) est asynchrone : attendre avant le rechargement
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('geosillage.photoSection.position'))).toBe('0')
   await page.reload()
   await tab(page, 'Positions et sens').click()
   await expect(page.locator('details[data-section="position"]')).not.toHaveAttribute('open', '')
