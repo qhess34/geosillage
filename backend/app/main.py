@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field, ValidationError
 
 from . import config, db, exporter, i18n, importer, jobs, panoramax, routes_edit, routes_publish, undo
@@ -29,6 +30,7 @@ async def lifespan(app):
 
 app = FastAPI(title="GeoSillage", lifespan=lifespan)
 app.add_middleware(i18n.LangMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # large JSON lists (photos) ; API stays on 127.0.0.1
 app.include_router(routes_edit.router)
 app.include_router(routes_publish.router)
 

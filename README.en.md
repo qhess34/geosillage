@@ -51,14 +51,15 @@ are then saved and “Restore source photos” puts them back.
 
 ## Preparing a ride in brief
 
-1. **Import** the folders of the ride; the summary (GPS anomalies, duplicates, interruptions) is in *Summary*.
-2. **Split** into sequences while browsing the photos (← →): `D` start, `F` end (the next one starts right away),
-   `C` cut, `X` exclude; or use the automatic suggested split.
-3. **Correct the GPS delay** (*Sync*): drag a photo along the track on the satellite view.
-4. **Correct the positions** (`M`): drag the point; `→` carries the same correction over to the following photos.
-5. **Check headings and orientation**: direction of travel for a helmet camera, correction of the mounting.
-6. **Export** one folder per sequence (`<project>_1`, `_2`…) with corrected EXIF; re-export what has changed.
-7. Publish each folder on Panoramax as a single sequence.
+One tab per step (bar above the right-hand panel):
+
+1. **Import**: import the folders of the ride; the summary (GPS anomalies, duplicates, interruptions) is shown there.
+2. **Sync (GPS delay)**: drag a photo along the track on the satellite view.
+3. **Duplicates and stops**: go through the points to check (duplicates, stops, large gaps, doubtful headings).
+4. **Positions and direction**: correct the positions (`M`; `→` carries the correction over to the following photos); direction of travel for a helmet camera, mounting correction.
+5. **Sequences**: split while browsing the photos (← →): `D` start, `F` end (the next one starts right away), `C` cut, `X` exclude; or use the automatic suggested split.
+6. **Export**: one folder per sequence (`<project>_1`, `_2`…) with corrected EXIF; re-export what has changed.
+7. **Upload**: publish each folder on Panoramax as a single sequence.
 
 Everything can be undone (`Ctrl+Z`); `?` shows the keyboard shortcuts. Details: [user guide](doc/USER_GUIDE.md).
 

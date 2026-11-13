@@ -51,14 +51,15 @@ par séquence ; les valeurs d'origine sont alors sauvegardées et « Restaurer l
 
 ## Préparer une sortie en bref
 
-1. **Importer** les dossiers de la sortie ; le bilan (anomalies GPS, doublons, interruptions) est dans *Bilan*.
-2. **Découper** en séquences en parcourant les photos (← →) : `D` début, `F` fin (la suivante commence aussitôt),
-   `C` couper, `X` exclure ; ou découpage proposé automatiquement.
-3. **Corriger le retard GPS** (*Synchro*) : glisser une photo le long de la trace sur la vue satellite.
-4. **Corriger les positions** (`M`) : glisser le point ; `→` reporte la même correction sur les suivantes.
-5. **Vérifier caps et orientation** : sens de déplacement pour une caméra sur casque, correction du montage.
-6. **Exporter** un dossier par séquence (`<projet>_1`, `_2`…) avec EXIF corrigés ; réexporter ce qui a changé.
-7. Publier chaque dossier sur Panoramax comme une seule séquence.
+Un onglet par étape (barre au-dessus du panneau droit) :
+
+1. **Import** : importer les dossiers de la sortie ; le bilan (anomalies GPS, doublons, interruptions) s'y affiche.
+2. **Synchro (retard GPS)** : glisser une photo le long de la trace sur la vue satellite.
+3. **Doublons et arrêts** : traiter les points à vérifier (doublons, arrêts, grands écarts, caps douteux).
+4. **Positions et sens** : corriger les positions (`M` ; `→` reporte la correction sur les suivantes) ; sens de déplacement pour une caméra sur casque, correction du montage.
+5. **Séquences** : découper en parcourant les photos (← →) : `D` début, `F` fin (la suivante commence aussitôt), `C` couper, `X` exclure ; ou découpage proposé automatiquement.
+6. **Export** : un dossier par séquence (`<projet>_1`, `_2`…) avec EXIF corrigés ; réexporter ce qui a changé.
+7. **Envoi** : publier chaque dossier sur Panoramax comme une seule séquence.
 
 Tout est annulable (`Ctrl+Z`) ; `?` affiche les raccourcis. Détails : [guide d'utilisation](doc/GUIDE_UTILISATEUR.md).
 
