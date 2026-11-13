@@ -5,7 +5,7 @@ import { Issue, issueText, issueDetail, missingEdgeFix } from './issues'
 
 export type CheckAction = 'interpolate' | 'clear-headings' | 'ignore-headings' | 'create-sequence' | 'exclude'
 
-// Card on top of the Photo tab: what is wrong on these photos (cause), how to fix it, the useful actions. When the
+// Card on top of the tab of the issue's step: what is wrong on these photos (cause), how to fix it, the useful actions. When the
 // issue is no longer in the list (fixed: interpolated, heading restored, sequence created… or ignored), it says so.
 export default function CheckCard({
   issue,

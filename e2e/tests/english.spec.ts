@@ -1,4 +1,4 @@
-import { expect, newProject, openProject, pickOnTimeline, test } from './helpers'
+import { expect, newProject, openProject, pickOnTimeline, tab, test } from './helpers'
 
 test.use({ locale: 'en-GB' })
 
@@ -9,6 +9,6 @@ test('default sequence name is shown in English', async ({ page, request }) => {
   await page.keyboard.press('d')
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight')
   await page.keyboard.press('f')
-  await page.locator('.tab', { hasText: 'Sequences' }).click()
+  await tab(page, 'Sequences').click()
   await expect(page.locator('.seq-name').first()).toHaveText('Sequence 1')
 })

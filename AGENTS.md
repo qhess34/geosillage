@@ -21,20 +21,20 @@ Serveur : `backend/app/` — `main.py` (projets, photos, import, fichiers, sert 
 `jobs.py` (SQLite + migrations, journal, tâches), `exporter.py` + `exif/`, `panoramax.py` + `routes_publish.py`.
 Tests : `backend/tests/` (photos simulées par `tools/make_samples.py`), `e2e/tests/` (Playwright).
 Interface : `frontend/src/ProjectView.tsx` (écran principal) + `shortcuts.ts`, `useIssues.ts`, `contextMenuItems.ts`,
-`PhotoTab`, `SummaryTab`, `ProjectDialogs`, `JobBar`, `PhotoMap`, `Timeline`, `Viewer360`, `api.ts`.
+`StepBar` (onglets = étapes), `PhotoTab`, `SummaryTab`, `ProjectDialogs`, `JobBar`, `PhotoMap`, `Timeline`, `Viewer360`, `api.ts`.
 
 | Fonction | Serveur | Interface (tests) |
 |---|---|---|
 | Import | `importer.py`, `main.py` | `ImportDialog`, `FsBrowser` (`test_import`, e2e `files`) |
 | Séquences, exclusion, annuler | `core/sequences.py`, `undo.py`, `routes_edit.py` | `SequencesTab`, `shortcuts.ts` (e2e `edits`) |
-| Raccourcis, menu contextuel | — | `shortcuts.ts`, `contextMenuItems.ts`, `HelpDialog` (e2e `navigation`) |
+| Onglets-étapes, raccourcis, menu contextuel | — | `StepBar`, `shortcuts.ts`, `contextMenuItems.ts`, `HelpDialog` (e2e `navigation`) |
 | Synchro (retard GPS), GPX | `core/timesync.py`, `core/gpx.py` | `SyncTab`, `Gpx.tsx` (`test_timesync`, `test_gpx`) |
 | Positions, recalage OSM | `core/positions.py`, `core/osm.py` | `PhotoTab`, `OsmSnapPanel` (`test_positions_sources`, `test_osm`) |
 | Caps et orientation | `core/headings.py` | `PhotoTab` (`TravelSection`), `RideSettings`, `HeadingDial`, `YawRotate` (`test_headings`) |
-| Points à vérifier, arrêts | `core/quality.py`, `core/analysis.py` | `issues.ts`, `IssuesPanel`, `StopRangeEditor` (`test_quality`, e2e `issues`) |
+| Points à vérifier, arrêts | `core/quality.py`, `core/analysis.py` | `issues.ts`, `IssuesPanel` (liste en tête de l'onglet-étape), `StopRangeEditor` (`test_quality`, e2e `issues`) |
 | Réglages | `config.DEFAULT_SETTINGS`, `main.SettingsIn` | `SettingsDialog` |
 | Export, EXIF | `exporter.py`, `exif/` | `ExportTab` (`test_export`) |
-| Publication / projet Panoramax | `panoramax.py`, `routes_publish.py` | `Publication`, `SendTab`, `PublishedEdit` (`test_publish`) |
+| Publication / projet Panoramax | `panoramax.py`, `routes_publish.py` | `Publication`, `PublishTab`, `SendTab`, `PublishedEdit` (`test_publish`) |
 | Carte, fonds, surcouche | — | `PhotoMap`, `basemaps.ts`, `panoramaxLayer.ts`, `MapLegend` |
 
 Vérifications : `tools/check.sh [back|front|e2e|all]` (voir plus bas). Captures du guide : `tools/captures.sh`

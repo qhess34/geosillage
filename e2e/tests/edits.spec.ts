@@ -1,4 +1,4 @@
-import { expect, newProject, openProject, photoNumber, pickOnTimeline, rows, test } from './helpers'
+import { expect, newProject, openProject, photoNumber, pickOnTimeline, rows, tab, test } from './helpers'
 
 test('séquence créée avec D puis F, annulée avec Ctrl+Z', async ({ page, request }) => {
   const pid = await newProject(request, 'Séquences')
@@ -7,10 +7,11 @@ test('séquence créée avec D puis F, annulée avec Ctrl+Z', async ({ page, req
   await page.keyboard.press('d')
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight')
   await page.keyboard.press('f')
-  await expect(page.locator('.tab', { hasText: 'Séquences' }).locator('.count')).toHaveText('1')
+  await tab(page, 'Séquences').click()
+  await expect(page.locator('.tab-body .seq-name')).toHaveCount(1)
   expect((await rows(request, pid)).filter((r) => r.sequence_id != null).length).toBe(11)
   await page.keyboard.press('Control+z')
-  await expect(page.locator('.tab', { hasText: 'Séquences' }).locator('.count')).toHaveText('0')
+  await expect(page.locator('.tab-body .seq-name')).toHaveCount(0)
 })
 
 test('exclusion avec X', async ({ page, request }) => {

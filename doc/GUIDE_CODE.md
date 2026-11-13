@@ -22,7 +22,7 @@ cette carte :
 - `exif/writer.py` : écriture ExifTool (cap, position), lecture/restauration des balises d'origine, règle « cap 0 » Panoramax
 - `core/geo.py` : géodésie WGS84 (pyproj.Geod) : distance, azimut, longueur de trace
 - `frontend/src/main.tsx` : routage (`#/p/<id>`), thème clair/sombre/auto
-- `ProjectList.tsx` : création, ouverture, suppression (avec confirmation) des projets ; `StepBar.tsx` : barre d'étapes
+- `ProjectList.tsx` : création, ouverture, suppression (avec confirmation) des projets ; `StepBar.tsx` : onglets-étapes (seule navigation)
 - `FolderPicker.tsx` : choix d'un dossier local ; `PhotoViewer.tsx` : visionneuse plate pleine définition
 - `timesync.ts` : miroir JS de `core/timesync.py` pour l'aperçu en direct (positionAt, snap)
 - `tools/make_samples.py` : générateur de sorties GoPro MAX simulées + vérité terrain
@@ -117,7 +117,7 @@ caméra ne bouge jamais reste `uncertain`.
 Source du cap automatique : `meta.heading_source` (`headings.get_source`, défaut `track`). `device` : `heading_auto`
 = `heading_exif` (boussole de l'appareil) quand il existe, sinon le cap calculé. Choisi au premier import
 (`importer`, `headings.detect_source` : `GPSImgDirection` sur au moins la moitié des photos, pas tout à 0, au moins
-deux valeurs entières différentes), puis par `PUT …/headings/source` (onglet Photo › *Toute la sortie*, ⚙ Réglages : `HeadingSource.tsx`).
+deux valeurs entières différentes), puis par `PUT …/headings/source` (onglet Positions et sens › *Toute la sortie*, ⚙ Réglages : `HeadingSource.tsx`).
 Annulable : `undo.META_KEYS` journalise ces clés de `meta` (`meta_before` / `meta_after`, toutes les séquences
 marquées modifiées).
 
@@ -135,7 +135,7 @@ emprise). Overpass refuse les clients anonymes (406) : `User-Agent` avec lien de
 `none`. Renvoie aussi, pour chaque photo, sa projection sur chaque voie candidate (aperçu dans l'interface).
 **Routes** : `POST …/osm/snap/propose` (rien n'est modifié ; `manual_ids` : photos placées à la main) et
 `POST …/osm/snap/apply` (segments choisis → projection, `pos_method = 'osm'`, une opération annulable ; photos
-`manual` épargnées si `keep_manual`). **Interface** : `OsmSnapPanel.tsx` (au-dessus de l'onglet Photo, amené à
+`manual` épargnées si `keep_manual`). **Interface** : `OsmSnapPanel.tsx` (fenêtre flottante sur la carte, amenée à
 l'écran à l'ouverture ; ouvert par le menu contextuel `ContextMenu.tsx` : clic droit sur la carte (`PhotoMap.onContextMenu`), la
 timeline (`Timeline.onContextMenu`) ou une séquence (`SequencesTab.onSeqContext`) ; `photosContext` prend la
 sélection si la photo cliquée en fait partie, sinon la photo ; le menu propose aussi « Créer une séquence » si
@@ -244,7 +244,7 @@ ce cap à la direction vers la photo précédente). `POST …/headings/yaw` : `y
 chaque photo : caméra à l'envers = 180°), sur des photos, une plage, une séquence (`sequence_id`) ou tout le projet
 (`all`). Interface : `YawRotate.tsx` (correction du montage de la caméra sur le casque : angle libre,
 `localStorage['pss-yaw-angle']`, « ↻ Corriger le montage » = `add`, jamais `yaw` qui effacerait les angles de tête)
-pour tout le projet (*Toute la sortie*) et la plage de l'onglet Photo.
+pour tout le projet (*Toute la sortie*) et la plage de l'onglet Positions et sens.
 
 **Photos plates** (`photo.is_360 = 0`) : `yaw_offset` = direction de la caméra par rapport au sens de déplacement.
 `headings.written` donne le `GPSImgDirection` écrit : cap + lacet si la source est `track` (ou photo sans boussole), cap seul en `device`
@@ -341,7 +341,7 @@ atomique) ; `GET /api/panoramax` ne renvoie jamais le jeton (décision : pas de 
 Docker). **Publication** (tâche `publish`) : par séquence, fichiers du dernier export (`report.items` : photo →
 fichier exporté, écrit par `exporter.run` ; un export plus ancien sans cette liste, ou une séquence « à
 réexporter », est réexporté d'abord avec les mêmes réglages) ; `POST /api/upload_sets` (`title`, `no_split`,
-`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans la section « Publier sur Panoramax » de l'onglet Export et envoi (`Publication.tsx` : `usePublishOptions`,
+`no_deduplication`, `sort_method: time-asc`, `estimated_nb_files`, `visibility`, `semantics` choisies dans la section « Publier sur Panoramax » de l'onglet Envoi (`PublishTab.tsx`, `Publication.tsx` : `usePublishOptions`,
 `PublishOptionsPanel` avec « Publier les n séquences exportées non publiées » en un seul `api.publish(ids)`, bouton
 `PublishButton` sur chaque séquence exportée) (`transport` walk / bike / car comme sur le site
 Panoramax, plus attributs libres `clé=valeur` ; validées par `normalize_semantics`, absentes si aucune ; les
@@ -387,8 +387,8 @@ tangage/roulis, que le viewer n'applique pas : 0,01 proposé). Images : miniatur
 relaie `sd.jpg` (`?hd=1` : `hd.jpg`, lien « Original »), avec le jeton pour les séquences privées. Garde
 `routes_edit.ride_only` (409) sur l'import, la vérification des fichiers, la création / découpe / fusion /
 limites / suppression de séquences, l'export, le réexport, les sources et la publication. Interface : `isPnx` dans
-`ProjectView` (pas d'*Importer*, de *Couper*, de *Début/Fin* ni des touches D/F/C ; onglet *Envoyer* =
-`SendTab.tsx`), `SequencesTab` (`pnx`), `NewPanoramaxProject.tsx` (accueil), `PnxConnection` (dans
+`ProjectView` (pas d'*Importer*, de *Couper*, de *Début/Fin* ni des touches D/F/C ; onglet-étape *Envoi* =
+`SendTab.tsx` ; onglets *Séquences* et *Export* masqués), `NewPanoramaxProject.tsx` (accueil), `PnxConnection` (dans
 `Publication.tsx`, partagé). Tests : `test_publish.py` (`FakeAccount`).
 
 ## Réexport
@@ -452,15 +452,21 @@ Si la photo suivante est cohérente avec la référence, c'est un saut isolé : 
 Sinon c'est un décalage durable : la photo est signalée une fois et devient la référence.
 Seuils modifiables par projet (`PATCH /api/projects/{id}` `{"settings": {...}}`).
 
-## Barre d'étapes
+## Onglets-étapes
 
-`StepBar.tsx`, sous la barre d'outils : calculée côté interface à partir de ce qui est déjà chargé (`photos`,
+`StepBar.tsx`, sous la barre d'outils : **seule navigation** (`role="tablist"`), les étapes sont les onglets du
+panneau droit (`StepTab` : `summary` = Import/statistiques, `sync`, `dups`, `gps`, `sequences`, `export`, `send`) ; `photo`
+(visionneuse, infos : `PhotoTab part="photo"`) est un onglet à part, hors étapes. `stepTabs(pnx)` donne l'ordre (touches
+`1`…`8` de `shortcuts.ts`) ; projet Panoramax : `sequences` et `export` masqués (mention `steps.pnxHidden`). États calculés côté interface à partir de ce qui est déjà chargé (`photos`,
 `sequences`, `project.summary`, points à vérifier `quality`), sans route dédiée. Étapes dans l'ordre de travail :
 import, synchro (photos `pos_method = 'time'`, décalage `sync_offset_s` de `GET /api/projects/{id}`, méta
 `last_time_offset`), doublons et arrêts (`quality` `stop`), « Positions et sens » (`step.gps` ; photos sans position, `GPS_JUMP` sans `pos_method`,
 autres points de `quality`), séquences (photos utilisables non classées), export (`last_export`, `needs_export`),
 envoi (`last_publication`, `changed_since_publication`) ; sous-titres courts (nombre seul), détail dans `detail` (infobulle) ; `Tips.tsx` : bandeau du premier lancement (`localStorage` `pss-tips-seen`) ; `SummaryTab` : lignes orange = liens (`links`) vers les listes `À corriger` ; projet Panoramax : sans séquences ni export. États
-`ok` / `warn` / `todo` ; `onTab` ouvre un onglet, `onShow` sélectionne des photos (onglet Photo). `.workspace` est
+`ok` / `warn` / `todo` ; `onTab` ouvre l'onglet ; sous 1150 px, pastilles masquées (CSS). Contenu (`ProjectView`) :
+`dups` / `gps` / `sequences` commencent par `issuesOf(step)` (encadré `CheckCard` du point en cours s'il est de
+l'étape, puis `IssuesPanel`) ; `gps` ajoute `PhotoTab part="travel"` (visionneuse, `TravelSection`, *Position*) ;
+`send` = `SendTab` (projet Panoramax) ou `PublishTab` (sortie). `.workspace` est
 une colonne flex (barre d'outils, étapes, bandeau d'erreur, `.main`, barre des tâches).
 
 ## Langues de l'interface (i18n)
@@ -495,13 +501,12 @@ Mécanisme maison, sans dépendance, dans `frontend/src/i18n/` : `fr.ts` (réfé
   photos non classées, triés par index.
   `issues.ts` : type `Issue` (`kind`, `start`, `end`, `count`, `detail` du backend, `meters`), `computeIssues`, la
   table unique des textes `ISSUE_TEXT` (titre, nom, cause, correction), prédicats partagés `isUsable` / `isPlaced`.
-  `focusOn` y va et l'explique dans `CheckCard.tsx` (haut de l'onglet Photo : précision, cause, correction, actions ;
+  `focusOn` y va, ouvre l'onglet de son étape (`stepOf(kind)`) et l'explique dans `CheckCard.tsx` (haut de l'onglet : précision, cause, correction, actions ;
   `fixIssue` pour les actions, exclusion confirmée) ; le point est recherché dans la liste à chaque rendu : disparu =
   « Corrigé ✓ ». `focusFirst(kinds)` sert à l'étape *Correction GPS* ; l'encadré est retiré quand la photo courante
   sort de `start..end`.
-  `IssuesPanel.tsx` : fenêtre flottante (`useDraggable`, partagé avec `OsmSnapPanel`) des problèmes d'une étape
-  (`STEP_KINDS`), groupés avec cause et correction (`ISSUE_TEXT`) ; ouverte par la `StepBar` (`onIssues`) ; plus de
-  listes de corrections dans le *Bilan*.
+  `IssuesPanel.tsx` : liste *À corriger* d'une étape (`STEP_KINDS`), en tête de son onglet (plus de fenêtre
+  flottante), groupée avec cause et correction (`ISSUE_TEXT`) ; plus de listes de corrections dans l'onglet Import.
 - `MapLegend.tsx` (repliée par défaut, `localStorage` `pss-legend`, avec les classes d'âge de la couverture Panoramax
   quand elle est affichée) ; pastille de sélection (`.selection-chip`) ;
   carte et légende dans `.map-area` (relatif à la carte, pas à la timeline).
@@ -509,11 +514,11 @@ Mécanisme maison, sans dépendance, dans `frontend/src/i18n/` : `fr.ts` (réfé
   pas changé ; photo et onglet gardés sous `pss-view-<projet>`.
 - `SettingsDialog.tsx` (bouton ⚙ Réglages, avec `OverlayUrl` et `HeadingSettings`) : surcouche Panoramax, fonds XYZ
   ajoutés (hook `useCustomBasemaps` : ajout / retrait, retrait confirmé),
-  calcul du cap du projet (`HeadingSettings`) ; le *Bilan* ne garde que les statistiques et la maintenance.
+  calcul du cap du projet (`HeadingSettings`) ; l'onglet Import (`SummaryTab`) ne garde que les statistiques et la maintenance.
 - Sens de déplacement et orientation : un seul endroit, `TravelSection` (`PhotoTab.tsx`, section repliable `travel`) ;
   en tête `RideSettings.tsx` (source du cap, décalage, montage de la caméra : `all: true`), sous-section `ride`
   repliée par défaut et affichée même sans photo courante ; dessous, la photo courante et les outils de plage.
-  Interface seulement (lot 4 : le bloc ira tel quel dans l'onglet-étape « Positions et sens »).
+  Affichée dans l'onglet-étape « Positions et sens ».
 - `Dialogs.tsx` : `Confirm` (Entrée / Échap) et `AddBasemap` ; plus aucun `window.confirm` / `prompt`.
 - `JobBar` : temps restant d'après la vitesse observée depuis l'ouverture ; notification (`Notification`) à la fin
   d'une tâche de plus de 10 s si la fenêtre est cachée et l'autorisation donnée.

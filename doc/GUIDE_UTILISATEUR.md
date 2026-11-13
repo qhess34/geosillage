@@ -70,7 +70,7 @@ type dans le même projet (un message l'indique : créez une autre sortie). Une 
 demandée : photo 360° ou plate ? Dans un projet de photos plates, la visionneuse affiche l'image à plat (pas de vue
 sphère) et l'orientation devient la **direction de la caméra** (0° = avant, 180° = arrière, ±90° = côté). Le tangage
 et le roulis lus dans la photo sont affichés (lecture seule). Un projet Panoramax suit la même règle (type d'après le
-champ de vision des photos publiées). Le **Bilan** indique l'intervalle médian entre photos et vous avertit, avec un
+champ de vision des photos publiées). L'onglet **Import** indique l'intervalle médian entre photos et vous avertit, avec un
 lien vers *⚙ Réglages*, s'il est trop grand pour les seuils (réglés pour environ 1 photo toutes les 2 s).
 Il compare aussi l'heure de prise de vue à l'heure GPS des photos : si l'écart est constant, la ligne *Horloge de
 l'appareil* donne le décalage (ex. « +1 h 15 min 07 s ») et le fuseau déduit de la position (c'est l'horloge de
@@ -94,7 +94,7 @@ dans la liste à importer. Les photos du dossier ouvert sont affichées en gris 
 (l'import se fait par dossier). Une photo déjà importée n'est pas importée deux fois. L'import lit les EXIF puis crée les
 miniatures en tâche de fond : la carte est utilisable avant la fin.
 
-Onglet **Bilan** : nombre de photos, période, anomalies détectées :
+Onglet **Import** (statistiques de la sortie) : nombre de photos, période, anomalies détectées :
 
 | Anomalie | Signification |
 |---|---|
@@ -105,11 +105,11 @@ Onglet **Bilan** : nombre de photos, période, anomalies détectées :
 | illisible / introuvable | fichier abîmé, ou déplacé depuis l'import (*Vérifier les fichiers*) |
 
 
-![Onglet Bilan](images/09-bilan.webp)
-*Onglet *Bilan* : statistiques et anomalies de la sortie (surlignées), vérification des fichiers. Les réglages de toute la sortie sont dans l'onglet *Photo* (*Sens de déplacement et orientation*).*
+![Onglet Import (statistiques)](images/09-bilan.webp)
+*Onglet *Import* : statistiques et anomalies de la sortie (surlignées), vérification des fichiers. Les réglages de toute la sortie sont dans l'onglet *Positions et sens* (*Sens de déplacement et orientation*).*
 
 Les photos sans GPS, sans date, en doublon, illisibles ou introuvables ne peuvent pas entrer dans une séquence.
-L'onglet *Bilan* contient aussi *Vérifier les fichiers* et, s'il y en a, *Relancer les miniatures en échec*.
+L'onglet *Import* contient aussi *Vérifier les fichiers* et, s'il y en a, *Relancer les miniatures en échec*.
 
 ---
 
@@ -117,12 +117,11 @@ L'onglet *Bilan* contient aussi *Vérifier les fichiers* et, s'il y en a, *Relan
 
 ```
 ┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Début · Fin │ Mode Positions … ⚙ Réglages · ?
-├ étapes : Import · Synchro · Doublons et arrêts · Positions et sens · Séquences · Export · Envoi
+├ onglets = étapes : Import · Synchro · Doublons et arrêts · Positions et sens · Séquences · Export · Envoi │ Photo
 ├──────────────────────────────────────────────┬──────────────────────────────┐
-│ carte                                        │ onglets :                    │
-│ (Panoramax · fond · Centrer · Suivre · …)    │ Photo · Séquences · Synchro  │
-│                                              │ Export et envoi · Bilan      │
-├──────────────────────────────────────────────┤                              │
+│ carte                                        │ contenu de l'onglet ouvert   │
+│ (Panoramax · fond · Centrer · Suivre · …)    │ (liste « À corriger » en     │
+├──────────────────────────────────────────────┤  tête quand l'étape en a)    │
 │ timeline (toute la sortie)                   │                              │
 └──────────────────────────────────────────────┴──────────────────────────────┘
 ```
@@ -132,33 +131,34 @@ fonds de carte ajoutés (pour toutes les sorties ; *Retirer* supprime un fond aj
 minimale et fenêtre de temps, pour ce projet ; *Enregistrer et recalculer*) et **Langue** de l'interface (français ou
 anglais ; par défaut celle du navigateur ; s'applique aussi aux messages du serveur).
 
-**Barre d'étapes** (sous la barre d'outils) : où en est la sortie, dans l'ordre de travail. Chaque étape est
-**✓ verte** (rien à faire), **! orange** (quelque chose à reprendre, résumé à côté) ou **numérotée en gris** (pas
-commencée) ; l'étape de l'onglet ouvert est encadrée. Au survol, le détail ; au clic, le bon endroit :
+**Onglets = étapes** (sous la barre d'outils) : une seule navigation, dans l'ordre de travail ; l'onglet ouvert est
+encadré, `1` … `8` y vont au clavier. Chaque étape affiche son état : **✓ vert** (rien à faire), **! orange** (à
+reprendre, résumé court dessous, détail au survol) ou **numéro gris** (pas commencée). **Photo**, à droite, n'est pas
+une étape : la photo courante (visionneuse 360°, informations, anomalies).
 
-| Étape | Orange quand… | Clic |
+| Onglet | Contenu | Orange quand… |
 |---|---|---|
-| Import | — (gris tant qu'aucune photo) | *Bilan* |
-| Synchro | — (grise tant qu'aucun décalage n'est appliqué ; verte avec le nombre de photos synchronisées, sans le décalage ; les décalages, qui peuvent varier d'un lot de photos à l'autre, sont dans l'onglet) | *Synchro* |
-| Doublons et arrêts | des arrêts restent à trier (les fichiers identiques sont écartés à l'import) | fenêtre *À corriger* : la liste des arrêts |
-| Positions et sens | photos sans position, sauts GPS non corrigés, points à vérifier (écarts, précision GPS, caps) | fenêtre *À corriger* : problèmes, cause, correction ; un clic sur une photo y va (*Bilan* quand tout est vert) |
-| Séquences | photos ni dans une séquence, ni exclues | fenêtre *À corriger* (photos non classées) ; onglet *Séquences* quand tout est vert |
-| Export | séquences pas encore exportées, ou à réexporter | *Export* |
-| Envoi | séquences pas encore publiées, modifiées depuis, ou envoi interrompu | *Export et envoi* (projet Panoramax : *Envoi*) |
+| Import | statistiques de la sortie (ex-*Bilan*) : anomalies, durée, distance, horloge, dossiers sources | — (gris tant qu'aucune photo) |
+| Synchro | retard GPS ([§ 5](#5-corriger-le-retard-gps-onglet-synchro)) | — (gris tant qu'aucun décalage n'est appliqué) |
+| Doublons et arrêts | liste *À corriger* des arrêts à trier ([§ 7](#points-à-vérifier-avant-de-publier)) | des arrêts restent à trier |
+| Positions et sens | liste *À corriger* (sans position, sauts GPS, points à vérifier), puis pour la photo courante : visionneuse, *Sens de déplacement et orientation* ([§ 7](#7-caps-et-orientation)), *Position* ([§ 6](#6-corriger-des-positions)) | il reste quelque chose à corriger |
+| Séquences | photos non classées (s'il y en a), découpage ([§ 4](#4-découper-en-séquences)) | photos ni dans une séquence, ni exclues |
+| Export | dossiers et EXIF ([§ 8](#8-exporter)) | séquences pas exportées, ou à réexporter |
+| Envoi | publication sur Panoramax ([§ 9](#9-publier-sur-panoramax)) | pas encore publiées, modifiées depuis, envoi interrompu |
 
-Les sous-titres restent courts pour tenir sur une ligne à 1280 px (« 5 à vérifier », « 2 à classer ») ; le détail
-(par exemple les photos sans position, les sauts GPS, les doublons écartés) est dans l'infobulle. Dans le **Bilan**, les
-lignes orange qui ont une liste (positions, anomalies GPS, sens de déplacement incertain, doublons, exclues) sont des
-liens : un clic ouvre la liste *À corriger* correspondante (pour les exclues : *Afficher les exclues* est coché).
+Les sous-titres restent courts pour tenir sur une ligne à 1280 px (« 5 à vérifier ») ; sous ~1150 px, les pastilles
+rondes disparaissent (✓ devant le nom). Dans l'onglet *Import*, les lignes orange qui ont une liste (positions,
+anomalies GPS, sens incertain, doublons, exclues) sont des liens vers l'onglet de l'étape (exclues : *Afficher les
+exclues* est coché).
 
 **Astuces du premier lancement** : au premier projet ouvert, un bandeau de quelques phrases résume le parcours, les
 gestes de base (clic droit, `Ctrl+Z`, `?`) et le sens de *Début* (commence une sélection) et de *Fin* (coupe la
 sélection et pose un nouveau début). *Compris* le ferme pour de bon (mémorisé dans le navigateur).
 
 Dans un projet Panoramax : Import Panoramax · Synchro · Doublons et arrêts · Positions et sens · Envoi (orange quand des
-séquences ont été corrigées depuis leur import ou leur dernier envoi). Le badge **Projet Panoramax** de la barre
-d'outils (et le Bilan) explique pourquoi les étapes et onglets *Séquences* et *Export* sont absents : pas de découpe ni
-d'export, les photos restent sur l'instance.
+séquences ont été corrigées depuis leur import ou leur dernier envoi). *Séquences* et *Export* sont masquées : une
+mention « sans objet » dans la barre, le badge **Projet Panoramax** et l'onglet *Import* expliquent pourquoi (pas de
+découpe ni d'export, les photos restent sur l'instance).
 
 
 ![Écran principal](images/02-ecran.webp)
@@ -185,9 +185,10 @@ d'export, les photos restent sur l'instance.
 - **Légende** (bas gauche de la carte, repliable) : signification des couleurs et marques de la carte et de la
   timeline.
 - **Barre d'outils** : trois groupes nommés — *Projet* (retour, nom, import), *Édition* (annuler/rétablir, *Début*/*Fin*), *Mode* (*✥ Positions*, bascule : un bandeau violet « Mode Positions actif – Échap » reste affiché tant qu'il est actif).
-- **Onglet Photo** (sections *Sens de déplacement*, *Orientation de la caméra* et *Position* repliables, l'état est mémorisé ; *Début*/*Fin* ne sont que dans la barre d'outils) : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,
-  *⟲ Recentrer* pour revenir face à l'avant), boutons *⏵ Début* / *⏹ Fin*, cap, position, et outils de la plage
-  sélectionnée.
+- **Onglet Photo** : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,
+  *⟲ Recentrer* pour revenir face à l'avant), séquence, informations et anomalies de la photo courante. Le sens de
+  déplacement, l'orientation et la position se corrigent dans l'étape *Positions et sens* (sections repliables, état
+  mémorisé) ; *Début*/*Fin* ne sont que dans la barre d'outils.
 
 ### Surcouche Panoramax
 
@@ -369,11 +370,11 @@ le déplacement moyen et maximal, recalculés à chaque réglage. *Recaler N pho
 
 ### Photos sans position
 
-Photos sans GPS (début de sortie, tunnel, perte du signal) : clic sur l'étape **Positions et sens** (fenêtre *À
+Photos sans GPS (début de sortie, tunnel, perte du signal) : onglet **Positions et sens** (liste *À
 corriger*, groupe *Photos sans position*), un élément par trou.
 - Un clic sur un trou va à sa première photo : la carte montre, entourées en rouge et reliées en pointillés, la
   photo d'avant et celle d'après ; en mode Positions (`M`), cliquer sur la carte place la photo.
-- *Interpoler entre les voisines* (encadré de l'onglet *Photo*) répartit les photos du trou entre la photo d'avant
+- *Interpoler entre les voisines* (encadré de l'onglet *Positions et sens*) répartit les photos du trou entre la photo d'avant
   et celle d'après, selon l'heure de prise de vue (*Interpoler tous les trous possibles* dans la fenêtre). Impossible
   en début ou en fin de sortie (il manque un voisin) : les placer à la main ou les exclure.
 - Une photo placée **rejoint la séquence de ses voisines** quand la photo d'avant et celle d'après sont dans la
@@ -383,7 +384,7 @@ La synchronisation (§ 5) place aussi les photos sans GPS qui tombent sur la tra
 placées à la main ne sont ensuite plus modifiées par une nouvelle synchronisation (option *Garder les positions
 corrigées à la main*).
 
-Onglet *Photo* : saisie des coordonnées, *Revenir à la position d'origine* ; sur une plage sélectionnée : décalage (m vers
+Onglet *Positions et sens* : saisie des coordonnées, *Revenir à la position d'origine* ; sur une plage sélectionnée : décalage (m vers
 l'est / le nord) ou déplacement le long du trajet.
 
 ---
@@ -397,7 +398,7 @@ Deux notions distinctes :
 - l'**orientation** = l'angle entre le **centre de l'image** et le sens de déplacement (XMP `PoseHeadingDegrees`).
   Elle vaut 0 quand la caméra regarde vers l'avant ; Panoramax s'en sert pour tourner la photo 360°.
 
-Changer l'un ne change jamais l'autre. L'onglet *Photo* les réunit dans **une seule section**, *Sens de déplacement
+Changer l'un ne change jamais l'autre. L'onglet *Positions et sens* les réunit dans **une seule section**, *Sens de déplacement
 et orientation* :
 - en tête, **Toute la sortie** (repliée par défaut, accessible même sans photo sélectionnée) : *Source du cap*,
   *Décalage du sens de déplacement*, *Montage de la caméra* ;
@@ -407,7 +408,7 @@ le cap en bleu (depuis le nord), le centre de l'image en orange pointillé (déc
 comme « Centre de l'image à −35° du sens de déplacement (vers la gauche) ». *Remettre à 0°* annule l'orientation de
 la photo.
 
-**Source du cap** (onglet *Photo*, *Toute la sortie*, ou *⚙ Réglages*) : *Calculé depuis la trace*, ou *Cap de
+**Source du cap** (onglet *Positions et sens*, *Toute la sortie*, ou *⚙ Réglages*) : *Calculé depuis la trace*, ou *Cap de
 l'appareil* (boussole, `GPSImgDirection` enregistré par la caméra ou le smartphone). Au premier import, le cap de
 l'appareil est choisi s'il est présent, non nul et variable le long de la sortie ; sinon il est calculé. Les photos
 sans cap de l'appareil gardent le cap calculé. `Ctrl+Z` annule le changement.
@@ -421,16 +422,16 @@ Panoramax.
 ### Vérifier les caps
 
 Flèches sur la carte (zoom ≥ 15). À un arrêt (feu rouge, pause), le cap calculé est la direction d'arrivée à
-l'arrêt (sinon celle de départ) : la photo gardée d'un arrêt a donc toujours un cap. Onglet *Photo* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
-**Décalage du sens de déplacement** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Photo*, *Sens de déplacement et
+l'arrêt (sinon celle de départ) : la photo gardée d'un arrêt a donc toujours un cap. Onglet *Positions et sens* : cadran, `[` / `]` (±1°, Maj : ±5°), saisie d'un cap manuel, *Revenir au cap calculé*.
+**Décalage du sens de déplacement** (ajouté aux caps calculés) : sur **toute la sortie** (onglet *Positions et sens*, *Sens de déplacement et
 orientation* › *Toute la sortie*) ou sur **une série de photos** (sélectionnée sur la timeline, puis clic droit *Décalage du sens de déplacement…*, ou
-*Décaler* dans les outils de la plage de l'onglet *Photo*). La valeur remplace le décalage déjà posé sur ces
+*Décaler* dans les outils de la plage de l'onglet *Positions et sens*). La valeur remplace le décalage déjà posé sur ces
 photos ; 0 le retire. Ce réglage ne dépend pas des séquences, qui ne sont qu'un découpage. Sur une plage, aussi
 *Fixer* (même cap manuel pour toutes) et *Caps calculés*. Les caps manuels ne sont jamais écrasés ; un cap manuel voisin d'une position corrigée est marqué
 « à revoir ».
 
 ![Cap et position d'une photo](images/07-cap.webp)
-*Onglet *Photo* : cap calculé (avec son décalage éventuel), orientation de la photo par rapport au sens de déplacement, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
+*Onglet *Positions et sens* : cap calculé (avec son décalage éventuel), orientation de la photo par rapport au sens de déplacement, cap final ; position d'origine et position corrigée (ici par la synchro, 8 m).*
 
 ### Caméra sur casque
 
@@ -442,8 +443,8 @@ l'application comme sur Panoramax).
 ### Caméra mal orientée sur le casque, ou à l'envers
 
 Champ d'angle et bouton **↻ Corriger le montage** :
-- sur toutes les photos de la sortie (onglet *Photo*, *Sens de déplacement et orientation* › *Toute la sortie*, *Montage de la caméra*) ;
-- sur une série de photos sélectionnée : clic droit *Orientation de la caméra…*, ou outils de la plage de l'onglet *Photo*.
+- sur toutes les photos de la sortie (onglet *Positions et sens*, *Sens de déplacement et orientation* › *Toute la sortie*, *Montage de la caméra*) ;
+- sur une série de photos sélectionnée : clic droit *Orientation de la caméra…*, ou outils de la plage de l'onglet *Positions et sens*.
 
 Comme le décalage du cap, l'orientation ne dépend pas des séquences.
 
@@ -453,10 +454,9 @@ correction. Le fichier JPEG n'est jamais tourné : seule la balise d'orientation
 
 ### Points à vérifier avant de publier
 
-Clic sur une étape orange de la barre d'étapes (*Doublons et arrêts*, *Positions et sens*, *Séquences*) : une **fenêtre
-*À corriger*** s'ouvre sur la carte (déplaçable par sa barre de titre, `Échap` ou ✕ la ferme). Elle liste les
-problèmes de l'étape, groupés par type avec leur **cause** et la **correction** à apporter ; un clic sur une photo
-de la liste centre la carte dessus et la charge dans l'onglet *Photo*, la fenêtre restant ouverte pour enchaîner.
+Les onglets *Doublons et arrêts*, *Positions et sens* et *Séquences* commencent par la liste **À corriger** de leur
+étape : problèmes groupés par type avec leur **cause** et la **correction** à apporter. Un clic sur une photo de la
+liste centre la carte dessus et affiche au-dessus de la liste, dans le même onglet, l'encadré décrit plus bas.
 Les problèmes sont aussi marqués **en orange en haut de la timeline** :
 
 - **Arrêts** : au moins 3 photos de suite au même endroit (moins de 2 m entre elles : feu rouge, pause). Choisir la
@@ -465,17 +465,17 @@ Les problèmes sont aussi marqués **en orange en haut de la timeline** :
   Un trou laissé par des photos que vous avez exclues n'est pas signalé ;
 - **Précision GPS faible** : la caméra indique une position peu précise (DOP > 5) ; vérifier la position sur la carte ;
 - **Caps à vérifier** : cap saisi à la main à plus de 90° du cap calculé (erreur de saisie ?). Si c'est le cap
-  calculé qui est faux (perte du GPS : la trace ne donne plus la bonne direction), **Ignorer** (dans la fenêtre *À
-  corriger* ou l'encadré de l'onglet *Photo*) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas (`Ctrl+Z` annule).
+  calculé qui est faux (perte du GPS : la trace ne donne plus la bonne direction), **Ignorer** (dans la liste *À
+  corriger* ou l'encadré) : le cap saisi est gardé et n'est plus signalé, tant qu'il ne change pas (`Ctrl+Z` annule).
 - **Photos sans cap** (étape *Positions et sens*) : photo positionnée sans cap final, ni calculé ni saisi — pas de
   position utilisable autour (voisines sans position ou en saut GPS), ou caméra immobile sur tout le tronçon. Sans
   cap, Panoramax ne peut pas orienter la photo : corriger les positions voisines (le cap est recalculé), saisir le cap
-  à la main (section *Cap* de l'onglet *Photo*), ou exclure.
+  à la main (onglet *Positions et sens*), ou exclure.
 
 Les valeurs ci-dessus sont celles par défaut : elles se règlent pour chaque projet dans **⚙ Réglages**, section
 *Points à vérifier* (nombre de photos et distance d'un arrêt, grand écart, DOP, écart de cap).
 
-L'onglet *Photo* sélectionne alors les photos concernées et affiche en haut un encadré
+Les photos concernées sont alors sélectionnées et l'onglet de l'étape affiche en haut un encadré
 **« À corriger »** : quel est le problème, comment le corriger, et les boutons utiles (*Corriger la position (M)*,
 *Interpoler entre les voisines*, *Revenir au cap calculé*, *Comparer les photos*, *Créer une séquence*, *Exclure*),
 plus *Suivant (N)*. L'encadré disparaît quand on quitte ces photos ou avec ✕. **Rien n'est modifié
@@ -485,14 +485,13 @@ précédente) : *Début* / *Fin* ◀ ▶, *+ Ajouter* ou *− Retirer* ajustent 
 sélectionnées sur la carte et la timeline ; un clic sur une ligne montre la photo. **Comparer ces n photos**
 affiche ensuite ses photos côte à côte ; un clic sur une vignette l'ouvre dans une visionneuse 360° (la direction
 regardée est gardée d'une photo à l'autre, pour comparer le même détail) : cocher celles à garder (*Tout désélectionner* pour partir de zéro, *Tout garder* pour tout recocher ; aucune cochée : toutes sont exclues), puis *Exclure n photos*
-(une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. Les sauts GPS et les photos sans position sont
-listés dans la même fenêtre (étape *Positions et sens*), les photos non classées avec l'étape *Séquences*.
+(une seule opération, `Ctrl+Z` l'annule) ; la liste se met à jour après chaque correction. `N` ouvre l'onglet de l'étape du point atteint.
 
 ---
 
 ## 8. Exporter
 
-Onglet **Export et envoi** :
+Onglet **Export** :
 
 1. **Dossier de destination** (*Parcourir…*), prérempli avec celui du dernier export. Avec Docker : sous
    `/exports` pour une copie.
@@ -515,8 +514,8 @@ Onglet **Export et envoi** :
 5. *Exporter*. La tâche s'affiche en bas de l'écran.
 
 
-![Onglet Export et envoi](images/08-export.webp)
-*Onglet *Export et envoi* : mode, dossier, séquences (la séquence 1, déjà exportée et inchangée, est décochée ; les séquences exportées ont leur bouton *⇪ Publier*) et options.*
+![Onglet Export](images/08-export.webp)
+*Onglet *Export* : mode, dossier, séquences (la séquence 1, déjà exportée et inchangée, est décochée) et options ; la publication est dans l'onglet *Envoi*.*
 
 Résultat : un dossier par séquence, `<nom du projet>_1`, `_2`… dans l'ordre de la sortie, avec les photos renommées
 `0001_GSAC….JPG`, `0002_…`. Chaque photo reçoit :
@@ -541,10 +540,10 @@ seule séquence avec le dossier, le mode et les options de son dernier export.
 
 ## 9. Publier sur Panoramax
 
-### Depuis l'application (onglet *Export et envoi*)
+### Depuis l'application (onglet *Envoi*)
 
-La publication se fait une fois la séquence exportée : section **Publier sur Panoramax** en bas de l'onglet pour la
-connexion et les options, puis bouton **⇪ Publier** sur la ligne de la séquence, ou **⇪ Publier les n séquences
+La publication se fait une fois la séquence exportée (*à exporter d'abord* sinon) : section **Publier sur Panoramax**
+sous la liste des séquences pour la connexion et les options, puis bouton **⇪ Publier** sur la ligne de la séquence, ou **⇪ Publier les n séquences
 exportées non publiées** pour toutes à la fois.
 
 1. **Instance** : adresse de l'instance Panoramax (par défaut `https://panoramax.openstreetmap.fr` ; IGN ou autre
@@ -569,7 +568,7 @@ redécoupée, ni dédoublonnée). Une séquence modifiée depuis son export est 
 en bas de l'écran ; après l'envoi, Panoramax traite les photos (floutage) : la publication est terminée quand la
 séquence est prête. Un envoi interrompu (réseau coupé…) reprend où il s'était arrêté en relançant la publication.
 
-Ensuite, onglets *Séquences* et *Export et envoi* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
+Ensuite, onglets *Séquences*, *Export* et *Envoi* : badge *publiée sur Panoramax* et lien *voir* (ouvre la première photo
 sur le site de l'instance) ; *modifiée depuis la publication* si la séquence a changé depuis (corrections à
 envoyer : voir ci-dessous).
 
@@ -650,6 +649,7 @@ fichiers.
 | `[` / `]` | Cap −1° / +1° (Maj : 5°) |
 | `N` / `Maj+N` | Point suivant / précédent à vérifier (photos concernées sélectionnées) |
 | `M` | Mode Positions |
+| `1` … `8` | Onglets : les étapes dans l'ordre, puis *Photo* |
 | `Ctrl+Z` / `Ctrl+Y` | Annuler / rétablir |
 | `?` | Aide |
 

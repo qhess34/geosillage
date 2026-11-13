@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { expect, newProject, openProject, ridePath, rows, test } from './helpers'
+import { expect, newProject, openProject, ridePath, rows, test, tab } from './helpers'
 
 // A GPX "recorded" along the ride: camera clock 2 h ahead of UTC, trace ~4 m to the north
 async function writeGpx(request: Parameters<typeof rows>[0], pid: string, name: string): Promise<string> {
@@ -16,7 +16,7 @@ test('GPX : import dans l\'onglet Synchro, décalage horaire détecté, recalage
   const pid = await newProject(request, 'GPX')
   const file = await writeGpx(request, pid, `trace-${pid.slice(0, 6)}.gpx`)
   await openProject(page, 'GPX')
-  await page.locator('.tab', { hasText: 'Synchro' }).click()
+  await tab(page, 'Synchro').click()
   const sec = page.locator('.gpx-section')
   await sec.getByRole('button', { name: 'Importer un GPX…' }).click()
   const picker = page.getByRole('dialog', { name: 'Choisir une trace GPX' })

@@ -7,11 +7,12 @@ import ExportTab from './ExportTab'
 import ImportDialog from './ImportDialog'
 import PhotoMap from './PhotoMap'
 import SendTab from './SendTab'
-import StepBar from './StepBar'
+import StepBar, { StepTab, stepTabs } from './StepBar'
+import PublishTab from './PublishTab'
 import Tips from './Tips'
 import IssuesPanel from './IssuesPanel'
 import CheckCard from './CheckCard'
-import { canInterpolate } from './issues'
+import { canInterpolate, Issue, IssueStep, stepOf } from './issues'
 import StopCompare from './StopCompare'
 import MapLegend from './MapLegend'
 import { AddBasemap } from './Dialogs'
@@ -42,7 +43,7 @@ function shifted(lat: number, lon: number, east: number, north: number): { lat: 
   return { lat: lat + north / M_PER_DEG, lon: lon + east / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)) }
 }
 
-type Tab = 'photo' | 'sequences' | 'sync' | 'export' | 'send' | 'summary'
+type Tab = StepTab
 
 export default function ProjectView({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const lang = useLang() // re-render (menus, help) when the language changes
@@ -192,11 +193,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       /* ignore */
     }
   }, [viewKey, selected, tab])
-  // a Panoramax project has no Export tab, a ride has no separate Envoi tab (publication is in « Export et envoi »)
+  // a Panoramax project has no Sequences nor Export step (tab of an older version, or of a ride, remembered)
   useEffect(() => {
-    if (isPnx && tab === 'export') setTab('send')
-    if (project && !isPnx && tab === 'send') setTab('export')
-  }, [project, isPnx, tab])
+    if (isPnx && (tab === 'export' || tab === 'sequences')) setTab('send')
+  }, [isPnx, tab])
   const current = useMemo(() => photos.find((p) => p.id === selected) ?? null, [photos, selected])
 
   const reloadPhotos = useCallback(async () => setPhotos(await api.photos(projectId)), [projectId])
@@ -270,9 +270,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     setQuality,
     checkPoints,
     issuesByStep,
-    issuesStep,
-    setIssuesStep,
-    closeIssues,
     focusPoint,
     setFocusPoint,
     focusLive,
@@ -489,6 +486,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     carryCorrection,
     focusOn,
     excludeRange,
+    tabs: [...stepTabs(isPnx), 'photo'],
+    setTab,
   })
 
   // Right click on a photo of the map / timeline: the selection if the photo is in it, otherwise this photo
@@ -556,6 +555,62 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       }}
       onError={fail}
     />
+  )
+
+  // Top of a step's tab: the card of the issue being corrected (if it belongs to this step), then what is left to fix
+  const issuesOf = (step: IssueStep) => (
+    <>
+      {focusPoint && stepOf(focusPoint.kind) === step && (
+              <CheckCard
+                issue={focusLive ?? focusPoint}
+                fixed={!focusLive}
+                index={focusLive ? checkPoints.indexOf(focusLive) : -1}
+                total={checkPoints.length}
+                detail={detail}
+                editMode={editMode}
+                interpolable={canInterpolate(focusPoint, photos)}
+                onPositions={() => setEditMode(true)}
+                onCompare={() => setStopCompare(stopAdj ?? [focusPoint.start, focusPoint.end])}
+                stopEditor={
+                  focusPoint.kind === 'stop' && stopAdj
+                    ? {
+                        photos,
+                        range: stopAdj,
+                        currentIdx: current?.idx ?? null,
+                        onRange: (r) => {
+                          setStopAdj(r)
+                          setRange(r)
+                          if (current && (current.idx < r[0] || current.idx > r[1])) goIdx(Math.min(Math.max(current.idx, r[0]), r[1]))
+                        },
+                        onGo: (i) => {
+                          if (i < stopAdj[0] || i > stopAdj[1]) {
+                            const r: [number, number] = [Math.min(stopAdj[0], i), Math.max(stopAdj[1], i)]
+                            setStopAdj(r)
+                            setRange(r)
+                          }
+                          goIdx(i)
+                          setCenterTick((t) => t + 1)
+                        },
+                      }
+                    : undefined
+                }
+                onAction={fixIssue}
+                onNext={nextIssue}
+                onClose={() => setFocusPoint(null)}
+              />
+      )}
+      {(step !== 'seq' || issuesByStep.seq.length > 0) && (
+        <IssuesPanel
+          step={step}
+          issues={issuesByStep[step]}
+          current={focusPoint}
+          duplicates={project.summary.duplicates}
+          onPick={focusOn}
+          onIgnore={(i: Issue) => ignoreHeadings(photos.slice(i.start, i.end + 1).filter((p) => !p.excluded).map((p) => p.id))}
+          onInterpolateAll={askInterpolateAll}
+        />
+      )}
+    </>
   )
 
   return (
@@ -633,8 +688,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         quality={quality}
         tab={tab}
         onTab={setTab}
-        onIssues={(st) => setIssuesStep(st)}
-        issueCounts={{ dups: issuesByStep.dups.length, gps: issuesByStep.gps.length, seq: issuesByStep.seq.length }}
       />
       {error && (
         <div className="error banner" onClick={() => setError(null)}>
@@ -658,7 +711,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             centerTick={centerTick}
             snapPreview={snapPreview}
             lineTrack={gpxLine}
-            viewAzimuth={(tab === 'photo' || tab === 'sync') && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
+            viewAzimuth={(tab === 'photo' || tab === 'sync' || tab === 'gps') && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
             viewYaw={tab === 'sync' ? viewYaw : 0}
             onSyncOffset={onSyncOffset}
             onSelect={(id, extend) => {
@@ -744,18 +797,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               </label>
             )}
           </div>
-          {issuesStep && (
-            <IssuesPanel
-              step={issuesStep}
-              issues={issuesByStep[issuesStep]}
-              current={focusPoint}
-              duplicates={project.summary.duplicates}
-              onPick={focusOn}
-              onIgnore={(i) => ignoreHeadings(photos.slice(i.start, i.end + 1).filter((p) => !p.excluded).map((p) => p.id))}
-              onClose={closeIssues}
-              onInterpolateAll={askInterpolateAll}
-            />
-          )}
             {snapOpen && (
               <OsmSnapPanel
                 key={`${snapOpen.scope}-${snapOpen.sequenceId}-${snapOpen.bounds?.join('-')}`}
@@ -800,66 +841,13 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         </div>
         <div className="resizer" onMouseDown={startResize} title={t('pv.resize')} />
         <aside className="side">
-          <nav className="tabs" role="tablist">
-            {(
-              [
-                ['photo', t('tab.photo')],
-                ['sequences', t('tab.sequences')],
-                ['sync', t('tab.sync')],
-                ['export', t('tab.export')],
-                ['send', t('tab.send')],
-                ['summary', t('tab.summary')],
-              ] as [Tab, string][]
-            ).filter(([id]) => (isPnx ? id !== 'export' : id !== 'send')).map(([id, label]) => (
-              <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'tab active' : 'tab'} onClick={() => setTab(id)}>
-                {label}
-                {id === 'sequences' && <span className="count">{sequences.length}</span>}
-              </button>
-            ))}
-          </nav>
           <div className="tab-body">
-            {tab === 'photo' && focusPoint && (
-              <CheckCard
-                issue={focusLive ?? focusPoint}
-                fixed={!focusLive}
-                index={focusLive ? checkPoints.indexOf(focusLive) : -1}
-                total={checkPoints.length}
-                detail={detail}
-                editMode={editMode}
-                interpolable={canInterpolate(focusPoint, photos)}
-                onPositions={() => setEditMode(true)}
-                onCompare={() => setStopCompare(stopAdj ?? [focusPoint.start, focusPoint.end])}
-                stopEditor={
-                  focusPoint.kind === 'stop' && stopAdj
-                    ? {
-                        photos,
-                        range: stopAdj,
-                        currentIdx: current?.idx ?? null,
-                        onRange: (r) => {
-                          setStopAdj(r)
-                          setRange(r)
-                          if (current && (current.idx < r[0] || current.idx > r[1])) goIdx(Math.min(Math.max(current.idx, r[0]), r[1]))
-                        },
-                        onGo: (i) => {
-                          if (i < stopAdj[0] || i > stopAdj[1]) {
-                            const r: [number, number] = [Math.min(stopAdj[0], i), Math.max(stopAdj[1], i)]
-                            setStopAdj(r)
-                            setRange(r)
-                          }
-                          goIdx(i)
-                          setCenterTick((t) => t + 1)
-                        },
-                      }
-                    : undefined
-                }
-                onAction={fixIssue}
-                onNext={nextIssue}
-                onClose={() => setFocusPoint(null)}
-              />
-            )}
-            {tab === 'photo' &&
+            {tab === 'dups' && issuesOf('dups')}
+            {tab === 'gps' && issuesOf('gps')}
+            {tab === 'gps' &&
               (detail ? (
                 <PhotoTab
+                  part="travel"
                   ride={rideSettings}
                   projectId={projectId}
                   photo={detail}
@@ -878,7 +866,25 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
               ) : (
                 <p className="muted">{t('pv.importFirst')}</p>
               ))}
-            {tab === 'sequences' && (
+            {tab === 'sequences' && issuesOf('seq')}
+            {tab === 'photo' &&
+              (detail ? (
+                <PhotoTab
+                  part="photo"
+                  ride={rideSettings}
+                  projectId={projectId}
+                  photo={detail}
+                  count={photos.length}
+                  sequences={sequences}
+                  range={range}
+                  onView={setViewYaw}
+                  onChanged={afterHeadingChange}
+                  onError={fail}
+                />
+              ) : (
+                <p className="muted">{photos.length ? t('pv.pickPhoto') : t('pv.importFirst')}</p>
+              ))}
+            {tab === 'sequences' && !isPnx && (
               <SequencesTab
                 pnx={isPnx}
                 onCut={() => current && api.cutAt(projectId, current.id).then(applyState, (er) => setError(er.message))}
@@ -933,6 +939,9 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'send' && isPnx && (
               <SendTab projectId={projectId} instance={project.pnx_instance} sequences={sequences} onStarted={refresh} onError={fail} />
             )}
+            {tab === 'send' && !isPnx && (
+              <PublishTab projectId={projectId} sequences={sequences} jobs={project.jobs} onStarted={refresh} onError={fail} />
+            )}
             {tab === 'export' && !isPnx && (
               <ExportTab
                 projectId={projectId}
@@ -948,8 +957,8 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             {tab === 'summary' && (
               <SummaryTab
                 links={{
-                  gps: issuesByStep.gps.length ? () => setIssuesStep('gps') : null,
-                  dups: issuesByStep.dups.length ? () => setIssuesStep('dups') : null,
+                  gps: issuesByStep.gps.length ? () => setTab('gps') : null,
+                  dups: issuesByStep.dups.length ? () => setTab('dups') : null,
                   excluded: showExcluded ? null : () => setShowExcluded(true),
                 }}
                 projectId={projectId}
@@ -1057,7 +1066,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
           onGo={(idx) => {
             setStopCompare(null)
             goIdx(idx)
-            setTab('photo')
           }}
           onDone={(s, n) => {
             setStopCompare(null)
