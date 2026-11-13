@@ -5,8 +5,8 @@ const OUT = process.argv[2], BASE = process.argv[3] || 'http://127.0.0.1:8767/';
 const LANG = process.argv[4] === 'en' ? 'en' : 'fr';
 // Labels the script clicks on, per language (exact texts of frontend/src/i18n)
 const L = LANG === 'en'
-  ? { ride: 'Ride 14 June', seq: 'Sequences', summary: 'Summary', export: 'Export and send', sync: 'Sync', photo: 'Photo', basemap: 'Background map', heading: /heading/i, info: /information/i }
-  : { ride: 'Sortie 14 juin', seq: 'Séquences', summary: 'Bilan', export: 'Export', sync: 'Synchro', photo: 'Photo', basemap: 'Fond de carte', heading: /cap/i, info: /informations/i };
+  ? { ride: 'Ride 14 June', seq: 'Sequences', summary: 'Import', export: 'Export', sync: 'Sync', photo: 'Positions and direction', basemap: 'Background map' }
+  : { ride: 'Sortie 14 juin', seq: 'Séquences', summary: 'Import', export: 'Export', sync: 'Synchro', photo: 'Positions et sens', basemap: 'Fond de carte' };
 (async () => {
   const b = await chromium.launch(); const errors = [];
   const ctx = await b.newContext({ viewport: { width: 1280, height: 760 }, colorScheme: 'light', locale: LANG === 'en' ? 'en-GB' : 'fr-FR' });
@@ -17,11 +17,11 @@ const L = LANG === 'en'
   const shot = async (name, opts = {}) => { await p.screenshot({ path: `${OUT}/${name}.png`, ...opts }); console.log('ok', name); };
   const go = async (n) => { await p.keyboard.press('Home'); for (let i = 0; i < Math.floor(n / 10); i++) await p.keyboard.press('Shift+ArrowRight'); for (let i = 0; i < n % 10; i++) await p.keyboard.press('ArrowRight'); await wait(); };
 
-  await p.addInitScript((lang) => { try { localStorage.setItem('pss-basemap', 'osm'); localStorage.setItem('pss-follow', '1'); localStorage.setItem('pss-lang', lang) } catch {} }, LANG);
+  await p.addInitScript((lang) => { try { localStorage.setItem('pss-basemap', 'osm'); localStorage.setItem('pss-follow', '1'); localStorage.setItem('pss-lang', lang); localStorage.setItem('pss-tips-seen', '1') } catch {} }, LANG);
   await p.goto(BASE); await p.waitForSelector('.project-name'); await wait();
   await shot('01-projets');
 
-  await p.click(`.project-name:has-text("${L.ride}")`); await p.waitForSelector('.tabs');
+  await p.click(`.project-name:has-text("${L.ride}")`); await p.waitForSelector('.steps');
   await go(40); await p.evaluate(() => window.__pssMap.zoomTo(16.3, { duration: 0 })); await tiles();
   await shot('02-ecran');
 
@@ -30,22 +30,22 @@ const L = LANG === 'en'
   await shot('03-debut-fin');
   await p.keyboard.press('Escape');
 
-  await p.click(`.tab:has-text("${L.seq}")`); await wait();
+  await p.click(`.step:has(.lab:text-is("${L.seq}"))`); await wait();
   await shot('04-sequences');
 
-  await p.click(`.tab:has-text("${L.summary}")`); await wait();
+  await p.click(`.step:has(.lab:text-is("${L.summary}"))`); await wait();
   await shot('09-bilan');
 
-  await p.click(`.tab:has-text("${L.export}")`); await wait();
+  await p.click(`.step:has(.lab:text-is("${L.export}"))`); await wait();
   await shot('08-export');
 
   // satellite IGN for sync and positions
   await p.selectOption(`select[aria-label="${L.basemap}"]`, 'ign-ortho'); await wait(1000);
-  await p.click(`.tab:has-text("${L.sync}")`); await wait(1500);
+  await p.click(`.step:has(.lab:text-is("${L.sync}"))`); await wait(1500);
   await go(150); await p.evaluate(() => window.__pssMap.zoomTo(18, { duration: 0 })); await tiles();
   await shot('05-synchro');
 
-  await p.click(`.tab:has-text("${L.photo}")`); await wait();
+  await p.click(`.step:has(.lab:text-is("${L.photo}"))`); await wait();
   await go(100); await p.keyboard.press('m'); await p.evaluate(() => window.__pssMap.zoomTo(18.5, { duration: 0 })); await tiles();
   const mk = await p.locator('.maplibregl-marker').last().boundingBox();
   if (mk) { const x = mk.x + mk.width / 2, y = mk.y + mk.height - 4; await p.mouse.move(x, y); await p.mouse.down(); await p.mouse.move(x + 40, y - 25, { steps: 8 }); await p.mouse.up(); await wait(1200); }
@@ -55,12 +55,7 @@ const L = LANG === 'en'
   // heading / orientation part of the photo panel
   await go(130); await wait(1500);
   await p.setViewportSize({ width: 1280, height: 1500 }); await wait(1200);
-  const box = await p.evaluate(([capRe, infoRe]) => {
-    const hs = [...document.querySelectorAll('aside.side h3')];
-    const cap = hs.find(h => new RegExp(capRe, 'i').test(h.textContent)), info = hs.find(h => new RegExp(infoRe, 'i').test(h.textContent));
-    const a = cap.getBoundingClientRect(), b = info.getBoundingClientRect(), side = document.querySelector('aside.side').getBoundingClientRect();
-    return { x: side.x, y: a.y - 12, width: side.width, height: b.y - a.y };
-  }, [L.heading.source, L.info.source]);
+  const box = await p.evaluate(() => { const r = document.querySelector('details[data-section="travel"]').getBoundingClientRect(); return { x: r.x, y: r.y - 6, width: r.width, height: r.height + 12 } });
   await p.screenshot({ path: `${OUT}/07-cap.png`, clip: box }); console.log('ok 07-cap');
   await p.setViewportSize({ width: 1280, height: 760 }); await wait();
 
