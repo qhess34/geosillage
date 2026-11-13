@@ -72,6 +72,7 @@ function Section({ id, title, help, defaultOpen = true, children }: { id: string
       open={open}
       onToggle={(e) => {
         const o = (e.currentTarget as HTMLDetailsElement).open
+        if (o === open) return // initial toggle event of a section rendered open: nothing changed, keep the stored state
         setOpen(o)
         try {
           localStorage.setItem(key, o ? '1' : '0')
@@ -91,19 +92,21 @@ function Section({ id, title, help, defaultOpen = true, children }: { id: string
 export function TravelSection({ ride, children }: { ride: React.ReactNode; children?: React.ReactNode }) {
   useLang()
   return (
-    <Section id="travel" title={t('travel.title')} help={`${capHelp()} ${orientationHelp()}`}>
+    <>
       <Section id="ride" title={t('travel.ride')} defaultOpen={false}>
         {ride}
       </Section>
-      {children ?? <p className="small-text muted">{t('travel.noPhoto')}</p>}
-    </Section>
+      <Section id="travel" title={t('travel.title')} help={`${capHelp()} ${orientationHelp()}`}>
+        {children ?? <p className="small-text muted">{t('travel.noPhoto')}</p>}
+      </Section>
+    </>
   )
 }
 
 interface PhotoTabProps {
-  // 'photo': the current photo (viewer, details), a tab apart; 'travel': step « Positions et sens » (viewer, then
-  // direction of travel and orientation, then position)
-  part: 'photo' | 'travel'
+  // step « Positions et sens » = tab of the current photo: header (viewer, number, exclusion, details), then the
+  // step's « À corriger » list (issues), the ride settings, then the sections of this photo
+  issues?: React.ReactNode
   projectId: string
   photo: PhotoDetail
   count: number
@@ -115,7 +118,7 @@ interface PhotoTabProps {
   onError: (m: string) => void
 }
 
-export default function PhotoTab({ part, projectId, photo, count, sequences, range, ride, onView, onChanged, onError }: PhotoTabProps) {
+export default function PhotoTab({ issues, projectId, photo, count, sequences, range, ride, onView, onChanged, onError }: PhotoTabProps) {
   useLang()
   const flat = !photo.is_360 // flat picture: the yaw is the direction of the camera
   const [draft, setDraft] = useState<number | null>(null)
@@ -168,7 +171,7 @@ export default function PhotoTab({ part, projectId, photo, count, sequences, ran
           thumbUrl={photo.thumb === 1 ? api.thumbUrl(projectId, photo.id) : api.imageUrl(projectId, photo.id)}
           imageUrl={api.imageUrl(projectId, photo.id)}
           alt={photo.filename}
-          height={part === 'photo' ? 280 : 200}
+          height={240}
           yaw={photo.yaw_offset}
           pitch={photo.pitch_orig}
           roll={photo.roll_orig}
@@ -188,6 +191,11 @@ export default function PhotoTab({ part, projectId, photo, count, sequences, ran
         <span className="muted">
           {photo.idx + 1} / {count}
         </span>
+        {!photo.excluded && (
+          <button className="small" title={t('photo.excludeTitle')} onClick={() => api.excludePhotos(projectId, { photo_ids: [photo.id] }).then(() => onChanged(), (e) => onError(e.message))}>
+            {t('photo.exclude')}
+          </button>
+        )}
       </div>
       {photo.excluded ? (
         <div className="excluded-box small-text">
@@ -204,9 +212,57 @@ export default function PhotoTab({ part, projectId, photo, count, sequences, ran
           <span className="muted">{t('photo.unclassified')}</span>
         )}
       </div>
+      <Section id="info" title={t('photo.info')} defaultOpen={false}>
+      <table className="summary">
+        <tbody>
+          <tr>
+            <th>{t('photo.info.date')}</th>
+            <td>{photo.ts_text ?? '—'}</td>
+          </tr>
+          <tr>
+            <th>{t('photo.info.gpsTime')}</th>
+            <td>{fmtTime(photo.gps_ts)}</td>
+          </tr>
+          <tr>
+            <th>{t('photo.info.exifHeading')}</th>
+            <td>{photo.heading_exif != null ? `${photo.heading_exif}°` : t('photo.info.absent')}</td>
+          </tr>
+          {(photo.pitch_orig != null || photo.roll_orig != null) && (
+            <tr>
+              <th title={t('photo.info.poseHelp')}>{t('photo.info.pose')}</th>
+              <td>
+                {photo.pitch_orig ?? '—'}° / {photo.roll_orig ?? '—'}°
+              </td>
+            </tr>
+          )}
+          <tr>
+            <th>{t('photo.info.camera')}</th>
+            <td>
+              {photo.make} {photo.model} {photo.is_360 ? '· 360°' : `· ${t('photo.info.flat')}`}
+            </td>
+          </tr>
+          <tr>
+            <th>{t('photo.info.image')}</th>
+            <td>
+              {photo.width}×{photo.height} · {fmtSize(photo.size)}
+            </td>
+          </tr>
+          <tr>
+            <th>{t('photo.info.file')}</th>
+            <td className="mono small-text break">{photo.path}</td>
+          </tr>
+        </tbody>
+      </table>
+      {photo.flag_names.length > 0 && (
+        <ul className="flags">
+          {photo.flag_names.map((f) => (
+            <li key={f}>{flagLabel(f)}</li>
+          ))}
+        </ul>
+      )}
+      </Section>
+      {issues}
 
-      {part === 'travel' && (
-      <>
       <TravelSection ride={ride}>
       <h4 className="travel-sub" title={capHelp()}>{t('travel.photoHeading')}</h4>
       <p className="small-text muted section-help">{t('photo.heading.help')}</p>
@@ -418,60 +474,6 @@ export default function PhotoTab({ part, projectId, photo, count, sequences, ran
       )}
 
       </Section>
-      </>
-      )}
-      {part === 'photo' && (
-      <>
-      <h3>{t('photo.info')}</h3>
-      <table className="summary">
-        <tbody>
-          <tr>
-            <th>{t('photo.info.date')}</th>
-            <td>{photo.ts_text ?? '—'}</td>
-          </tr>
-          <tr>
-            <th>{t('photo.info.gpsTime')}</th>
-            <td>{fmtTime(photo.gps_ts)}</td>
-          </tr>
-          <tr>
-            <th>{t('photo.info.exifHeading')}</th>
-            <td>{photo.heading_exif != null ? `${photo.heading_exif}°` : t('photo.info.absent')}</td>
-          </tr>
-          {(photo.pitch_orig != null || photo.roll_orig != null) && (
-            <tr>
-              <th title={t('photo.info.poseHelp')}>{t('photo.info.pose')}</th>
-              <td>
-                {photo.pitch_orig ?? '—'}° / {photo.roll_orig ?? '—'}°
-              </td>
-            </tr>
-          )}
-          <tr>
-            <th>{t('photo.info.camera')}</th>
-            <td>
-              {photo.make} {photo.model} {photo.is_360 ? '· 360°' : `· ${t('photo.info.flat')}`}
-            </td>
-          </tr>
-          <tr>
-            <th>{t('photo.info.image')}</th>
-            <td>
-              {photo.width}×{photo.height} · {fmtSize(photo.size)}
-            </td>
-          </tr>
-          <tr>
-            <th>{t('photo.info.file')}</th>
-            <td className="mono small-text break">{photo.path}</td>
-          </tr>
-        </tbody>
-      </table>
-      {photo.flag_names.length > 0 && (
-        <ul className="flags">
-          {photo.flag_names.map((f) => (
-            <li key={f}>{flagLabel(f)}</li>
-          ))}
-        </ul>
-      )}
-      </>
-      )}
     </div>
   )
 }

@@ -129,7 +129,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
       return {}
     }
   }, [viewKey])
-  const [tab, setTab] = useState<Tab>(savedView.tab ?? 'photo')
+  const [tab, setTab] = useState<Tab>(!savedView.tab || (savedView.tab as string) === 'photo' ? 'gps' : savedView.tab)
   const [showImport, setShowImport] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [confirmExclude, setConfirmExclude] = useState<{ range: [number, number]; n: number } | null>(null)
@@ -486,7 +486,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
     carryCorrection,
     focusOn,
     excludeRange,
-    tabs: [...stepTabs(isPnx), 'photo'],
+    tabs: stepTabs(isPnx),
     setTab,
   })
 
@@ -711,7 +711,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
             centerTick={centerTick}
             snapPreview={snapPreview}
             lineTrack={gpxLine}
-            viewAzimuth={(tab === 'photo' || tab === 'sync' || tab === 'gps') && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
+            viewAzimuth={(tab === 'sync' || tab === 'gps') && current?.heading != null ? (((current.heading + viewYaw) % 360) + 360) % 360 : null}
             viewYaw={tab === 'sync' ? viewYaw : 0}
             onSyncOffset={onSyncOffset}
             onSelect={(id, extend) => {
@@ -843,11 +843,10 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
         <aside className="side">
           <div className="tab-body">
             {tab === 'dups' && issuesOf('dups')}
-            {tab === 'gps' && issuesOf('gps')}
             {tab === 'gps' &&
               (detail ? (
                 <PhotoTab
-                  part="travel"
+                  issues={issuesOf('gps')}
                   ride={rideSettings}
                   projectId={projectId}
                   photo={detail}
@@ -860,6 +859,7 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 />
               ) : photos.length ? (
                 <>
+                  {issuesOf('gps')}
                   <p className="muted">{t('pv.pickPhoto')}</p>
                   <TravelSection ride={rideSettings} />
                 </>
@@ -867,23 +867,6 @@ export default function ProjectView({ projectId, onBack }: { projectId: string; 
                 <p className="muted">{t('pv.importFirst')}</p>
               ))}
             {tab === 'sequences' && issuesOf('seq')}
-            {tab === 'photo' &&
-              (detail ? (
-                <PhotoTab
-                  part="photo"
-                  ride={rideSettings}
-                  projectId={projectId}
-                  photo={detail}
-                  count={photos.length}
-                  sequences={sequences}
-                  range={range}
-                  onView={setViewYaw}
-                  onChanged={afterHeadingChange}
-                  onError={fail}
-                />
-              ) : (
-                <p className="muted">{photos.length ? t('pv.pickPhoto') : t('pv.importFirst')}</p>
-              ))}
             {tab === 'sequences' && !isPnx && (
               <SequencesTab
                 pnx={isPnx}

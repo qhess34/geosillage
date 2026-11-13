@@ -117,7 +117,7 @@ L'onglet *Import* contient aussi *Vérifier les fichiers* et, s'il y en a, *Rela
 
 ```
 ┌ barre d'outils : ← projets · Importer │ Annuler · Rétablir │ Début · Fin │ Mode Positions … ⚙ Réglages · ?
-├ onglets = étapes : Import · Synchro · Doublons et arrêts · Positions et sens · Séquences · Export · Envoi │ Photo
+├ onglets = étapes : Import · Synchro · Doublons et arrêts · Positions et sens · Séquences · Export · Envoi
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ carte                                        │ contenu de l'onglet ouvert   │
 │ (Panoramax · fond · Centrer · Suivre · …)    │ (liste « À corriger » en     │
@@ -132,9 +132,8 @@ minimale et fenêtre de temps, pour ce projet ; *Enregistrer et recalculer*) et 
 anglais ; par défaut celle du navigateur ; s'applique aussi aux messages du serveur).
 
 **Onglets = étapes** (sous la barre d'outils) : une seule navigation, dans l'ordre de travail ; l'onglet ouvert est
-encadré, `1` … `8` y vont au clavier. Chaque étape affiche son état : **✓ vert** (rien à faire), **! orange** (à
-reprendre, résumé court dessous, détail au survol) ou **numéro gris** (pas commencée). **Photo**, à droite, n'est pas
-une étape : la photo courante (visionneuse 360°, informations, anomalies).
+encadré, `1` … `7` y vont au clavier. Chaque étape affiche son état : **✓ vert** (rien à faire), **! orange** (à
+reprendre, résumé court dessous, détail au survol) ou **numéro gris** (pas commencée).
 
 | Onglet | Contenu | Orange quand… |
 |---|---|---|
@@ -185,10 +184,11 @@ découpe ni d'export, les photos restent sur l'instance).
 - **Légende** (bas gauche de la carte, repliable) : signification des couleurs et marques de la carte et de la
   timeline.
 - **Barre d'outils** : trois groupes nommés — *Projet* (retour, nom, import), *Édition* (annuler/rétablir, *Début*/*Fin*), *Mode* (*✥ Positions*, bascule : un bandeau violet « Mode Positions actif – Échap » reste affiché tant qu'il est actif).
-- **Onglet Photo** : visionneuse 360° (glisser pour regarder, molette pour zoomer, *À plat* pour l'image brute,
-  *⟲ Recentrer* pour revenir face à l'avant), séquence, informations et anomalies de la photo courante. Le sens de
-  déplacement, l'orientation et la position se corrigent dans l'étape *Positions et sens* (sections repliables, état
-  mémorisé) ; *Début*/*Fin* ne sont que dans la barre d'outils.
+- **Onglet Positions et sens** = l'onglet de la photo courante, dans cet ordre : en-tête (visionneuse 360° : glisser
+  pour regarder, molette pour zoomer, *À plat* pour l'image brute, *⟲ Recentrer* ; numéro n / N, *Exclure* /
+  *Réintégrer*, séquence, *Informations*), liste *À corriger* de l'étape, réglages *Toute la sortie*, puis les sections
+  de cette photo (sens de déplacement et orientation, position), repliables, état mémorisé. Cliquer une photo sur la
+  carte ou la timeline depuis une autre étape ne change pas d'onglet. *Début*/*Fin* ne sont que dans la barre d'outils.
 
 ### Surcouche Panoramax
 
@@ -649,7 +649,7 @@ fichiers.
 | `[` / `]` | Cap −1° / +1° (Maj : 5°) |
 | `N` / `Maj+N` | Point suivant / précédent à vérifier (photos concernées sélectionnées) |
 | `M` | Mode Positions |
-| `1` … `8` | Onglets : les étapes dans l'ordre, puis *Photo* |
+| `1` … `7` | Onglets : les étapes dans l'ordre |
 | `Ctrl+Z` / `Ctrl+Y` | Annuler / rétablir |
 | `?` | Aide |
 

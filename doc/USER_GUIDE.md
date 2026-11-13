@@ -112,7 +112,7 @@ The *Import* tab also has *Check the files* and, if there are any, *Retry failed
 
 ```
 ┌ toolbar: ← projects · Import │ Undo · Redo │ Start · End │ Positions mode … ⚙ Settings · ?
-├ tabs = steps: Import · Sync · Duplicates and stops · Positions and direction · Sequences · Export · Upload │ Photo
+├ tabs = steps: Import · Sync · Duplicates and stops · Positions and direction · Sequences · Export · Upload
 ├──────────────────────────────────────────────┬──────────────────────────────┐
 │ map                                          │ content of the open tab      │
 │ (Panoramax · background · Centre · Follow …) │ ("To fix" list at the top    │
@@ -126,10 +126,9 @@ maps (for all rides; *Remove* deletes an added background, after confirmation), 
 time window, for this project; *Save and recompute*), thresholds of the *Points to check* (for this project) and the
 interface **Language** (French or English; by default the browser's; it also applies to the server messages).
 
-**Tabs = steps** (under the toolbar): a single navigation, in working order; the open tab is framed, `1` … `8`
+**Tabs = steps** (under the toolbar): a single navigation, in working order; the open tab is framed, `1` … `7`
 reach the tabs from the keyboard. Each step shows its state: **✓ green** (nothing to do), **! orange** (to redo, short
-summary below, detail on hover) or **grey number** (not started). **Photo**, on the right, is not a step: the current
-photo (360° viewer, details, anomalies).
+summary below, detail on hover) or **grey number** (not started).
 
 | Tab | Content | Orange when… |
 |---|---|---|
@@ -176,10 +175,11 @@ or export, the photos stay on the instance.
   scrolls; the current photo stays visible when you navigate.
 - **Legend** (bottom left of the map, collapsible): meaning of the colours and marks of the map and the timeline.
 - **Toolbar**: three named groups — *Project* (back, name, import), *Edit* (undo/redo, *Start*/*End*), *Mode* (*✥ Positions* toggle: a purple banner "Positions mode on – Esc to exit" stays visible while it is on).
-- **Photo tab**: 360° viewer (drag to look around, wheel to zoom, *Flat* for the raw image, *⟲ Recentre* to face
-  the front again), sequence, details and anomalies of the current photo. Direction of travel, orientation and
-  position are fixed in the *Positions and direction* step (collapsible sections, state remembered); *Start*/*End* are
-  in the toolbar only.
+- **Positions and direction tab** = the tab of the current photo, in this order: header (360° viewer: drag to look
+  around, wheel to zoom, *Flat* for the raw image, *⟲ Recentre*; number n / N, *Exclude* / *Re-include*, sequence,
+  *Information*), the step's *To fix* list, the *Whole ride* settings, then the sections of this photo (direction of
+  travel and orientation, position), collapsible, state remembered. Clicking a photo on the map or the timeline from
+  another step does not change tab. *Start*/*End* are in the toolbar only.
 
 ### Panoramax overlay
 
@@ -619,7 +619,7 @@ the orientation Panoramax can read, the [pan360-fixexif](https://github.com/qhes
 | `[` / `]` | Heading −1° / +1° (Shift: 5°) |
 | `N` / `Shift+N` | Next / previous point to check (photos concerned selected) |
 | `M` | Positions mode |
-| `1` … `8` | Tabs: the steps in order, then *Photo* |
+| `1` … `7` | Tabs: the steps in order |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
 | `?` | Help |
 
